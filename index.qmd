@@ -1,0 +1,39 @@
+---
+title: "Statistical Thinking"
+listing:
+  - id: post
+    contents: post/*/*.qmd
+    sort: "date desc"
+    type: default
+    fields: [date, title, description, categories, author, reading-time]
+    categories: cloud
+    sort-ui: false
+    filter-ui: false
+    page-size: 3
+  - id: talk
+    contents: talk/*/*.qmd
+    sort: "date desc"
+    type: default
+    fields: [date, title, description, categories, author]
+    categories: cloud
+    sort-ui: false
+    filter-ui: false
+    page-size: 3
+page-layout: full
+title-block-banner: false
+include-in-header: meta.html
+toc: true
+---
+
+## Posts
+
+::: {#post}
+:::
+
+## Talks
+
+::: {#talk}
+:::
+
+
+

@@ -1,0 +1,78 @@
+project:
+  type: website
+
+website:
+  title: "Statistical Thinking"
+  site-url: "https://fharrell.com"
+  google-analytics: "G-P47K0XF3SM"
+  page-footer:
+    left: "Blog made with [Quarto](https://quarto.org/), by Frank Harrell. License: [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/)."
+    right:
+      - icon: github
+        href: https://github.com/harrelfe/
+      - icon: twitter
+        href: https://twitter.com/f2harrell
+      - icon: envelope
+        href: mailto:fh@fharrell.com
+  twitter-card:
+    creator: "@f2harrell"
+    card-style: summary_large_image
+  navbar:
+    title: "Statistical Thinking"
+    background: "#000000"
+    foreground: "#FFFFFF"
+    pinned: true
+    left:
+    - text: "Frank Harrell"
+    right:
+      - about.qmd
+      - text: Posts
+        href: post/
+      - text: Talks
+        href: talk/
+      - text: Datamethods
+        href: datamethods.qmd
+      - text: News
+        href: https://paper.li/stn
+      - text: Links
+        href: https://hbiostat.org
+      - text: Bio
+        href: https://hbiostat.org/fh
+      - text: Publications
+        href: https://www.zotero.org/groups/feh/items/q/Harrell
+      - icon: github
+        href: https://github.com/harrelfe
+      - icon: twitter
+        href: https://twitter.com/f2harrell
+
+format:
+  html:
+    smooth-scroll: true
+    theme: [litera, styles.scss]
+    css: h.css
+    link-external-icon: false
+    link-external-newwindow: true
+    citations-hover: true
+    footnotes-hover: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    anchor-sections: true
+    code-tools: true
+    code-fold: true
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+comments:
+  hypothesis:
+    theme: clean
+    openSidebar: false
+    enableExperimentalNewNoteButton: true
+
+execute:
+  warning: false
+  message: false
