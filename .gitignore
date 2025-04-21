@@ -5,3 +5,6 @@ harrelfe.bib
 apa*.csl
 q.Rproj
 saturnRings.jpg
+
+/.quarto/
+.Rproj.user
