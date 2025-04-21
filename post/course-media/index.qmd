@@ -1,0 +1,173 @@
+---
+title: "Integrating Audio, Video, and Discussion Boards with Course Notes"
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2017-08-01
+modified: 2020-03-16
+categories: [collaboration, teaching, r, reproducible, 2017]
+description: "In this article I seek recommendations for integrating various media for teaching long courses."
+---
+
+As a biostatistics teacher I've spent a lot of time thinking about inverting
+the classroom and adding multimedia content. My first thought was to
+create YouTube videos corresponding to sections in my lecture notes.
+This typically entails recording the computer screen while going through
+slides, adding a voiceover. I realized that the maintenance of such
+videos is difficult, and this also creates a barrier to adding new
+content. In addition, the quality of the video image is lower than just
+having the student use a pdf viewer on the original notes (**Plea for help**: does anyone know of a way to create html files with audio where slides are "self-advancing" and synchronization with audio is maintained?). For those
+reasons I decided to create audio narration for the sections in the
+notes to largely capture what I would say during a live lecture. The
+audio `mp3` files are stored on a local server and are streamed on
+demand when a study clicks on the audio icon in a section of the notes.
+The audio recordings can also be downloaded one-at-a-time or in a batch. (**Note**: I have given in to mostly producing traditional YouTube videos but would still like to find a better approach).  [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+The notes themselves are created using `LaTeX, R`, and `knitr` using a
+`LaTeX` style I created that is a compromise format between projecting
+slides and printing notes. In the future I will explore using `bookdown`
+for creating content in `html` instead of `pdf`. In either case, the
+notes can change significantly when R commands within them are
+re-executed by `knitr` in `R`.
+
+An example of a page of `pdf` notes with icons that link to audio or
+video content is in Section 10.5 of
+[BBR](https://hbiostat.org/bbr). I add red letters
+in the right margin for each subsection in the text, and occasionally
+call out these letters in the audio so that the student will know where
+I am.
+
+There are several student activities for which the course would benefit
+by recording information. Two of them are students pooling notes taken
+during class sessions, and questions and answers between sessions. The
+former might be handled by simultaneous editing or wiki curation on the
+cloud, and I haven't thought very much about how to link this with the
+course notes to in effect expand the notes for the next class of
+students. Let's consider the Q&A aspect. It would be advantageous for
+questions and answers to "grow", and for future students to take
+advantage of the Q&As from past students. Being able to be looking at a
+subsection in the course notes and quickly linking to cumulative Q&A on
+that topic is a plus. My first attempt at this was to set up a
+[slack.com](http://slack.com) team for courses in our department, and
+then setting up a channel for each of the two courses I teach. As
+`slack` does not allow sub-channels, the discussions need to be
+organized in some way. I went about this by assigning a mnemonic in the
+course notes that should be mentioned when a threaded discussion is
+started in `slack`. Students can search for discussions about a
+subsection in the notes by searching for that mnemonic. I have put
+hyperlinks from the notes to a slack search expression that is supposed
+to bring up discussions related to the mnemonic in the course's `slack`
+channel. The problem is that `slack` doesn't have a formal URL
+construction that guarantees that a hyperlink to a URL with that
+expression will cause the correct discussions to pop up in the user's
+browser. This is a work in progress, and other ideas are welcomed. See
+Section 10.5.1 of [BBR](https://hbiostat.org/bbr)
+for an example where an icon links to slack (see the mnemonic
+`reg-simple`).
+
+Besides being hard to figure out how to create URLs o get the student
+and instructor directly into a specific discussion, `slack` has the
+disadvantage that users need to be invited to join the team. If every
+team member is to be from the instructor's university, you can configure
+`slack` so that anyone with an email address in the instructor's domain
+can be added to the team automatically.
+
+I have entertained another approach of using [disqus](http://disqus.com)
+for linking student comments to sections of notes. This is very easy to
+set up, but when one wants to have a separate discussion about each
+notes subsection, I haven't figured out how to have `disqus` use
+keywords or some other means to separate the discussions. [`hypothes.is` is probably the best solution.]{.aside}
+
+[stats.stackexchange.com](http://stats.stackexchange.com) is the world's
+most active Q&A and discussion board for statistics. Its ability to
+format questions, answers, comments, math equations, and images is
+unsurpassed. Perhaps every discussion about a statistical issue should
+be started in `stackexchange` and then linked to from the course notes.
+This has the disadvantage of needing to link to multiple existing
+`stackexchange` questions related to one topic, but has the great
+advantage of gathering input from statisticians around the world, not
+just those in the class.
+
+No mater which method for entering Q & A is used, I think that such
+comments need to be maintained separately from the course notes because
+of the dynamic, reproducible nature of the notes using `knitr`. Just as
+important, when I add new static content to the notes I want the
+existing student comments to just move appropriately with these changes.
+Hyperlinking to Q & A does that. There is one more issue not discussed
+above - students often annotate the `pdf` file, but their annotations
+are undone when I produce an update to he notes. It would be nice to
+have some sort of dynamic annotation capability. This is likely to work
+better as I use `R bookdown` for new notes I develop.
+
+I need your help in refining the approach or discovering completely new
+approaches to coordination of information using the course notes as a
+hub. Please add comments to this post below, or short suggestions to
+`@f2harrell` on `twitter`.
+
+--------
+
+Resources to investigate:
+
+* [hypothes.is](https://hypothes.is)
+* [SideComment.js](http://aroc.github.io/side-comments-demo)
+* [Medium](http://medium.com)
+* [genius.it](http://genius.it)
+
+----
+
+## Discussion Archive (2017)
+
+**Frank Harrell**: Thanks again Phil - that's very helpful and is similar to the way I use Github for managing my R packages. I am still a little skeptical of the powerful Github approach being accepted by non-programmers. I would love to have something that is streamlined to course notes annotation. If the notes were in Google Docs then all kinds of instant commenting would be easy to do, but I can't use that approach because I believe in making documents reproducible with knitr.
+
+**Phil Schumm**: The GitHub (or equivalent) method would be:
+
+1. From the your GitHub project page, a person would click on the "Fork" button to create a copy of your repository under their GitHub account.
+2. The person could then edit whatever portion of the notes he or she wishes using the online editor (or some other method). If the notes were in the form of a Jupyter notebook, he or she could view the rendered notes right from within GitHub (note that Jupyter notebooks support a variety of languages besides Python, including R). If you wanted to stick with the purely R/LaTeX-based setup, you could provide a continuous integration server to render the edited notes in the cloud for those who aren't able to render them locally (e.g., if they don't have R, etc. installed on their machine).
+3. The person then clicks on the "Create Pull Request" button, which will notify you of their wish to have their edits incorporated. You can then go back-and-forth on the proposed changes, if necessary, with all of the conversation being preserved in the pull request.
+4. If and/or when you wish to incorporate the person's changes, you can then pull and merge the changes either online or using git locally.
+
+I suspect that you may already be familiar with this, and if so, my apologies for repeating it. Point is, however, that the standard workflow we use for software development could also be applied here, and with the continual development by GitHub and GitLab of their online interfaces, it can now be accomplished in simple cases (such as collaboratively editing course notes) without additional software or expertise. For example, a well-written cheatsheet on how to contribute should be sufficient. Finally, RE annotation, the "blame" functionality in git is really rather nice, and would permit you (or others) to quickly look at how changes to the notes have evolved over time.
+
+Note that I am not necessarily arguing that you should use GitHub/GitLab for this, or that it is the best possible solution. Rather, I'm merely pushing the idea a bit, just to explore the implications. I believe that it could definitely address all of the requirements described above (with the exception, of course, of real-time joint editing of a document). The real question then becomes whether it would be too high a hurdle for the likely contributors in your case.
+
+**FH**: Nice to know about stackedit. Still trying to think about quick and easy-to-maintain ways to extend/annotate course notes.
+
+**Phil Schumm**: The online editors for GitHub and GitLab are pretty basic, though they do permit you to preview the rendered result before saving. They do not, however, have GUI controls for styling (e.g., emphasis, verbatim, etc.), so you need to know Markdown (or reStructuredText, or whatever markup language you're using). For people who are learning a new markup language, I typically suggest that they open a second window alongside their editing window with a cheatsheet for the language in question.
+
+If you really want to make things as easy as possible for folks, then check out StackEdit (https://stackedit.io). This permits you to edit a Markdown document in the cloud (e.g., GitHub) using a nice-looking, web-based, WYSIWYG editor (including math).
+
+**FH**: P.S. <https://github.com/harrelfe/bbr/tree/master> has everything for one large set of notes.
+
+Thanks for the clear thinking and useful ideas Phil. This is great. With online editing in Github is there a builtin markdown-specific editor?
+
+I think the following question will be easier to deal with if I move future courses to Rmarkdown from LaTeX, but as of now all notes are in LaTeX/knitr. Having students directly edit or annotate the LaTeX source code in Github would be worth entertaining, but the nature of LaTeX markup would make this a bit daunting for some.
+
+**Phil Schumm**: Absolutely agreed that version control has a formidable learning curve, and can't be a prerequisite for participating or even contributing (though I would point out that we have had good luck beginning to train some students and researchers to use it in limited ways). Note however that for the services I mentioned (i.e., GitHub or GitLab) files in a repository and/or in the Wiki can also be edited online using a simple graphical editor (while retaining the full history), which can therefore be done by folks without any special knowledge (or software tools). We use this capability extensively on a private GitLab server we maintain to enable individuals who don't have the time or inclination to learn version control to contribute. The result is not quite like editing a Google doc, but in some ways it is better.
+
+RE threaded discussions, GitLab now has these (see <https://docs.gitlab.com/ee/user/discussions/#threaded-discussions>) and they are on the list of requested features for GitHub. Also, you can be liberal in creating new issues and it's very easy to link between them, so you can always use distinct issues for each individual thread. Finally, the ability to attach comments to specific lines in a file allows a different way to target one's comments, which can often be very helpful. Of course, if you really want to preserve the power of a fully-threaded medium (e.g., a proper mailing list or Slack), you can then combine those with these services. For example, both GitHub and GitLab provide email interfaces to a lot of their functionality, and there is GitHub integration for Slack.
+
+I must confess that I have not (yet) checked out your materials online, so I can't comment in much detail on your setup. However, my gut tells me that yes, separate files for each section (or subsection) might make things more manageable. Further organizing the files within subdirectories (e.g., one for each chapter) might help. This is the standard setup for a lot of open source software documentation.
+
+Finally, one advantage of using GitHub (or GitLab, which I tend to prefer) is that they provide syntax coloring for R, Stata, LaTeX, etc., and more than that, you can set up "continuous integration" which can be used to (re)build documentation, analytic projects, etc. automatically upon pushing your changes (so you don't have to do it locally and upload). And although some (perhaps even the plurality) of your users will never go on to learn about version control, for those that do (e.g., as part of a reproducible workflow), interacting with your class materials will either give them a head start or, at the least, be consistent with what they are doing in their data analytic life already.
+
+**FH**: Phil that's a tremendous amount of good information. Thanks for going to that effort. I had not thought of Trello for this sort of thing and will at least take a look. The github option is also fascinating. I use github extensively for code projects and like the way it handles markdown files. I've found the version control difficult for newcomers, e.g., far more difficult than simultaneous editing a google doc. I did look at issue tracking for a context similar to the one in question. I came to the conclusion that while it's great for occasional code issues, its lack of "threaded discussions" (which slack handles well) and lack of major and minor topics (which slack doesn't actually do well) is a problem. I would love to keep this discussion going if you have time. One more tought about github: I have a separate .Rnw for each chapter. Having curated files that contain additional discussions about subsections in the chapter would have perhaps worked better with github had I put each section or subsection in a separate text file. But that may create other management headaches.
+
+**Phil**: Slack is great, but not really for this type of thing. It's main strength is in facilitating frequent, flexible and rich communication within a work group (e.g., we use it in our Biostatics Lab, in a Data Coordinating Center, etc.). Likewise, our family uses it to communicate among ourselves, and it works much better for that purpose than anything else we've tried. However, it's not good for archiving material (unless you are using a paid account), it has limited options for organization and presentation of content, and it doesn't work well for casual and/or temporary users.
+
+One option that you may have heard about is Trello. Trello addresses a different problem from Slack, namely the organization and presentation of information that can either be used by one person (e.g., I use Trello for my own personal to-do lists) or equally well by a group. Its original motivating use-cases were collaborative to-do lists, planning and project management, etc. However, because of its intuitive interface and ability to link to other online services, it is now used for all sorts of things (e.g., an online cookbook, a place to document an event or trip, etc). For a quick look at some of the ways it has been used in education, see <https://trello.com/education>. Note that I'm not necessarily suggesting you use Trello (in fact, for this purpose, I wouldn't), but if you're talking to people about this type of thing, Trello will definitely come up.
+
+Quite honestly, for this purpose I would use one of GitHub, GitLab or BitBucket. As you may know, all of these are online hosting services for code repositories, originally intended for collaborative software development but now widely used for all sorts of projects. In addition to an online code repository, these services have now added features like issue tracking, Wikis, simple set-up and hosting of a project website, project management tools, communication tools and linkage to social media, etc. Thus, they make a great platform for all types of projects. Here are a few quick comments addressing specific points in your post above:
+
+1. While repositories are primarily intended for code, you can also store other resources such as media, etc.
+2. All resources will have a permanent, unique URL that you can use elsewhere
+3. If your project is public, people can consume it without having to create an account (though they would have to create an account to contribute).
+4. As I mentioned, you would have many options for presenting material and for structuring subsequent contributions and communication (e.g., you can use the issue tracker, inline comments, RSS and social media for communication, the Wiki or the standard pull-request workflow for contributions, etc). And, if you wanted, you could put a website (hosted on the same service) in front of the project(s) to make them easier to navigate and to make the whole thing more user-friendly.
+5. Related to (4), these services handle mathematical and analytic content pretty well, and their facilities for this are always improving. For example, you can host Jupyter notebooks on GitHub now, and will soon be able to do so on GitLab. Also, GitLab will render math as part of a reStructuredText or Markdown document in a repository or in a Wiki.
+6. Finally, since you can use a standard version control system (e.g., git) to edit and manipulate these resources locally, the whole thing becomes much easier to manage than using a Content Management System which requires all of your editing and file management to be done using an online GUI.
+
+Feel free to email me offline if you'd like to discuss further.
+
+**FH**: Good question. Since my notes are one large R knitr LaTeX pdf document, its content can change quite a bit when I update R commands used to produce tables and graphs (and some sentences). I think student input may need to be kept in a separate location. I added a point related to this in the article.
+
+**Warren Winfried (Winni) Kretzs**: This looks sensible. Have you considered making the course notes part of a wiki?

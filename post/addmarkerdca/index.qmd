@@ -1,0 +1,197 @@
+---
+title: Decision curve analysis for quantifying the additional benefit of a new marker
+author:
+  - name: Emily Vertosick and Andrew Vickers
+    affiliation: Department of Epidemiology and Biostatistics, Memorial Sloan Kettering Cancer Center
+    url: https://www.decisioncurveanalysis.org
+date: 2022-04-11
+categories: [2022, biomarker, accuracy-score, decision-making, diagnosis, medicine]
+description: "This article examines the benefits of decision curve analysis for assessing model performance when adding a new marker to an existing model. Decision curve analysis provides a clinically interpretable metric based on the number of events identified and interventions avoided."
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+set.seed(20211229)
+```
+
+```{r dca}
+library(tidyverse)
+library(rms)
+library(gtsummary)
+theme_gtsummary_compact()
+
+# Load data
+options(prType='html')
+Hmisc::getHdata(acath)
+
+# drop those without cholesterol and setup sex variable
+acath <- subset(acath, !is.na(choleste))
+
+# pre model (age and sex)
+pre <- lrm(sigdz ~ rcs(age,4) * sex, data = acath)
+pre_pred <- predict(pre, type='fitted')
+
+# post model (age, sex and cholesterol)
+post <- lrm(sigdz ~ rcs(age,4) * sex + rcs(choleste,4) + rcs(age,4) %ia%
+              rcs(choleste,4), data = acath)
+post_pred <- predict(post, type='fitted')
+
+# combine predictions with original data
+acath_pred <-
+  bind_cols(
+    acath,
+    pre_pred %>% enframe(name = NULL, value = "pre"),
+    post_pred %>% enframe(name = NULL, value = "post")
+  )
+
+# decision curve
+dca_prepost <-
+  dcurves::dca(
+    sigdz ~ pre + post,
+    data = acath_pred,
+    label = list(pre = "Age and Sex", post = "Age, Sex and Cholesterol")
+  )
+
+dca_prepost_smooth <-
+  dca_prepost %>%
+  plot(smooth = TRUE)
+
+dca_prepost_15_35 <-
+  dcurves::dca(
+    sigdz ~ pre + post,
+    data = acath_pred,
+    thresholds = seq(0.15, 0.35, by = 0.05),
+    label = list(pre = "Age and Sex", post = "Age, Sex and Cholesterol")
+  )
+
+# net interventions avoided
+dca_prepost_netint <-
+  dca_prepost %>%
+  dcurves::net_intervention_avoided()
+
+# estimates table
+df_dca_tbl <-
+  dca_prepost_netint$dca %>%
+  filter(variable %in% c("pre", "post")) %>%
+  # keep 5-50%, by 5%
+  transmute(
+    threshold100 = threshold*100,
+    groupvar = factor(variable, levels = c("pre", "post")),
+    net_benefit, net_intervention_avoided
+  ) %>%
+  filter(threshold100 > 1 & threshold100 <= 50 & round(threshold100 %% 5) == 0) %>%
+  mutate(threshold100 = factor(str_glue("{threshold100}%"),
+                               levels = c("5%", "10%", "15%", "20%", "25%",
+                                          "30%", "35%", "40%", "45%", "50%")))
+
+# create gtsummary table to start so gtsummary themes can be used
+dca_tbl_continuous <-
+  tbl_continuous(
+    data = df_dca_tbl,
+    variable = net_benefit,
+    include = threshold100,
+    by = groupvar,
+    statistic = list(everything() ~ "{median}"),
+    digits = list(everything() ~ 4)
+  ) %>%
+  modify_footnote(everything() ~ NA) %>%
+  modify_header(update = list(
+    label ~ "**Threshold**",
+    stat_1 ~ "**Net Benefit (Age+Sex)**",
+    stat_2 ~ "**Net Benefit (Age+Sex+Cholesterol)**"
+  ))
+
+df_diff_tbl <-
+  df_dca_tbl %>%
+  # First, reshape two columns to long
+  pivot_longer(
+    cols = c(starts_with("net_"))
+  ) %>%
+  # Create name variable
+  unite(name, c(groupvar, name), sep = "_") %>%
+  # Reshape to wide to get difference
+  pivot_wider(
+    names_from = "name",
+    values_from = "value"
+  ) %>%
+  # Calculate differences
+  transmute(
+    threshold100,
+    diff_net_benefit = post_net_benefit - pre_net_benefit,
+    diff_net_intavoid = post_net_intervention_avoided - pre_net_intervention_avoided
+  )
+
+# Merge in with continuous table
+estimate_tbl <-
+  dca_tbl_continuous %>%
+  modify_table_body(
+    ~ .x %>%
+      left_join(
+        df_diff_tbl,
+        by = c("label" = "threshold100")
+      ) %>%
+      filter(row_type != "label")
+  ) %>%
+  modify_header(
+    diff_net_benefit = "**Difference in Net Benefit**",
+    diff_net_intavoid = "**Net Difference in Interventions Avoided per 100 patients**"
+  ) %>%
+  modify_fmt_fun(c(diff_net_benefit, diff_net_intavoid) ~ function(x) { style_sigfig(x, digits = 4)})
+
+
+```
+
+**Decision curve analysis for quantifying the additional benefit of a new marker**
+
+Decision curve analysis is a method to quantify the clinical utility of a model. While discrimination, calibration and other metrics can be used to compare the performance of models, these methods do not give us information on whether the application of a model in a real-life setting would be appropriate or beneficial. [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+
+For example, take the question of whether using a model including age, sex and cholesterol is better than a model with age and sex alone at identifying patients with chest pain who have a risk of coronary artery disease (CAD) and should undergo cardiac catheterization. To utilize the new model, a blood draw must be performed to measure the patient's cholesterol. However, if using the new model with cholesterol could help ensure that the patients with CAD are treated while allowing patients without CAD to avoid the invasive cardiac catheterization procedure, then requiring a blood draw may be reasonable. Decision curves allow us to assess the risk-benefit balance associated with adding cholesterol to the age and sex model.
+
+```{r results1}
+
+dca_prepost_smooth
+
+```
+
+The x-axis is "threshold probability" while the y-axis is "net benefit". The threshold probability is the risk level that would prompt an intervention. For example, a threshold probability of 10% would indicate that anyone who had a risk from the model of ≥10% would receive the intervention. Net benefit is calculated as true positives minus false positives, where the latter is given a weighting factor related to the relative benefits and harms of each. Generally in medicine, it is more beneficial to have a true positive (e.g. find a cancer) than it is harmful to have a false positive (e.g. an unnecessary biopsy). Hence false positives are often downweighted in the net benefit calculation. The weights are actually derived from the threshold probability: for more on net benefit and its calculation and interpretation, see www.decisioncurveanalysis.org.
+
+Interpretation of the decision curve comes down to comparing the net benefit between the models and for the default strategies of intervening on all or no patients for the threshold probability of interest. Choosing the threshold probability of interest depends on the trade-off between the risk of the test and the intervention and the preferences of the doctor and patient.
+
+For a younger, healthier patient, a doctor may be more willing to intervene and perform a cardiac catheterization at a lower risk threshold, like 15%. A 15% risk threshold implies that missing a case of CAD that requires catheterization is approximately 6 times as harmful as an unnecessary catheterization (odds ratio 85%/15% = 5.7), so we would be willing to accept the risk associated with catheterization from 6 similar patients to avoid missing a diagnosis and treatment for 1 young healthy patient.
+
+On the other hand, an older, sicker patient may be at a higher risk and receive less benefit from cardiac catheterization and would prefer only to undergo catheterization if they are at a relatively high risk, for example, 35% or higher. Hence we should really only show the decision curve for the range of 15% to 35%.
+
+```{r results2}
+
+dca_prepost_15_35
+
+```
+
+Up to a risk threshold of about 20%, there is only a very slight difference between the age and sex model and the age, sex and cholesterol model -- they both pretty much overlap with the "treat all" line. At higher threshold probabilities, there appears to be a slight benefit associated with adding cholesterol to the model, because the purple line for the cholesterol model indicates a higher net benefit than the model without.
+
+We can also create a corresponding plot where the y-axis is "net reduction in interventions" rather than net benefit. This shows the number of patients who would avoid catheterization -- holding the number of cases of CAD found constant -- using the cholesterol model instead of age and sex alone.
+
+```{r results3}
+
+dca_prepost_netint
+
+```
+
+Below is a table which shows the net benefit, difference in net benefit and net difference in interventions avoided for threshold probabilities from 5-50% (we've gone a bit wider than 15% to 35% for the purposes of illustration). A net difference in interventions avoided of 1 means that, if we decide on catheterization based on the model including cholesterol rather than age and sex alone, we will have to do one fewer catheterization for every 100 patients, while keeping the number of cases of CAD found constant.
+
+```{r results4}
+
+estimate_tbl
+
+```
+
+<br>
+
+What this table shows is that (with the exception of the 20% threshold, an effect we can likely attribute to statistical noise) the model including cholesterol leads to a net difference in interventions. However, at some thresholds, e.g. 10 or 15%, the effect is very small. A net difference of 0.31 means that we would have to apply the cholesterol model rather than the age and sex model to over 300 patients to avoid one catheterization procedure.
+
+This illustrates the value of net benefit for quantifying the benefit of additional markers. Most patients have a cholesterol available, and even if someone doesn't, it is a quick, virtually painless and inexpensive test. So yes, we would probably take 300 cholesterol measurements to avoid one cardiac catheterization. This is likely not true for a more expensive, inconvenient or invasive test. For instance, it is unlikely that we would be willing to subject over 300 patients to an MRI to prevent one undergoing a cardiac catheterization.
+
+Compare this to other metrics for quantifying the added value of a predictor in a model, such as assessing variation or R2. What value of the ratio of variances of the predicted values would indicate that we should use cholesterol or MRI? What increment in AUC would be worthwhile?
+
+Decision curve analysis provides a clinically interpretable metric because it is given in clinical terms: cases of CAD found or cardiac catheterizations avoided.

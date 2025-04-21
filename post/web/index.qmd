@@ -1,0 +1,72 @@
+---
+title: "Hosting Web Content"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2024-09-29
+date-modified: last-modified
+categories: [computing, 2024]
+description: "This article is about lessons I've learned in building and maintaining web sites, with hopefully helpful recommendations."
+---
+
+One of my best decisions was to build my own web sites [hbiostat.org](https://hbiostat.org) and [fharrell.com](https://fharrell.com) so that I have total control of content and formatting and can easily and quickly post content updates.  I want to share a few things I’ve learned. 
+
+While your organization's web pages are great for static content, my public-facing content evolves rapidly with constant improvements made to course web pages, miscellaneous web pages such as [hbiostat.org/data](https://hbiostat.org/data), blog articles, and course handouts.  To make it easy to update and to add new pages I’ve found it productive to take control of the situation using web sites that are served by the amazing [netlify.com](https://netlify.com).  Some people prefer to create web sites with [`Github`](https://github.com) but I like to have total control of formats.
+
+With the Netlify approach you create a static web site on your local computer (I have my main one under `~/web` for `hbiostat.org`), and whenever there is a significant change to your material, you have Netlify re-deploy the web site to Netlify (it only sends what has been changed).  I use my own domains but you can use free `*.netlify.net` domains.[I have the deluxe Netlify paid plan because some pages have high traffic but you can do a lot with the Netlify free plan.]{.aside}  Your local computer provides a mirror of what is available publicly and you can easily preview changes by just opening one of your `.html` files.   Deployment can be handled interactively or better by using the Netlify command line app – you just run a single command which I abbreviate as e.g. `hdeploy` after doing a one-time authentication. [`hdeploy` stands for `netlify deploy -p -s hbiostat -d ~/web`.]{.aside} If you ever decide to quit using Netlify you have all the web content locally for easy deployment to AWS or anywhere else you want to put it. 
+
+To create web content locally I recommend one of the following (or a mix of them):
+
+*	Simple markdown `.md` files that are converted to `.html` using [`pandoc`](https://pandoc.org) (creates very small and fast `html`)
+*	R markdown run through R to create `html`
+*	`Quarto` (produces the most beautiful output but if you want the `html` file to be self-contained and not part of a whole `Quarto` web site it will create larger `html` files)
+
+The beauty of `Quarto` is that it creates books, individual reports, blogs, presentations, and whole web sites.  [fharrell.com](https://fharrell.com) was created completely by `Quarto`.  When you have connected web pages (book chapters; blog articles) the individual `html` files are lean.  Here is an example of a standalone `Quarto` web page: [hbiostat.org/r/hmisc](https://hbiostat.org/r/hmisc).
+
+The [hbiostat.org](https://hbiostat.org) home page was created using R markdown.  The R markdown script is [here](https://hbiostat.org/index.Rmd).
+
+Here is a course web page which I converted from a wiki (see below for a conversion script) to a simple markdown file: [hbiostat.org/b2](https://hbiostat.org/b2) .  The markdown for this is at [hbiostat.org/b2/index.md](https://hbiostat.org/b2/index.md) .  The `pandoc` command to convert from `.md` to `.html` is 
+
+```
+  pandoc --toc --css=https://bootswatch.com/5/cerulean/bootstrap.min.css \
+    -s -o index.html index.md
+```
+
+An example of course notes created with `Quarto` is [hbiostat.org/rmsc](https://hbiostat.org/rmsc).
+
+One other lesson I’ve learned over the years after hosting my web pages on Amazon Web Services (AWS) is that when you have to support your own Linux or Windows web server such as an AWS Lightsail instance, the time spent in keeping the site secure and software updated is significant, and doing updates to web pages is not as easy as the local `~/web` Netlify mirroring approach.  It is far easier to host a static web site where Netlify takes care of 100% of system and web server software issues.  There is nothing to update on your site other than the actual web content.
+
+## Miscellaneous Tips
+
+### Creating an `index` File
+
+Sometimes you want to add a directory full of files to a public web page without taking the time to create `index.md` to point to each file.  The following shell script uses the wonderful `tree` Linux/Mac app to create `index.html` such as the one appearing [here](https://hbiostat.org/r).  Dates are file-last-modified dates.
+
+```
+#! /bin/bash
+# Stored in ~/bin/mkindexd
+
+tree --ignore-case -C -I '*confidential*|*cache*|*courseregistrants*' \
+  --timefmt "<span style=\"font-size:45%;\">%F</span>&nbsp;&nbsp;" \
+  -H . | sed -e "s/<span&nbsp;/<span /g" \
+  -e "s/<span\(.*\)\/span>\(.*\)<br>/\\2\&emsp;\&emsp;\&emsp;<span\\1\/span><br>/" \
+  -e "s/\[&nbsp;&nbsp;\]&nbsp;&nbsp;//" > index.html
+```
+
+### Converting Wiki Content to Markdown
+
+Here is a shell script that converts legacy wiki markdown to regular markdown.
+
+```
+#! /bin/bash
+#
+# Convert from foswiki-type wiki markup to markdown
+# Run e.g. wiki2md foo to convert foo.wiki to foo.md
+cat $1.wiki | sed -E -e "s/\[\[(\S+?)\]\[(.+?)\]\]/[\2](\1)/g" \
+-e "s/\[\[http(\S+?) (.+?)\]\]/[\2](http\1)/g" \
+-e "s/^---+++/###/g" \
+-e "s/^---++/##/g" \
+-e "s/^---+/#/g" \
+-e "s/%N%//g" > $1.md
+```

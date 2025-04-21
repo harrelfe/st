@@ -1,0 +1,63 @@
+---
+title: "Interactive Statistical Graphics: Showing More By Showing Less"
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2017-02-05
+modified: 2020-11-15
+categories: [survival-analysis, graphics, r, 2017]
+description: "With interactive graphics one can start by showing the most important data features, then drill down to see details."
+---
+
+Version 4 of the R [`Hmisc`](http://hbiostat.org/R/Hmisc) package and version
+5 of the R [`rms`](http://hbiostat.org/R/rms) package
+interfaces with interactive [`plotly`](https://plot.ly/r/) graphics, which
+is an interface to the `D3` javascript graphics library.  This allows
+various results of statistical analyses to be viewed interactively, with
+pre-programmed drill-down information.  More examples will be added
+here.  We start with a video showing a new way to display survival
+curves. [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+Note that plotly graphics are best used with RStudio Rmarkdown html
+notebooks, and are distributed to reviewers as self-contained (but
+somewhat large) html files. Printing is discouraged, but possible, using
+snapshots of the interactive graphics.
+
+Concerning the second bullet point below, boxplots have a high
+ink:information ratio and hide bimodality and other data features.  Many
+statisticians prefer to use dot plots and violin plots.  I liked those
+methods for a while, then started to have trouble with the choice of a
+smoothing bandwidth in violin plots, and found that dot plots do not
+scale well to very large datasets, whereas spike histograms are useful
+for all sample sizes.  Users of dot charts have to have a dot stand for
+more than one observation if N is large, and I found the process too
+arbitrary.  For spike histograms I typically use 100 or 200 bins.  When
+the number of distinct data values is below the specified number of
+bins, I just do a frequency tabulation for all distinct data values,
+rounding only when two of the values are very close to each other.  A
+spike histogram approximately reduces to a rug plot when there are no
+ties in the data, and I very much like rug plots.
+
+-   `rms survplotp` [video](https://youtu.be/EoIB_Obddrk): plotting
+    survival curves
+-   `Hmisc histboxp` [interactive html
+    example](http://hbiostat.org/R/Hmisc/examples.html#better_demonstration_of_boxplot_replacement):
+    spike histograms plus selected quantiles, mean, and Gini's mean
+    difference - replacement for boxplots - show all the data!  Note
+    bimodal distributions and zero blood pressure values for patients
+    having a cardiac arrest.
+
+In the `plotly` graphic below, hover over areas of the histogram or over the mean or quantile symbols to show more information.  Click components of the legend to turn off/on various computed quantities.  By default the SD and Gini's mean difference are not shown.  Click on them to show these as horizontal lines just to the right of the category names.
+```{r echo=FALSE}
+require(Hmisc)
+knitrSet(lang='blogdown')
+```
+```{r support}
+require(Hmisc)
+getHdata(support2)
+with(support2, {
+    units(meanbp) <- 'mmHg'
+    histboxp(x=meanbp, group=dzgroup, sd=TRUE, bins=200)
+} )
+```

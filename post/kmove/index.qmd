@@ -1,0 +1,221 @@
+---
+title: "Minimal-Assumption Estimation of Survival Probability vs. a Continuous Variable"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2025-04-19
+date-modified: last-modified
+categories: [computing, prediction, r, regression, survival-analysis, validation, "2025"]
+description: "There is no straightforward nonparametric smoother for estimating a smooth relationship between a continuous variable and the probability of survival past a fixed time when censoring is present.  Several flexible methods are compared with regard to estimation error, and recommendations are made on the basis of a simulation study for one data generating mechanism.  The results are particularly applicable to estimation of smooth calibration curves with right-censored data."
+bibliography:
+  - grateful-refs.bib
+code-fold: false
+---
+
+# Background
+
+This article considers the following setting.  Suppose we have one continuous predictor $x$ and an outcome variable $y$ and we wish to estimate a smooth, usually nonlinear, relationship between $x$ and some property of $y$ such as the mean or the probability that $y$ exceeds some specified value.  When there is no censoring on $y$, one can estimate such a smooth relationship nonparametrically using a standard smoother such as `loess` or the R "super smoother" `supsmu`.  Semiparametric ordinal regression, using a regression spline for $x$ is also a good approach.
+
+Now suppose that $y$ represents the time until an event, where there may be right-censoring, i.e., for some observations the time to event is only known to be beyond the last recorded follow-up time.  If we were willing to make an assumption such as proportional hazards (PH), we could easily estimate the curve in question by fitting a Cox PH model using a regression spline in $x$.  But nonparametric smoothers along the lines of _loess_ or `supsmu` have not been developed for this setting, and we stiill need to estimate the relationship with minimal assumptions.  For example, we may want to avoid making the PH assumption (parallelism over $t$ in $\log(-\log(S(t | x))))$ for different values of $x$).
+
+An especially important application is the estimation of calibration curves, which is the process of estimating how the predicted probability of surviving past a specific $t$ relates to the estimated actual probability of survival. Here the predicted survival probability is the sole continuous covariate.[Binning $x$ and computing stratified Kaplan-Meier estimates is not a competitive procedure due to noise from not utilizing interpolation leading to increased mean squared error, and from the arbitrary choice of bins.]{.aside} 
+
+# Estimation Methods
+
+The $x$ vs. $S(t | x)$ estimation methods considered here are as follows.
+
+* _hazard regression_ using the R `polspline` package's `hare` function.  `hare` uses adaptive linear splines in $x$ and in $t$ to find a smooth function.  Non-parallelism (e.g., non-PH) is handled by adaptively adding product terms involving linear spline terms in $t$ and in $x$.
+* _adaptive ordinal regression_ using the R `rms` package's `adapt_orm` function (available as of version 8.0-1) with right-censoring, starting by modeling $x$ with a restricted cubic spline function with 4 knots.  Four link functions are tried: logit, probit, log-log, and complementary log-log.  The link function resulting in the lowest deviance is selected, and fits using that link are then tried with 0, 3, 4, 5, and 6 knots, where 0 represents a linear fit.  The fit with the best AIC is selected.  This fit
+is then used to estimate survival probabilities at a specific $t$ over a regular grid of $x$.  The models considered span a range from PH to non-PH accelerated failure time models.
+* _moving overlapping window Kaplan-Meier (KM) estimates_ at a specific $t$ using the R `Hmisc` package [`movStats`](https://hbiostat.org/rflow/analysis#sec-analysis-assoc) function.  At each distinct $x$ value occurring in the data, an interval containing `eps` observations on either side of $x$ is formed.  For each interval, the KM estimate at $t$ is computed.  By default, these are then smoothed over all the estimates at all distinct $x$ values, using the R super smoother.  The amount of smoothing in `supsmu` is controlled by the `bass` parameter.
+
+# Simulation
+
+The following simulations under one data generating mechanism estimate the performance of each of the above methods, the last method being used multiple times for different `eps` (and `bass` if smoothing KM estimates).
+
+For sample sizes ranging from 35 to 500, simulate right-censored data generated from a log-logistic accelerated failure time model that is quadratic in $x$.  Our goal is to estimate $S(3 | x)$, i.e., 3-unit survival probability as a function of the sole predictor $x$.  Define a function `simdat` to simulate a single dataset, with the censoring distribution being $U(2, 6)$.  Plot the true $S(3 | x)$ as a function of $x$.
+
+```{r}
+require(Hmisc)
+require(rms)
+require(ggplot2)
+require(data.table)
+require(polspline)
+simdat <- function(n) {
+  cens <- runif(n, 2, 6)
+  x    <- runif(n)
+  # Logistic AFT model
+  lp   <- 2 - 2 * (x - 1) ^ 2
+  t    <- exp(lp + rlogis(n) / 2)
+  e    <- t <= cens
+  y    <- pmin(t, cens)
+  S    <- survival::Surv(y, e)
+  data.table(x, y, e)
+}
+
+# Function to compute true survival probability at t=3
+# T = exp(lp + r / 2)
+# P(T > 3) = P(exp(lp + r / 2) > 3) = P(lp + r / 2 > log(3)) =
+# P(r / 2 > log(3) - lp) = P(r > 2 * (log(3) - lp))
+surv <- function(x) {
+  lp <- 2 - 2 * (x - 1) ^ 2
+  1 - plogis(2 * (log(3) - lp))
+}
+x <- seq(0, 1, by=0.01)
+plot(x, surv(x), type='l', ylab='S(3 | x)')
+```
+
+For this setup the probability that an observation is right-censored is `r simdat(50000)[, round(mean(1 - e), 3)]`.
+
+Next create a function that runs any of the estimation methods on a dataset and computes its integrated mean squared error (and its square root) in estimating the true $S(3 | x)$ over $x=0, 0.01, 0.02, ..., 0.99, 1$.  Squared errors are computed for each $x$ and averaged over all 101 $x$ values.
+
+```{r}
+# Function to compute sqrt of average (over grid of x) 
+# mean squared error in estimating the true function of x
+# using one of several methods
+
+crmse <- function(dat, meth, msmooth='smoothed',
+                  eps=15, bass=8, penalty='BIC', u=3, pl=FALSE) {
+  xs <- seq(0, 1, by = 0.01)
+  x  <- dat$x
+  y  <- dat$y
+  e  <- dat$e
+  S <- survival::Surv(y, e)
+  O <- Ocens(y, ifelse(e == 1, y, Inf))
+  if(meth == 'hare') {
+    f <- if(penalty == 'BIC') hare(y, e, x, maxdim=6)
+      else hare(y, e, x, penalty=2, maxdim=6)
+    s <- 1 - phare(u, xs, f)
+  }
+  else if(meth == 'orm') {
+    f <- adapt_orm(x, O)
+    opt_link <<- c(opt_link, f$family)
+    opt_df   <<- c(opt_df,   f$stats['d.f.'])
+    s <- survest(f, data.frame(x=xs), times=u, conf.int=0)$surv
+  }
+  else {
+    if(nrow(dat) < 2 * eps) return(NA_real_)
+    if(msmooth == 'raw')
+      f <- movStats(S ~ x, times=u, msmooth='raw', eps=eps, melt=TRUE)
+    else
+      f <- movStats(S ~ x, times=u, msmooth=msmooth,
+                    eps=eps, bass=bass, melt=TRUE)
+    s <- approx(f$x, 1 - f$incidence, xout=xs, rule=2)$y
+  }
+  if(pl) {
+    plot(xs, s, type='l', xlab='x', ylab=expression(hat(S)(t)), ylim=c(0,1))
+    lines(xs, surv(xs), col='red')
+    title(sub=paste(meth, msmooth, eps, bass))
+  }
+  c(rmse=sqrt(mean((s - surv(xs)) ^ 2)))
+}
+```
+
+Define a function that for one dataset runs all estimation methods.
+
+```{r}
+run <- function(dat, u=3, pl=FALSE) {
+  # Not all parameters pertain to all methods
+  # Non-applicable parameters are set to NA by rbindlist(fill=TRUE)
+  u1 <- expand.grid(meth = 'hare', penalty=c('AIC', 'BIC'))
+  u2 <- data.frame( meth = 'orm')
+  u3 <- expand.grid(meth = 'km', msmooth='raw',
+                    eps=c(10,15,20,25,30))
+  u4 <- expand.grid(meth = 'km', msmooth='smoothed',
+                    eps=c(10,15,20,25,30), bass=c(1,3,5,7,9))
+  u <- rbindlist(list(u1, u2, u3, u4), fill=TRUE)
+  g <- function(x) if(is.na(x)) '' else x
+  u[, .(rmse = crmse(dat, meth, as.character(msmooth),
+                     eps, bass, penalty, pl=pl),
+        method=paste(meth, g(msmooth), g(eps), g(bass), g(penalty))),
+    by=.(meth, msmooth, eps, bass, penalty)]
+}
+```
+
+Now run the simulations.  To gain resolution in $n$ while minimizing the number of simulations and obtaining precise results, simply draw one simulated dataset per $n$, and later smooth the results with respect to $n$.
+
+```{r}
+w <- data.table(n = 35 : 500)
+set.seed(2)
+if(file.exists('sim.rds')) {
+  r        <- readRDS('sim.rds')
+  opt      <- readRDS('opt.rds')
+  opt_link <- opt$link
+  opt_df   <- opt$df
+  } else {
+    opt_link <- character(0)
+    opt_df   <- integer(0)
+    r        <- w[, run(simdat(n)), by=n]
+    opt      <- list(link=opt_link, df=opt_df)
+    saveRDS(r,   'sim.rds')
+    saveRDS(opt, 'opt.rds')
+}
+cat('\nFrequencies of selected links:\n\n')
+table(opt_link)
+cat('\nFrequencies of optimum number of x parameters:\n')
+table(opt_df)
+r[, eps  := factor(eps)]
+r[, bass := factor(bass)]
+# Mark the best performing km raw and km smoothed settings
+r[, best := (meth == 'km' & eps == 30) & (
+              (msmooth =='raw') |
+              (msmooth == 'smoothed' & bass == 9) )]
+```
+
+Graph results for methods that don't have parameters, and the performance of the other methods, at the parameters resulting in lowest root mean squared error overall.  These are `eps=30`, indicating moving windows with 30 observations on each side of the target `x` value, and `bass=9` indicating maximum smoothing using the "super smoother" R function `supsmu`.
+
+```{r}
+ggplot(r[meth %in% c('hare', 'orm') | best,],
+       aes(x=n, y=rmse, col=method)) +
+  geom_smooth(se=FALSE) +
+  labs(caption='hare and orm vs. best moving window KM estimators')
+```
+
+Oddly enough, `hare` BIC performed slightly better than AIC for low sample sizes, and there was no advantage of BIC for large $n$.  Moving-window Kaplan-Meier estimates, either smoothed or unsmoothed, did not perform as well as the other methods.  The best integrated mean squared estimation error was had with the adaptive-link `orm` method.
+
+Next graph results for the method that has one parameter, unsmoothed moving-window KM.
+
+```{r}
+ggplot(r[meth == 'km' & msmooth == 'raw',],
+       aes(x=n, y=rmse, col=eps)) +
+  geom_smooth(se=FALSE) +
+  labs(caption='Unsmoothed KM estimator performance by sample size on either side of target x')
+```
+
+Best overall mean squared estimation error resulted from `eps=30` observations on either side of the target predictor value `x`.
+
+Now consider the method with two parameters -- smoothed moving-window KM.
+
+```{r}
+ggplot(r[meth == 'km' & msmooth == 'smoothed',],
+       aes(x=n, y=rmse, col=eps)) +
+  geom_smooth(se=FALSE) + facet_wrap(~ bass) +
+  labs(caption='Smoothed KM performance by eps and smoothing parameter')
+```
+
+Show this another way to better judge effect of the smoothing parameter `bass`.
+
+```{r}
+ggplot(r[meth == 'km' & msmooth == 'smoothed',],
+       aes(x=n, y=rmse, col=bass)) +
+  geom_smooth(se=FALSE) + facet_wrap(~ eps) +
+  labs(caption='Smoothed KM performance by eps and smoothing parameter')
+```
+
+The best `bass` value is 9, i.e., maximum smoothing.  The best window size was `eps=30`.
+
+# Recommendations
+
+The overall winner is considering four link functions in an ordinal regression model with right censoring, fitting the predictor `x` with a restricted cubic spline function, and choosing the link with minimum deviance.  The number of knots in the spline (or linearity) can be selected using AIC.  If one wanted to accommodate more exotic effects of `x` over time, e.g., complex non-parallelism in survival curves, `hare` is a good choice.
+
+
+# Computing Environment
+
+```{r}
+grateful::cite_packages(pkgs='Session', output='paragraph', out.dir='.',
+    cite.tidyverse=FALSE, omit=c('grateful', 'ggplot2'))
+```
+
+The code was run on `r sessionInfo()$running` on a Macbook Pro M2 Max.
+

@@ -1,0 +1,66 @@
+---
+title: "The Burden of Demonstrating Statistical Validity of Clusters"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2024-10-06
+date-modified: last-modified
+categories: [classification, data-reduction, diagnosis, medicine, personalized-medicine, subgroup, 2024]
+description: "Patient clustering, often described as the finding of new phenotypes, is being used with increasing frequency in the medical literature.  Most of the applications of clustering of observations are not well thought out, not even considering whether observation clustering aligns with the clinical goals.  And the resulting clusters are not validated even in a statistical way.  This article describes some of the challenges of observation clustering, and challenges researchers to carefully check that found clusters are compact and contain the important statistical information in the variables on which clustering is based."
+---
+
+## Background
+
+Clustering of patients to find new "phenotypes" is now a fad.  For example, repeating the false assertion that [diabetes was ever a binary diagnosis](https://www.acpjournals.org/doi/10.7326/0003-4819-149-3-200808050-00010), Ahlqvist _et al_ claimed [to have found 5 diabetes subtypes](https://www.thelancet.com/journals/landia/article/PIIS2213-8587(18)30051-2) using a purely statistical analysis not driven by clinical knowledge.  What they found is likely just inefficient prognostic stratification that could be improved upon by directly relating patient characteristics to outcomes.
+
+Maarten van Smeden showed that [clustering algorithms easily get the wrong number of clusters](https://x.com/MaartenvSmeden/status/970237614413570048) when the true number of clusters is known, and Darren Dahly showed in [a simple example](https://darrendahly.github.io/post/cluster) that clustering is essentially telling us, for example, that people who are older than 65 are older than people who are under 65.  van Smeden, Harrell, and Dahly wrote a [letter to the editor](https://www.thelancet.com/journals/landia/article/PIIS2213-8587(18)30124-4/fulltext) concerning the Ahlqvist paper, casting extreme doubt on the original authors' assertions that "new forms of diabetes" have been identified or that this is a useful "step towards precision medicine in diabetes".  van Smeden _et al_ pointed out that direct modeling of outcomes is likely to have much greater payoff, and that the clusters found by Ahlqvist _et al_ are very unlikely to be what they seem.  Ahlqvist _et al_ did not even assess within-cluster homogeneity of the component variables nor did they assess within-cluster outcome homogeneity.
+
+## What is the Question and Why Cluster Patients?
+
+Most medical applications of statistical clustering techniques fail to address the most basic questions such as
+
+* What is the ultimate goal to which the results of the statistical analysis will be used?
+* Is the disease being studied all-or-nothing as assumed by clustering algorithms when doing the analysis on "diseased" patients?
+* What is the best way to summarize the result?  Is it patient cluster membership, a clinical prediction model (which much better handles categorical patient characteristics), or is it variable clustering?
+
+[_Variable_ clustering](https://hbiostat.org/rmsc/cony#fig-cony-redun) often is more likely to meet investigators' goals than _patient_ clustering.  Variable clustering does not discard nearly as much information as patient clustering, is less arbitrary, scales to more variables, and better handles collinearities / redundancies.  [Sparse principal components analysis](https://hbiostat.org/rmsc/impred#sec-impred-sparsepc) (PCA) is also a very useful tool, combining variable clustering with PCA to handle collinearities while providing a more sparse representation of the patient baseline variables.  Both of these variable clustering approaches can easiily feed their results into standard clinical prediction models to learn how various dimensions of the patient relate to outcomes.
+
+## How Should Clustering Results be Presented?
+
+In the minority of cases where patient clustering is most likely to meet clinical goals, investigators must be made aware that forced-choice classification (assigning each patient to a cluster with no gray zone) is not often the best way to represent clusters.  Assignment to discrete clusters assumes that R. A. Fisher's definition of clusters as _compact sets_ is in play.  In other words, pretending that clusters are discrete assumes that clusters are compact, i.e., there is no meaningful heterogeneity within a cluster.  When, for example, a patient at the outer boundary of one cluster is closer to a patient at the outer boundary of a different cluster than she is to the center of her own cluster, simply labeling her as a member of "her" cluster is misleading.  
+
+It is much more natural to use the results of patient clustering in a continuous, less assumption-laden fashion.  For example, one can summarize the results of clustering in the following ways when relating clusters to outcomes:
+
+* For $k$ clusters and for each patient, compute the $k$ distances from the cluster centers as $k$ outcome predictors.
+* Similarly, compute the $k$ probabilities that the patient belongs to each of the clusters and use the logits of these probabilities as predictors.
+
+## Forced-Choice Cluster Classification Requires Verifying Adequacy of Mere Cluster Membership
+
+When probabilities of cluster membership are not all near 0 or 1, the clusters are not compact enough to be used in forced-choice cluster classification, and likewise if the distributions of distances from cluster centers are wide.[Consider computing the median distance between all possible pairs of cluster centers, and show that the individual patient distances from their own cluster centers is below, say 1/5th of the median distance between cluster centers more than 4/5 of the time to demonstrate that cluster membership is not far from an all-or-nothing phenomenon.]{.aside}
+
+If forced-choice cluster assignments are still of interest, these assignments must be validated with regard to adequacy of summarization of statistical information contained in the original component variables.  In other words, demonstrate that the cluster identifiers are sufficient for conveying the information (e.g., phenotypes) the clusters are purported to contain, when there is an outcome or response variable that the clusters are supposed to predict.  Here are some useful steps in that endeavor:
+
+* Define $A$ as the set of $k-1$ indicator variables for membership in $k$ clusters
+* Define $B$ as the set of $k$ distances a patient has from each of the cluster centers
+* Fit models to predict patient outcome, with the models containing as predictors both sets $A$ and $B$, and models containing $A$ and $B$ separately
+* Compute likelihood ratio $\chi^2$ tests to assess the prognostic information due to each set
+* Compute the proportion of overall likelihood ratio $\chi^2$ for $A$ & $B$ combined that is due to each of the sets
+* Verify that the proportion of predictive information provided by $B$, after adjusting for $A$, is small. See [this](https://hbiostat.org/rmsc/mle) and [this](https://fharrell.com/post/addvalue) for more information.
+* Demonstrate that the clusters provide new prognostic information after accounting for previously known prognostic variables. In a similar fashion to the previous demonstration, replace set $B$ with known prognostic variables and compute the fraction of new prognostic information that is provided by the $k-1$ cluster indicators.
+* Demonstrate that cluster assignments cannot be easily predicted from simple features, using for example polytomous (multinomial) logistic regression.
+
+## Demonstrating Stability
+
+Besides adequacy of statistical summarization of component variables, clusters must be validated for stability.  A simple bootstrap procedure can document stability of found clusters, and when the number of clusters was not completely pre-specified (before analyzing the data), the number of clusters should be allowed to "float" across resamples, and the frequency distribution of the number of found clusters provided.
+
+## Ultimate Validations
+
+Statistical validations of cluster structure and especially of the adequacy of the cluster summarizations are easy.  But the clusters then need to be validated in the more difficult way, by demonstrating clinical usefulness of the clusters.  Examples of clinical usefulness include
+
+* demonstrating that the clusters are clinically interpretable and that patients are homogeneous within the finest level of detail used to summarize clusters
+   + If forced-choice classification is used, show that there is no remaining clinical information within each choice.
+   + If distance from all cluster centers are used, show that there is no remaining clinical information once the distance is fixed.
+* demonstrating within a randomized clinical trial that the clusters are uniquely useful for capturing differential treatment effect, e.g., showing that there is an important interaction between treatment and clusters but no important interaction between treatment and pre-specified raw baseline variables[Do similar likelihood ratio $\chi^2$ assessments as above to compare the total treatment $\times$ cluster interaction effect to the total treatment $\times$ cluster distance effects to the total treatment $\times$ original variable effects.  Forced-choice clusters will be embarrassed if the log-likelihood accounted for by simple raw variable (or cluster distance) interactions exceeds that accounted for by cluster memberships.]{.aside}
+* showing that the number of clusters is clinically correct.
+

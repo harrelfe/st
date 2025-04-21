@@ -1,0 +1,18 @@
+digraph {
+    rankdir =LR;
+    node [style=filled, shape=box, fontname="Times-Roman", fontsize=18, fontcolor=blue, fillcolor=azure, penwidth=0.1];
+    edge [color=blue3, arrowsize=0.7];
+    R[label=<Forces of Change>]
+n1[label=<Would have always been a Bayesian ...>]
+n2[label=<Spiegelhalter, Freedman, Parmar 1994>]
+n3[label=<Don Berry>]
+n4[label=<Silliness of multiplicity adjustments>]
+n41[label=<Chances for data to be extreme &#8800;<br></br>chances for assertions to be true>]
+n5[label=<Hypothesis testing &#8801; artificial<br></br>construct>]
+n6[label=<Absence of evidence is not evidence of<br></br>absence error>]
+n7[label=<Arbitrariness of primary, secondary,<br></br>co-primary endpoints>]
+n71[label=<Closed testing procedures &#8801; train<br></br>wreck>]
+R -> {n1, n2, n3, n4, n5, n6, n7}
+n4 -> {n41}
+n7 -> {n71}
+}

@@ -1,0 +1,137 @@
+---
+title: Biostatistical Modeling Plan
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+    url: https://hbiostat.org
+date: 2023-01-26
+modified: 2023-02-24
+categories: [2023, accuracy-score, endpoints, ordinal, collaboration, data-reduction, design, medicine, prediction, regression, validation, bootstrap]
+description: "This is an example statistical plan for project proposals where the goal is to develop a biostatistical model for prediction, and to do external or strong internal validation of the model."
+bibliography: /Users/harrelfe/web/bib/harrelfe.bib
+---
+
+# Introduction
+
+Even though several of the hypotheses will be translated
+into statistical tests, at the heart of the aims is the determination
+of clinically useful predictors of outcomes and the estimation of the
+magnitude of effects of predictors on the outcomes. Therefore, the
+statistical plan emphasizes development of multivariable models
+relating predictors (patient baseline characteristics) to outcomes,
+and the use of such models for estimating adjusted (partial) effects
+of risk factors of interest, after controlling for the effects of
+other characteristics. The strategy to be used for developing
+multivariable models is given in detail in @rms2.
+This strategy involves such steps as [This has been used successfully as a template for multiple grant proposals.<br><br>This material covers only frequentist model development.  A different template would be needed for (the preferred) Bayesian approach.]{.aside}
+
+* multiply imputing missing predictor values to make good use of partial information on a subject 
+* choosing an appropriate statistical model based on the nature of the response variable
+* deciding on the allowable complexity of the model based on the effective sample size available
+* allowing for nonlinear predictor effects using regression splines 
+* incorporating pre-specified interactions 
+* checking distributional assumptions 
+* adjusting the variance-covariance matrix for multiple imputation 
+* graphically interpreting the model using partial effect plots and nomograms
+* quantifying the clinical utility (discrimination ability) of the model 
+* internally validating the calibration and discrimination of the model using the bootstrap to estimate the model's likely performance on a new sample of patients from the same patient stream
+* possibly do external validation
+
+Regarding the choice of statistical model, we will use ordinary multiple regression for truly continuous responses, and for outcome scales that are not truly continuous or that have heavy ties in some of their values, the
+proportional odds ordinal logistic model (@wal67). Particular strategies and assumption checking procedures for these models are given in @rms2.
+
+Sample size justification for development of reliable predictive models should be based on @ril19min or @ril19mina.  For simplicity, in what follows sample size or allowable model complexity will be based on the rough rule of thumb that, on the average, a model must fit no more than $\frac{m}{15}$ parameters for it to be reliable on future similar patients, where $m$ is the effective sample size (@rms2). For continuous response variables or ordinal responses with at least 5 well-populated values, $m$ is the number of subjects. For binary outcomes, $m$ is the number of incident events in the cohort.  But one needs to take into account the number of subjects needed just to get an accurate overall average prediction, i.e., the number of subjects needed to estimate the model intercept (or the underlying survival curve in a Cox proportional hazards model).  For a binary outcome, 96 subjects are required to estimate the intercept such that the margin of error (with 0.95 confidence) in estimating the overall risk is $\pm 0.10$. For a continuous outcome, 70 subjects are required to estimate the residual variance to within a multiplicative margin of error of 1.2 with 0.95 confidence.  See [here](https://hbiostat.org/rmsc) for details about these minimum sample size calculations.
+
+# Example of Candidate Predictor Specification
+
+The most comprehensive models have the following candidate predictors.
+Baseline value refers to the baseline value of the response variable,
+if one exists. 
+
+# Two Possible Ways for Specifying Predictors and d.f.
+
+Type is c for a categorical variable, n for a numeric
+continuous measurement, or g for a group of related variables. 
+
+|Predictor|Type|d.f.|
+|----|-|--|
+|baseline score|n|2|
+|disease category|c|3|
+|disease history|g|5|
+|age|n|2|
+|...|.|.|
+|*Overall*| |42|
+
+|Predictor Type |d.f.|
+|----|--|
+|**Continuous Numeric Predictors**| |
+|&emsp;baseline score|  2|
+|&emsp;age|  2|
+|**Categorical Predictors** (exclusive categories) | |
+|&emsp;disease category|  3|
+|**Non-exclusive Categorical Predictors** | |
+|&emsp;disease history|  5|
+|*Overall* |  10|
+
+For categorical predictors the number of degrees of freedom (d.f., the
+numerator degrees of freedom in ordinary regression) is one less the
+number of categories. For continuous ones, degrees of freedom beyond
+one indicate nonlinear terms. When d.f. is two, the restricted cubic
+regression spline fit we will use is similar to a quadratic function.
+
+A model with a complexity given by 42 d.f. can be reliably fitted
+when the effective sample size is at least 42 x 15 = 630 subjects. Note that we will minimize the use of stepwise variable selection techniques that attempt to reduce the _apparent_ d.f., as this would add instability making the _effective_ d.f. at least 42. We will also use a data reduction technique based on variable clustering to reduce the d.f. in some of the groups of related variables. @rms2 provides references for pitfalls of stepwise variable selection as well as for data reduction issues.
+
+Alternative text:Data reduction techniques such as principal components analysis will be used to reduce related groups of variables not of primary interest to a single summary score to insert in the outcome model. Alternatively, penalized maximum likelihood estimation [@rms2, Section 9.10] will be used to jointly model all predictors, with shrinkage (a kind of discounting) to eliminate overfitting. The amount of shrinkage to be used would be that yielding an effective d.f. of xx.
+
+# Interactions (Effect Modifiers)
+
+The starting point for multivariable modeling is an additive effects model.  A purely additive model, even one with allowance for flexible nonlinear relationships, will not fit adequately if interactive or synergistic effects exist.  We do not find that an empirical search for interactions is a reliable approach, because there are too many possible interactions (product terms) and frequently interactions found by intensive search techniques are spurious.  Instead interactions should be pre-specified based on subject matter knowledge, using general suggestions in [@rms2, section 2.7.2] which states that sensible interactions to entertain are
+
+* Treatment $\times$ severity of disease being treated
+* Age $\times$ risk factors
+* Age $\times$ type of disease
+* Measurement $\times$ state of a subject during measurement
+* Race $\times$ disease
+* Calendar time $\times$ treatment (learning curve)
+* Quality $\times$ quantity of a symptom
+
+# Model Fitting and Testing Effects
+
+Regression models will be fitted by least squares (for ordinary multiple regression) or maximum likelihood.  Instead of deleting cases having some of the predictor variables missing, baseline predictors will be multiply imputed using the flexible semiparametric `aregImpute` algorithm in Harrell's `Hmisc` package in R.  When assessing the partial association of a predictor of interest with the response variable, it is important that there be as little residual confounding as possible [@gre00whe].  This is accomplished by avoiding stepwise variable selection (keeping all pre-specified variables in the model, significant or not) and by not assuming that effects are linear.  For testing the partial effect of a predictor, adjusted for other independent variables, partial Wald tests will be used.  When the predictor requires multiple degrees of freedom, these tests are composite or "chunk" tests.  For pivotal or equivocal P-values, likelihood ratio tests will be used when maximum likelihood is used for fitting the model.
+
+# Model Validation
+
+It is common practice when performing internal validations of predictive models to use a split sample technique in which the original sample is split into training and test samples.  Although this provides an unbiased estimate of predictive accuracy of the model developed on the training sample, it has been shown to have a margin of error that is much larger than that obtained from resampling techniques.  The reasons are (1) the arbitrariness of the sample split and (2) both the training and test samples must be smaller than the original, whole, sample.  Pattern discovery, power, and precision of the effects of predictors are sacrificed by holding out data.  For these reasons, we will use the bootstrap to internally validate the model, repeating all steps used in model development for each resample of the data.  The bootstrap allows one to estimate the likely future performance of a predictive model without holding out data.  It can be used to penalize estimates of predictive discrimination and calibration accuracy obtained from the original model (fit from the whole sample) for overfitting.  Details of this approach are given in Harrell [@rms2, Chapter 5].
+
+# Optional: Assessing Biases Caused by Dropouts
+
+Some subjects may not return for their follow-up visit and hence may have missing values for their response variables.  Frequently such subjects  ("dropouts") are not a random sample of the entire cohort, and analysis of only the complete cases will bias the results.  Without intermediate clinic visits there are no good ways to adjust for such biases.  Indirect information about the nonrandom dropouts will be obtained by using binary logistic models to predict the probability of dropping out on the basis of all the baseline predictor variables.  When a baseline variable is a significant predictor of dropout, the distribution of that variable differs for completers and subjects who drop out.
+
+# Optional: Multiple Endpoints
+
+There are multiple clinical endpoints in this study. We wish to answer separate questions and will report all negative as well as positive results, so no multiplicity corrections will be made for the number of endpoints [@coo96mul].
+
+# Optional: Ordinal Response Models
+
+Ordinal logistic models such as the proportional odds (PO) model [@wal67] are the most popular models for analyzing responses when there is a natural ordering of the values of the response but an interval scale cannot be assumed.  The usual ordinal logistic models (PO and the continuation ratio model) estimates a single odds ratio for each predictor.  For the PO model, letting $Y$ denote the response variable, $j$ a level of $Y$, and $a$ and $b$ be two levels for a predictor, the PO model assumes that the odds that $Y>j$ given $X=b$ divided by the odds that $Y>j$ given $X=a$ (the $b:a$ odds ratio for $X$) depends on $a$ and $b$ but not on $j$.  This enables us to arrive at valid conclusions not affected by a choice of $j$ while doing away with the need to have a separate predictor coefficient for each $j$. The resulting odds ratio can be thought of as the impact of the predictor for moving $Y$ to higher levels.  Ordinal logistic models also work well for continuous $Y$, just using the ranks of the variable.  If $Y$ has m unique levels, the ordinal logistic model will have $m-1$ intercepts but $m$ may equal $n$ with nothing more than computer memory problems.  Thus the ordinal response model has a great robustness advantage for skewed outcome variables while preserving power.  Unlike ordinary regression and ANOVA, transforming $Y$ will not affect regression coefficients, nor will a high outlier, nor is an equal spacing assumption assumed about $Y$.  The ordinal logistic model also has great power gains over the binary logistic model.
+
+The Wilcoxon-Mann-Whitney two-sample rank test is a special case of the PO model, and like the PO model, the Wilcoxon test requires PO in order to be fully efficient.  Details are [here](https://fharrell.com/post/powilcoxon).  General resources for ordinal modeling are [here](https://fharrell.com/post/rpo).
+
+# External Validation Plan (for binary outcome)
+
+There are two important aspects of the proposed external validation, and two different statistical quantities to be validated for each of these.  First, we will be interested in comparing whether predictive performance measures estimated in the internal validations accurately forecast those measures for the external validation proposed here. Secondly, and more importantly, we will interpret and rely upon the external validation especially in judging generalizability of our predictive models.
+
+The primary methods to be used for external validation are as follows. First, we will estimate predictive discrimination using the c-index [@har82] and its rescaled version, Somers' $D_{xy}$ rank correlation between predicted risk and observed binary outcome.  Second, we will validate the absolute predictive accuracy of predicted risks from our previously developed prediction rules.  For this we will use Cleveland's loess nonparametric regression smoother [@cle79; @har96mul; @rms2] or a spline function to estimate the relationship between predicted risk and actual risk to obtain high-resolution calibration curves.  This is done by regressing predicted risk on observed binary outcomes, with no binning (categorization), so that all levels of predicted risk supported by the data can be validated ^[We typically plot the calibration curve from the 10th smallest predicted risk to the 10th largest in the data.].  For testing whether the resulting calibration curve is ideal (i.e., is the 45 degree line of identity) we will use the single d.f. Spiegelhalter $z$-test [@spi86]  and the two d.f. test that simultaneously tests whether a linear logistic calibration curve has intercept of zero and slope of unity [@cox58two; @har87usi; @mil91val].  Calibration accuracy will be summarized graphically by the estimated nonparametric calibration curve and by the mean absolute error and the 90th percentile of absolute calibration error. All of these quantities and tests are provided by the `val.prob` function in the R `rms` package [@rrms].
+
+Validation benefits from using the mapping of all the predictors down into one variable which is the predicted risk.  So the sample size is that needed to very accurately estimate the relationship between predicted risk and observed outcome.  Even though this relationship will be estimated by a smooth nonparametric calibration curve, for purposes of assessing the needed size of the validation sample we consider this process to be equivalent to estimating the risk in k distinct risk groups.  Within each risk group, consider the worst case where the true risk is 0.5.  To achieve a margin of error of $\pm 0.075$ in estimating the true risk with 0.95 confidence requires a sample size of $\frac{0.96}{0.075^{2}} = 171$.  To be able to have this margin of error in any chosen group would require 171 subjects in that group.
+
+
+# Checklist of Things Reviewers Might Criticize
+
+1. No plan for variable selection (need to explain why traditional variable selection is a bad idea)
+1. Too little detail about missing value imputation
+1. Important variables omitted from list of predictors
+1. Too many predictors that are unmodifiable and hence less clinically useful
+
+

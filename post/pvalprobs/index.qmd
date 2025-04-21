@@ -1,0 +1,226 @@
+---
+title: p-values and Type I Errors are Not the Probabilities We Need
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2017-01-14
+modified: 2019-08-04
+categories: [judgment, inference, likelihood, bayes, multiplicity, p-value, prior, hypothesis-testing, 2017]
+description: "p-values are not what decision makers need, nor are they what most decision makers think they are getting."
+---
+
+In trying to guard against false conclusions, researchers often attempt to minimize
+the risk of a "false positive" conclusion.  In the field of assessing
+the efficacy of medical and behavioral treatments for improving
+subjects' outcomes, falsely concluding that a treatment is effective
+when it is not is an important consideration.   Nowhere is this more
+important than in the drug and medical device regulatory environments,
+because a treatment thought not to work can be given a second chance as
+better data arrive, but a treatment judged to be effective may be
+approved for marketing, and if later data show that the treatment was
+actually not effective (or was only trivially effective) it is difficult
+to remove the treatment from the market if it is safe.  The probability
+of a treatment not being effective is the probability of "regulator's
+regret."  One must be very clear on what is conditioned upon (assumed)
+in computing this probability.  Does one condition on the true
+effectiveness or does one condition on the available data?  Type I error
+conditions on the treatment having no effect and does not entertain the
+possibility that the treatment actually worsens the patients' outcomes.
+ Can one quantify evidence for making a wrong decision if one assumes
+that all conclusions of non-zero effect are wrong up front because H<sub>0</sub>
+was assumed to be true?  Aren't useful error probabilities the ones that
+are not based on assumptions about what we are assessing but rather just
+on the data available to us? [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+Statisticians have convinced regulators that long-run operating
+characteristics of a testing procedure should rule the day, e.g., if we
+did 1000 clinical trials where efficacy was always zero, we want no more
+than 50 of these trials to be judged as "positive."  Never mind that
+this type I error operating characteristic does not refer to making a
+correct judgment for the clinical trial at hand.  Still, there is a
+belief that type I error is the probability of regulator's regret (a
+false positive), i.e., that the treatment is not effective when the data
+indicate it is.  In fact, clinical trialists have been sold a bill of
+goods by statisticians.  No probability derived from an assumption that
+the treatment has zero effect can provide evidence about that effect.
+ Nor does it measure the chance of the error actually in question.  All
+probabilities are conditional on *something*, and to be useful they must
+condition on the *right thing*.  This usually means that what is
+conditioned upon must be knowable.
+
+The probability of regulator's regret is the probability that a
+treatment doesn't work given the data. So the probability we really seek
+is the probability that the treatment has no effect *or that it has a
+backwards effect*.  This is precisely one minus the Bayesian posterior
+probability of efficacy.
+
+In reality, there is unlikely to exist a treatment that has exactly zero
+effect.  As [Tukey argued in
+1991](http://dx.doi.org/10.1037/0003-066x.49.12.997), the
+effects of treatments A and B are always different, to some decimal
+place.  So the null hypothesis is always false and the type I error
+could be said to be always zero.
+
+The best paper I've read about the many ways in which p-values are
+misinterpreted is [Statistical tests, P values, confidence intervals,
+and power: a guide to misinterpretations](http://dx.doi.org/10.1007/s10654-016-0149-3) written by a group of renowned statisticians.  One of my favorite quotes from
+this paper is
+
+::: {.quoteit}
+Thus to claim that the null P value is the probability that chance
+alone produced the observed association is completely backwards: The P
+value is a probability computed assuming chance was operating alone.
+The absurdity of the common backwards interpretation might be
+appreciated by pondering how the P value, which is a probability
+deduced from a set of assumptions (the statistical model), can
+possibly refer to the probability of those assumptions.
+
+:::
+
+In 2016 the American Statistical Association took
+a [stand](https://matloff.wordpress.com/2016/03/07/after-150-years-the-asa-says-no-to-p-values) against
+over-reliance on p-values. This would have made a massive impact on all
+branches of science had it been issued 50 years ago but better late than
+never.
+
+### Update 2017-01-19
+
+Though believed to be true by many non-statisticians, p-values are not
+the probability that H<sub>0</sub> is true, and to turn them into such
+probabilities requires Bayes' rule.  If you are going to use Bayes' rule
+you might as well formulate the problem as a full Bayesian model.  This
+has many benefits, not the least of them being that you can select an
+appropriate prior distribution and you will get exact inference.
+ Attempts by several authors to convert p-values to probabilities of
+interest (just as sensitivity and specificity are converted to
+probability of disease once one knows the prevalence of disease) have
+taken the prior to be discontinuous, putting a high probability on H<sub>0</sub>
+being exactly true.  In my view it is much more sensible to believe that
+there is no discontinuity in the prior at the point represented by H<sub>0</sub>,
+encapsulating prior knowledge instead by saying that values near H<sub>0</sub>
+are more likely if no relevant prior information is available.
+
+Returning to the non-relevance of type I error as discussed above, and
+ignoring for the moment that long-run operating characteristics do not
+directly assist us in making judgments about the current experiment,
+there is a subtle problem that leads researchers to believe that by
+controlling type I "error" they think they have quantified the
+probability of misleading evidence.  As discussed at length by my
+colleague [Jeffrey Blume](https://www.zotero.org/groups/2199991/feh/items/q/Blume), once an
+experiment is done the probability that positive evidence is misleading
+is **not** type I error.  And what exactly does "error" mean in "type I
+error?"  It is the probability of rejecting H<sub>0</sub> when H<sub>0</sub> is exactly
+true, just as the p-value is the probability of obtaining data more
+impressive than that observed given H<sub>0</sub> is true.  Are these really
+error probabilities?  Perhaps ... if you have been misled earlier into
+believing that we should base conclusions on how unlikely the observed
+data would have been observed under H<sub>0</sub>.  Part of the problem is in the
+loaded word "reject."  Rejecting H<sub>0</sub> by seeing data that are unlikely
+if H<sub>0</sub> is true is perhaps the real error.
+
+The "error quantification" truly needed is the probability that a
+treatment doesn't work given all the current evidence, which as stated
+above is simply one minus the Bayesian posterior probability of positive
+efficacy.
+
+
+### Update 2017-01-20
+
+Type I error control is an indirect way to being careful about claims of
+effects.  It should never have been the preferred method for achieving
+that goal.  Seen another way, we would choose type I error as the
+quantity to be controlled if we wanted to:
+
+-   require the experimenter to visualize an infinite number of
+    experiments that might have been run, and assume that the current
+    experiment could be exactly replicated
+-   be interested in long-run operating characteristics vs. judgments
+    needing to be made for the one experiment at hand
+-   be interested in the probability that other replications result in
+    data more extreme than mine if there is no treatment effect
+-   require early looks at the data to be discounted for future looks
+-   require past looks at the data to be discounted for earlier
+    inconsequential looks
+-   create other multiplicity considerations, all of them arising from
+    the chances you give data to be extreme as opposed to the chances
+    that you give effects to be positive
+-   data can be more extreme for a variety of reasons such as trying to
+    learn faster by looking more often or trying to learn more by
+    comparing more doses or more drugs
+
+The Bayesian approach focuses on the chances you give effects to be
+positive and does not have multiplicity issues (potential issues such as
+examining treatment effects in multiple subgroups are handled by the
+shrinkage that automatically results when you use the 'right' Bayesian
+hierarchical model).
+
+The p-value is the chance that someone else would observe data more
+extreme than mine if the effect is truly zero (if they could exactly
+replicate my experiment) and not the probability of no (or a negative)
+effect of treatment given my data.
+
+### Update 2017-05-10
+
+As discussed in Gamalo-Siebers at al DOI: 10.1002/pst.1807 the type I
+error is the probability of making an assertion of an effect when no
+such effect exists. It is **not** the probability of regret for a
+decision maker, e.g., it is not the probability of a drug regulator's
+regret. The probability of regret is the probability that the drug
+doesn't work or is harmful when the decision maker had decided it was
+helpful. It is the probability of harm or no benefit when an assertion
+of benefit is made. This is best thought of as the probability of harm
+or no benefit given the data which is one minus the probability of
+efficacy. Prob(assertion|no benefit) is not equal to
+1-Prob(benefit|data).
+
+### Update 2017-11-28
+
+Type I ("false positive") error probability would be a useful concept
+while a study is being designed.  Frequentists speak of type I error
+control, but after a study is completed, the only way to commit a type I
+error is to know with certainty that an effect is exactly zero.  But
+then the study would not have been necessary.  So type I error remains a
+long-run operating characteristic for a sequence of **hypothetical**
+studies.
+
+Thinking of p-values that a sequence of hypothetical studies might
+provide, when the type I error is α this means P(p-value &lt; α | zero
+effect) = α.   Neither a single p-value nor α is the probability of a
+decision error.   They are "what if" probabilities, **if** the effect is
+zero.  The p-value for a single study is merely the probability that
+data more extreme than ours would have been observed had the effect been
+exactly zero and the experiment was capable of being re-run infinitely
+often.  It is nothing more than this.  It is not a false positive
+probability for the experiment at hand.  To compute the false positive
+probability one would need a prior distribution for the effect (and for
+the p-value to be perfectly accurate which is rare), and one might as
+well be fully Bayesian and enjoy all the Bayesian benefits.
+
+### Discussion Archive (2017)
+
+**Frank Harrell**: You are correct; sorry for the omission of the condition that H0 is true. Thanks for the comments.
+
+**Henry**: When you write the following, "The p-value is the chance that someone else would observe data more extreme than mine (if they could exactly replicate my experiment) and not the probability of no (or a negative) effect of treatment given my data," I am guessing that you left out, "conditional that the null hypothesis is true." While a nitpick, I thought that this is an important and meaningful addendum as its absence changes the meaning to a non-stats reader.
+
+Great fan of your book and your posts on Stackexchange.
+
+**FH**: Thanks for the perceptive comments. I agree in spirit with all of them until you get into multiplicity where the fundamental problems with p-values just makes everything implode. But in general, and in line with your thoughts, I think that it's not the case that p-values are not related to evidence, it's just that they are not calibrated to provide the quantification of evidence we need. So I need to say these points more clearly, e.g., p-values are the correct functions of the data, and except for not being able to deal with prior knowledge, they are measures of evidence but are not calibrated to what is needed for direct action/decision making.
+
+**Michael Lew**: I like very much the update of January 20, but I think the last sentence misses the important nature of the P-value.
+
+The best way to ensure care is taken about claims of effects is to make sure that scientists think scientifically: carefully, critically, and consider more than just the statistical result of any particular experiment or study component.
+
+Bayesian approaches help, presumably, but my opinion is that scientists would be more directly helped in their thinking if the statistics of evidence were emphasised over the statistics of posterior probabilities or the statistics of errors.
+
+Fisher's P-values have an evidential meaning that has nothing to do with error probabilities. They may not be as rich a depiction of evidence as a likelihood function, but they communicate evidence nonetheless.
+
+**FH*: These are great points. And I should have said "stand" instead of "strong stand", or "expressed significant caution". I linked to another blog instead of the ASA because the other blog linked to ASA and had some other statements I liked. I would like to note that evidence against H0 is not the kind of evidence I seek in science. A recent paper I co-authored delves into the Fisher vs Neyman-Pearson approaches - see [this](https://jamanetwork.com/journals/jamacardiology/article-abstract/2566171). One reason there are the two schools of thought is that the entire NHST premise is flawed in my humble opinion.
+
+**Michael Lew**: While I emphatically agree with the title of this post, I think that you are not presenting a complete picture of the P-value. In particular, you are your summary of the ASA statement on p-values as a "strong stand against" is incorrect. (I was a participant in the discusssions and forum that led to the statement.) Further, you have linked a blog that seems to be that of an anti-p-value polemicist rather than the ASA statement itself. Perhaps that is a useful strategy to obtain support for a strong stand, but it is bad practice.
+
+No commentary on p-values can avoid further muddying the waters without addressing the necessary distinction between the evidential account of p-values as indices of strength of evidence against the null hypothesised values of the model parameter of interest (Fisherian significance testing) and the alternative long run error rate measure of the analytical method (Neyman-Pearsonian hypothesis testing). See [this](https://stats.stackexchange.com/questions/16218) and [this](https://stats.stackexchange.com/questions/112769).
+
+**FH**: IMHO the discussion is best conducted without reference to data, sample size, and shrinking confidence intervals. The "true unknown population value" of a parameter is not always easy to define but it is not difficult for me to believe that, for example, in a blood pressure study where one treatment arm involves giving patients weather forecasts there is a miniscule but nonzero effect on blood pressure. So H0 is formally not true in this setting. The effect parameter needs to be exactly equal to zero for H0 to pertain. This is not a sampling issue in my view.
+
+**Daniel Lakens**: There has been a lot of criticism on the simplistic arguments in Tukey and Cohen that the null is never true (and I believe general agreement they got it wrong). You either have to take the view that everything causally impacts everything to tiny degrees we can never measure, or you have to admit the null can be true. The latter is more scientific. I've explained this in a blog post: [The Null Is Always False (Except When It Is True)](http://daniellakens.blogspot.com/2014/06/the-null-is-always-false-except-when-it.html).

@@ -1,0 +1,428 @@
+---
+title: Against Inference
+subtitle: And In Favor of Playing the Odds
+draft: true
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2022-10-14
+categories: [2022,RCT,bayes,decision-making,diagnosis,dichotomization,drug-evaluation,evidence,forward-probability,hypothesis-testing,inductive-reasoning,judgment,medicine,posterior,prediction,p-value,reporting]
+description: "This article argues against inductive reasoning, inference,
+and conclusion-drawing, and in favor of calculating probabilities of
+assertions and not probabilities about data.  We need to get away from
+endless arguments about the foundations of statistical inference.  It
+is more useful to play the odds, preserving uncertainty along the way."
+bibliography: /Users/harrelfe/web/bib/harrelfe.bib
+---
+
+::: {.quoteit}
+[Statistical inference](https://en.wikipedia.org/wiki/Statistical_inference): the process of using data analysis to 
+deduce properties of an underlying probability distribution
+<br><br>
+[Statistical inference](https://www.britannica.com/science/inference-statistics): the process of drawing conclusions about a
+parameter one is seeking to measure or estimate
+<br><br>
+[Diagnosis](https://www.merriam-webster.com/dictionary/diagnosis):the art or act of identifying a disease from its signs and symptoms
+<br><br>
+Inference, especially when it focuses on hypothesis testing, attempts
+to make a binary conclusion even in the face of uncertainty, and too
+often sweeps the uncertainty under the rug once the conclusion is made.  Making inferences or conclusions of the form "the treatment improves patient outcomes" or "the treatment is ineffective" is not unlike making medical diagnoses before definitive information (e.g., results of a biopsy) is available.  As Vickers et al argue in _Against Diagnosis_, providing the probability of a diagnosis or clinical outcome (like probability of efficacy), and even better predicting disease severity, is more valuable than categorizing the patient.
+<br><br>
+Despite our provocative title, we are not against diagnosis.
+Diagnosis does and always will play a central role in clinical
+medicine.  Nonetheless, we argue that an approach based on risk
+prediction can be of greater value for many diseases of greatest
+concern ... such as cancer, cardiovascular disease, and diabetes.
+Classification of these more complex disorders exists on a continuum
+... it is surely time for us to move beyond the binary, diagnostic
+thinking that has dominated medicine for so long, and embrace a
+quantitative approach to patient management. — AJ Vickers, E Basch, MW
+Kattan: Against Diagnosis<br>Annals of Internal Medicine 2008;149:200-203. 
+<br><br>
+Which is better — to bring evidence against a null hypothesis of no
+treatment effect and be tempted to refer to the point effect estimate as
+if it is a point, or to make a statement such as "the new drug
+probably (0.93) results in a lower blood pressure than the old drug,
+and probably (0.78) results in a reduction of at least 5mmHg"?
+<br><br>
+We need to spend less time and effort making inferences and more time
+computing uncertainties (probabilities) about quantities of interest.
+
+:::
+
+## Overview
+
+There are various modes of statistical inference, including
+	
+* Neyman-Pearson hypothesis testing: set level of type I error α (probability of an assertion when there is no effect), reject H<sub>0</sub>:no effect if p < α, accept H<sub>0</sub> otherwise
+* The Fisher p-value approach: compute the probability of getting data even more extreme than that observed if there is no true effect; use this p-value to quantify evidence against H<sub>0</sub> on a continuous scale
+* Bayesian posterior inference, e.g. given a prior distribution and given the data, compute P(effect)
+* Bayes factors: the Bayesian version of hypothesis testing (which I don't favor)
+* Likelihood ratios from the likelihoodist school of inference[^1]
+
+[^1]: The likelihood school of inference, like Bayes, avoids sampling distributions (sample space), but unlike Bayes does not have a prior distribution.  Likelihood inference has many advantages, but two disadvantages: It doesn't extend well to multi-parameter situations (i.e., simultaneous inference about multiple outcome variables) and it does not allow incorporation of extra-study information as a Bayesian prior would encode.
+
+Approaches featuring p-values typically result in conclusions such as:
+
+* There is strong evidence against H<sub>0</sub> (p=0.01), i.e., the data are incompatible with a lack of treatment effect.
+* There is no strong evidence against H<sub>0</sub> (p=0.35), so at the current sample size we are unable to conclude that the treatment is effective.
+
+As [Tukey](http://hbiostat.org/papers/genStat/tuk60con.pdf) argued,
+what is most often needed is not inferences or conclusions, but
+decisions.  Or even more so, _actions_.  He thought that the simplest
+way to think of decisions is "act as if ... is true" without the need
+of actually _knowing_ if ... is true.  Now look at the
+two frequentist conclusions just above and compare them with "playing
+the Bayesian odds", which includes direct information about the limits
+of our knowledge about drug similarity (in this case, insufficient
+evidence for similarity):
+
+* Drug B probably (0.94) better than drug A
+* Drug B is probably (0.71) less effective than drug A
+* The relative benefit of drug B is uncertain (0.53) and the
+  likelihood that patient outcomes with drug B are within ±0.02 of
+  those on A is 0.3.
+  
+These are not inferences.  These are probability calculations.
+For the first case, acting as if drug A is better entails by definition a 0.06
+chance of being wrong.  The Bayesian posterior probability
+encapsulates its own error risk.  This risk is much more direct that
+the type I error,  which is the chance of making an assertion of
+efficacy when there is none.  Note that we may have just made such an
+assertion, so the pre-study chance of making such an assertion is now
+irrelevant anyway.
+
+## Medical Diagnosis and Inference
+
+Suppose that a medical diagnosis is truly all-or-nothing (which
+happens rarely) and suppose you don't know about the papers by
+[Guggenmoos and van
+Houwelingen](https://www.onlinelibrary.wiley.com/doi/abs/10.1002/1097-0258%2820000715%2919%3A13%3C1783%3A%3AAID-SIM497%3E3.0.CO%3B2-B)
+and [Dawid](https://www.jstor.org/stable/2529753).  You were probably
+taught probabilistic diagnosis through the use of sensitivity and
+specificity.  You learned to make a decision on the basis of a
+"positive" or "negative" test, and how to use Bayes' rule coupled with
+some abstract notion of disease prevalence to turn sensitivity and specificity
+into a disease probability for better decision making.  Then you
+learned that [sensitivity and specificity vary with patient characteristics](http://www.sciencedirect.com/science/article/pii/0002934384904376)
+but decided to ignore that.  Finally, you were bewildered to learn
+that sensitivity and specificity are distorted by workup/referral bias
+caused by not all types of patients getting the definitive test result, but no one bothered to tell you that when you run the
+complex adjustment for workup bias and use Bayes' rule, all the
+complexities drop out.  You could have ignored sensitivity and
+specificity and directly estimated the disease
+probability (using for example a binary logistic regression model),
+not label the test "positive" or "negative", be able to ignore workup
+bias, and engage in good
+decision making by playing the odds (and later be thrilled to
+find similarly that Bayesian posterior probabilities of efficacy inherit the
+same advantages by not needing to be modified for a clinical trial's
+stopping rule and making lots of looks at the data).
+
+Now consider that few diseases are truly binary, and neither are
+diagnostic tests.  Take type II diabetes mellitus for example.
+Why do we define diabetes by a cutpoint on HbA1c, and allow a patient who
+qualifies as diabetic for only a single 24 hour period to be labeled
+as diabetic in the health record?  Likewise, since statistics deals with
+decision making in the face of uncertainty, why do we not quantify
+uncertainty very well but seek "conclusions", i.e., inferences?  Why
+do so many researchers use a bright line for deeming a treatment
+comparison "statistically significant", then once the magic threshold
+is passed, pretend that the point estimate is the real efficacy?  Why
+is such a huge portion of statistics devoted to inference, large
+sample theory, and α-spending?  And while we're at it, why do so many
+statisticians misstate type I error as the probability of making a mistake in
+concluding that a drug works when it is nothing more than an indirect
+quantity---the probability of making an assertion of efficacy when
+there is zero efficacy and no harm?
+
+## Aside: The Dirty Secret of Frequentist Methodologic Research
+
+I can't help but bring up something I've been hesitating to
+mention, because it threatens full employment of statisticians and
+will undoubtedly madden many of my esteemed colleagues.  Before
+proceeding I would like you to know that statisticians who are purely
+frequentist bring great scientific rigor and great statistical
+practice to biomedical and all other branches of research.  The
+research is far better off with their involvement.  But I fear that
+they have to work too hard when it comes to developing the frequentist
+methods to support their statistical practice.
+
+Why do I believe this?  It's because frequentist inference is based on
+transposed conditionals, and compute probabilities of past states
+given unknowns must entail "what might have happened" in their
+calculations (the need to take workup bias into account for
+backwards-information-flow probabilities known as sensitivity and
+specificity is an example).  As opposed to a Bayesian probability of
+efficacy given their data, frequentist probabilities such as the
+probability of 
+getting data more extreme than that observed on new and as-yet-unseen
+data, if there is no treatment effect, i.e., p-values, are relied
+upon.  Calculation of p-values and type I errors must consider data
+that _may have arisen_, e.g., must penalize for an earlier data look
+that was inconsequential only because that look gave the statistician an
+_opportunity_ to reject H<sub>0</sub>.  These probabilities depend on
+the _sample space_.  When doing an adaptive clinical trial or even a
+simple group sequential trial, the sample space is so complicated that
+it is difficult do get proper type I errors or confidence intervals.
+For example, in a group sequential setting, the sampling distribution
+of the estimate for the difference in two treatments can easily be
+bimodal, and the confidence interval formula is incredibly
+complex (which is why publications almost never include the
+correct CIs in the sequential testing setting). There is no p-value
+available at all in group sequential settings;
+only a "stopping boundary" (critical values) that preserves overall
+type I error.
+
+When I look at any issue of a statistical journal that features a
+significant number of methodologic research articles, I see a ton of
+research that was required by the adoption of a frequentist attack
+that by necessity has do deal with sampling distributions of
+statistics, and the
+sample space.  Many solutions use large sample approximations of
+unknown accuracy for sample sizes seen in practice.  One example: the
+Welch two-sample t-test when you don't assume equal variances in the
+two treatment arms yields only an approximate p-value.  Another
+example: confidence intervals and p-values routinely used in binary
+logistic model analyses are often not accurate enough.  The huge
+amount of large sample theory appearing in statistics articles is
+unnecessary in the Bayes world.  There are
+plenty more examples, e.g., the "exact" binomial confidence interval
+for a proportion and Fisher's "exact" test for comparing two
+proportions are not very accurate.  Or this---use the central limit
+theorem to compute a 0.95 confidence interval for the mean of a
+log-normal(0,1) distribution when the sample size is 50,000.  The
+resulting confidence limits are very inaccurate.  Once one gets past simple
+situations into complex models with multiple endpoints, distribution
+contamination, model uncertainty, penalization/shrinkage, etc.,
+things just get more difficult in the frequentist domain, and more
+approximations are made.
+
+Contrast all that with Bayesian calculations, which are numerically
+very demanding but which rely on simple parameter space ideas.
+Evidence for treatment effects is measured through parameters, and the
+interpretation of these parameters is independent of the sample space,
+stopping rules, multiple data looks, etc.  Credible intervals and
+probabilities for
+effects in a complex adaptive clinical trial are trivial, requiring
+**no** modification of the credible interval or posterior probability
+that is used in a simple fixed two-arm experimental design.  Huge
+efforts are expended in arbitrary frequentist multiplicity adjustment procedures
+and α-spending schemes[^2].  And the
+Bayesian solution is exact, not depending on anything like normality
+assumptions.  Posterior probabilities are directly actionable.  In
+some cases, in all the fuss about the choice of the prior
+distribution, frequentists fail to notice that their p-values and
+confidence intervals are in error by more than the prior distribution
+would matter in a Bayesian analysis.
+
+[^2]: In frequentist statistics there are no guiding statistical principles for exactly how to formulate a multiplicity adjustment, which is why there are so many of them.  Multiplicity comes from the [chances you give data to be more extreme](/post/pval-litany) (the sample space), not from the chances you give parameters to be positive (the parameter space).
+
+It's not too much of a stretch to say that the majority of time spent
+in frequentist methods development is caused by the frequentist
+philosophy itself.  Bayesians spend more of their time in specifying
+realistic statistical models that solve the problem at hand, helping the
+investigator choose a prior, and in checking convergence of
+simulations.  Whole swaths of mathematical statistics could be avoided
+with direct Bayesian modeling because it does not need at all to deal
+with the sample space. One can also largely ignore sufficiency,
+ancillarity, large sample theory, ...[^3]
+
+[^3]: My mathematical statistics professors at UNC Chapel Hill who discouraged the use of Bayesian inference may have had a bit of job security considerations in the back of their minds, although it's likely that the lack of computational tools for actually doing Bayes at that time played a major role.
+
+After mastering study design optimization of patient measurements,
+we'd all be better off putting less time into inferential methods and more
+time into specification of realistic models and computing
+probabilities about parameters of interest.
+
+## Conclusions vs. Decision Making vs. Actions Based on Playing the Odds
+
+<p class="rquote">
+The decisions of practice are far more nearly of the form "let us
+decide to act for the present as if" than of the form long
+conventional in treatments of decision theory — "we accept".  The
+distinction is important and too often neglected.  The restrictions
+"act ... as if" and "for the present" convey two separate and important
+ideas, ideas which serve to distinguish conclusions from decisions
+...<br>The three alternative decisions:<br><br>(1) to act in the present
+situation as if A > B,<br>(2) to act in the present situation as if
+A = B,<br>(3) to act in the present situation as if A < B<br><br>seems
+to me reasonably stated, while the conventional statements of the
+alternatives:<br><br>(1') to accept A > B,<br>(2') to accept
+A = B,<br>(3') to accept A < B<br><br>seem to have been (unconsciously)
+well calculated to mislead the reader or student.<br>When we say "act
+as if A > B", we have made <em>no</em> judgment as to the "truth" or
+"certainty beyond a reasonable doubt" of the statement "A > B". — JW
+Tukey: Conclusions vs Decisions. <em>Technometrics</em> 2:423; 1960.
+</p>
+
+Now let's turn to the main purpose of this article.
+Do we need conclusions or do we need decision making in the face of
+uncertainty, done in such a way that the uncertainty is always carried
+forward?  I submit that we need the latter in our everyday research.
+Think about how the 
+majority of decisions are made in our lives.  A person
+considering dashing across a busy street makes an internal estimate of
+the probability of getting hit by a car, and combines that with an
+unspoken utility function that gives positive points for saving time
+and worse negative points for getting hit.  Someone deciding whether
+to grab an umbrella when leaving her home may have heard a 0.3 chance
+of rain in the forecast, and then applies her implicit utility function
+that gives positive points for avoiding having to carry something
+extra, and negative points for getting wet.  In these and many other
+situations the probability of a hidden truth is assessed in a forwards
+information flow, predictive fashion.  To turn this into an optimum
+decision requires specification of a utility/loss/cost function.  This
+function is the harder to specify quantity that likely varies even more across
+persons than does their personal prior probabilities. 
+
+As described in the Diagnosis chapter in
+[BBR](http://hbiostat.org/doc/bbr.pdf), the optimum Bayes decision that
+maximizes expected utility integrates the utility function over the
+posterior probability distribution for the quantity of interest (risk
+of rain; unknown treatment difference).  The decision that maximizes
+expected utility can be determined once the parameter's probability
+distribution and utility function are known.  The fact that for
+treatment comparisons there will likely be different utility functions
+for physician, individual patient, or public health perspectives makes
+the full formal decision process difficult.  That should not prevent
+us from being serious about a major component of the expected utility,
+namely posterior probability distribution for the unknown quantity of
+interest.
+
+One example of the usefulness of forward-mode Bayesian probabilities
+is that if one makes a certain decision, the posterior probability defines
+its own error measure.  If I decide the take an umbrella when
+the chance of rain is 0.3, by definition the probability I will be
+making a mistake is 0.7.  If I decide to act as if a drug is effective
+because the probability of efficacy is 0.93, the chance that I'm wrong
+is 0.07.
+
+Bayesian posterior probabilities are like risk estimates that we
+routinely make for having or developing disease, or having a clinical
+event in the future.  These are all forward-information-flow
+predictive-mode probabilities.  With Bayes, the probabilities can
+represent mechanistic probabilities, e.g., long-term relative
+frequencies.  But more often they represent a degree of belief or
+degree of veracity.  To be actionable they must represent some form of
+absolute probability/belief, and the only way to get an absolute is to
+have a starting point or anchor.  That is the pre-data prior
+distribution.  As Deborah Mayo has stated, <em>you must put beliefs in
+to get beliefs out</em>.
+
+Before we get too far, I have to recognize that I don't choose the
+Bayesian approach because it is perfect.  I choose it because it is
+flexible, has fewer problems than frequentist approaches, and because
+the output of a 
+Bayesian posterior analysis is directly actionable.  Contrast the 0.93
+probability of efficacy with "if we could repeat this study infinitely
+often we would find 
+results more extreme (in either direction, for some reason) than that
+observed in the study at hand 0.04 of the time if the treatment has
+zero effect and does not harm patients."  Bayesian posterior inference
+replaces a [host of problems](/post/pval-litany)
+(multiplicity, alpha spending, 1-tailed vs 2-tailed tests, sequential
+testing, drawing conclusions from multiple endpoints, how to use
+external information, how to trade off safety with efficacy, etc.)
+with [one big problem](/post/journey): the choice
+of prior distribution.  Choosing a prior distribution before the data
+are unveiled is a very useful exercise, and one that prevents final
+study results from being misinterpreted if the data model is correct.
+For example, with 
+frequentism a study reviewer who doesn't like the treatment may demand
+a multiplicity adjustment, whereas a reviewer secretly predisposed
+towards the new treatment may not demand one.  A major advantage of
+Bayes is that everything is out in the open.  The cost of achieving
+all the advantages with Bayes is the requirement of having a prior.
+Note that in many treatment comparisons (and in all of nutritional
+epidemiology), it is advisable to use a skeptical prior.
+
+Conclusion-seeking inference involves dichotomization and is
+like diagnosis.  Vickers, Basch, and Kattan in their
+blood pressue example in [Against Diagnosis](https://annals.org/aim/fullarticle/742079/against-diagnosis) argue
+that "the current definition of hypertension includes a systolic blood
+pressure of 140 mmHg or higher.  But of course, there is no particular
+biological relevance of 140 mm Hg, such that individuals with a blood
+pressure of 141 mmHg qualitatively differ from those with blood
+pressure of 139 mmHg."  It seems that physicians want to draw a
+conclusion, or at least to conveniently label the patient.  The fact
+that much of physicians' time goes to justify billing perhaps has much
+to do with this.  Like inferring a diagnosis (other than a few binary
+ones such as bacterial meningitis), drawing a statistical
+inference invites arbitrariness, dichotomous thinking, and results in
+decision makers forgetting how to carry all the uncertainties forward.
+
+Decision making under uncertainty involves making optimum use of past
+and current data in order to make an educated guess about either the
+currently unknown state of a system or about whether something will
+occur in the future.  The key to actionable information is
+conditioning on what is known in order to estimate or compute a
+probability for what is unknown.  This is in stark contrast to
+assuming no effect and compute a probability about the already-known
+data.  By computing uncertainties (posterior probabilities) we can
+make decisions about effects the same way we "play the odds" in so
+many life decisions.
+
+There is a great deal of confusion among subject matter researchers
+and statisticians about what comprises evidence for an effect.  This
+may be exemplified by a clinical trial in a rare disease for which it
+is very difficult to achieve sample sizes that give excellent
+frequentist or Bayesian power.  Suppose that 60 patients are
+randomized to two treatments, A and B.  Supposed that 20 of 30 died on
+A and 25 of 30 died on B.  The [two-tailed
+p-value](https://www.medcalc.org/calc/comparison_of_proportions.php)
+for this binomial problem is 0.14.  Suppose that for an agreed-upon
+slightly skeptical prior the posterior probability that mortality of A
+is better than B is 0.72.  A betting person would make money betting
+on A being better than B.  Playing the odds makes sense.  Which
+treatment would you want for your child?  Things get a little more
+complicated in a regulatory environment when a decision to license a
+drug is irrevocable.  One may want the posterior probability to be a
+bit higher when making an "all-time" decision.
+
+In a similar sense to how Vickers, Basch, and Kattan are [against
+diagnosis](https://annals.org/aim/fullarticle/742079/against-diagnosis),
+I am against inference.
+Just as medical diagnosis can benefit from assessing disease severity
+and computing probability of disease or probability that a patient
+has a disease of severity y or greater, Bayesian posterior
+probabilities work in a forward predictive mode to tell us the
+likelihood of a treatment effect in the right direction.
+The [Bayesian vs. Frequentist Statements About Treatment
+Efficacy](/post/bayes-freq-stmts) provides several examples.  One
+example involves systolic blood pressure (SBP).  HR denotes the hazard
+ratio for a major cardiovascular event.
+
+* Assuming prior distribution p1 for the mean difference in SBP, SBP
+  is probably (0.67) reduced with treatment B.  The probability that B
+  is inferior to A is 0.33.  The probability that A and B are similar
+  (have means to within 3mmHg) is 0.53, so the study is uninformative
+  about similarity.
+* Assume prior p1 for difference in SBP and prior p2 for the HR,
+  treatment B is probably (0.985) better than A for SBP and is
+  probably (0.79) lowers the clinical event hazard.  Treatment B
+  probably (0.77) improves both endpoints, and very probably (0.991)
+  improves at least one of the two endpoints.
+  
+Of course the Bayesian posterior approach has a major advantage in
+being able to present evidence for all possible effect levels.  As an
+example, the x-axis could have the unknown HR ranging from 0.25 to 1.0
+and the y-axis have the probability that the HR is smaller than the
+corresponding x-axis value.  An excellent example is Figure 3 of [Ryan
+et al](https://bmjopen.bmj.com/content/bmjopen/9/3/e024256.full.pdf).
+
+In the words of John Tukey with a Bayesian slant added, one summary
+statement for an A/B comparison might contain the following:
+
+* Treatment B is probably (0.93) superior to treatment A.  By
+  approving the use of treatment B we are acting _as if_ B is truly
+  superior.  The chance we are acting incorrectly is 0.07, and Prof X
+  who holds a more skeptical prior than ours puts a chance we are
+  acting incorrectly at 0.1.
+
+## Further Reading
+
+## Discussion
+Add your comments, suggestions, and criticisms on [datamethods.org](test.com).
+

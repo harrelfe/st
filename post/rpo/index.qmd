@@ -1,0 +1,296 @@
+---
+title: Resources for Ordinal Regression Models
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics<br>Expert Biostatistics Advisor<br>Center for Drug Evaluation and Research<br>FDA
+date: 2023-05-01
+date-modified: last-modified
+categories: [2022, 2023, 2024, endpoints, ordinal, regression]
+description: "This article provides resources to assist researchers in understanding and using ordinal regression models, and provides arguments for their wider use."
+---
+
+```{r include=FALSE}
+source('~/rr/rmarkdown/qbookfun.r')
+```
+
+`r disccom('rms-ordinal-logistic-regression')`
+
+# Background
+
+Consider an ordinal outcome variable $Y$ and note that an interval-scaled $Y$ is also ordinal.  Such response variables can be analyzed with nonparametric tests and correlation coefficients and with semiparametric ordinal models.  Most semiparametric models in use involve modeling cumulative probabilities of $Y$.  Resources here deal primarily with the cumulative probability family of semiparametric models^[One exception is the continuation ratio ordinal logistic model that is covered in Chapters 13 and 14 of [Regression Modeling Strategies](https://hbiostat.org/rms).  That model is a discrete hazard-based proportional hazards model and applies primarily to a discrete dependent variable Y.]. [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+Semiparametric models are regression models having an intercept for each distinct value of $Y$, less one.  They have the following properties:
+
+* By encoding the entire empirical cumulative distribution of $Y$ in the intercepts, the model assumes nothing about the shape of the $Y$ distribution for any given covariate setting.  The distribution can be continuous, discontinuous, have arbitrary 'clumping at zero', or be bimodal.  For example, an ordinal model with a single binary covariate representing females (reference category) and males has intercepts that pertain to females and are easily translated by themselves into a cumulative probability distribution of $Y$ for males.
+* Because of the previous point, semiparametric models allow one to estimate effect ratios, exceedance probabilities $\Pr(Y\geq y|X)$, differences in exceedance probabilities (e.g., absolute risk reduction due to treatment as a function of $X$), quantiles of $Y|X$, and if $Y$ is interval-scaled, the mean of $Y|X$.
+* Semiparametric models do assume that there is a systematic shift in the $Y$ distribution as one moves from one covariate setting to another.  In the single binary covariate female-male example, the regression coefficient for being male completely defines how the distribution of $Y$ for females is shifted to get the distribution for males.
+   + Cox proportional hazards (PH) model: the shift in the survival distribution (one minus the cumulative distribution $P_1$ of $Y$ for females) is exponentiated by a hazard ratio $r$ (anti-log of the regression coefficient) to obtain one minus the cumulative distribution $P_2$ for males, i.e, $1 - P_{2} = (1 - P_{1})^{r}$.  The two distributions are assumed to be parallel on the log-log scale.
+    + Proportional odds (PO) ordinal logistic regression model: the cumulative distribution for females is shifted by an odds ratio $r$ (anti-log of the sex regression coefficient) to get the cumulative distribution $P_2$ for males in this way: $\frac{P_{2}}{1-P_{2}} = r \times \frac{P_{1}}{1-P_{1}}$.  The two distributions are assumed to be parallel on the logit (logs odds; $\log(\frac{P}{1 - P})$) scale.
+    + The PO assumption can be relaxed by using a [partial PO model](https://www.jstor.org/stable/2347760) to allow a different odds ratio for a subrange of $Y$ levels, and other complexities.  See Section 5 of [this](https://hbiostat.org/proj/covid19/statdesign#sec-outcome-classes) and also [this](https://hbiostat.org/bayes/bet/design#sec-design-popower) and [this](/post/yborrow).
+* Contrast semiparametric model assumptions with those of a parametric model.  For the Gaussian linear model, parallelism of the normal inverse of two cumulative distribution functions corresponds to an equal variance assumption, and the curves need to be straight (i.e., a Gaussian distribution holds), not just parallel.  In addition, one must be confident that $Y$ has been properly transformed, an irrelevant requirement for semiparametric models.
+* Regression coefficients and intercepts do not change if $Y$ is transformed.  Neither do predicted cumulative probabilities or quantiles (e.g. the first quartile of transformed $Y$ is the transformation of the first quartile of untransformed $Y$).  Only predicted means are not preserved under $Y$ transformation.
+* Since only the rank order of $Y$ is used, the models are robust to outliers in $Y$ (but not in $X$).
+* The models work equally well for discrete as for continuous $Y$.  One can have more parameters in the model than the number of observations due to the large number of intercepts when $Y$ is continuous and has few ties.  Since these intercepts are forced to be in order (in the cumulative probability model family we are dealing with), the effective number of parameters estimated is much smaller.  Note that the only efficient full likelihood software implementation at present (besides SAS JMP) for continuous $Y$ in large datasets is the `orm` function in the R `rms` package, which can efficiently handle more than 6000 intercepts (one less than the number of distinct $Y$ values).
+* Ordinal models allow one to analyze a continuous response variable that is [overridden by clinical events](/post/pop).  For example, in analyzing renal function measured by serum creatinine one could override the creatinine measurement with any arbitrary number higher than the highest observed creatinine when a patient requires dialysis.  This clumping at the rightmost value of the distribution presents no problems to an ordinal model. 
+* When one uses ordinary regression to analyze a response that is ordinal but not interval scaled, [bad things happen](https://discourse.datamethods.org/t/preprint-analysis-of-likert-type-data-using-metric-methods).
+
+The most popular semiparametric models are the Cox PH model and the PO ordinal logistic model.  Cox developed a partial likelihood method so that the intercepts could be estimated separately and only the regression coefficients need to be optimized.  Other semiparametric models use a full likelihood approach that estimates intercepts simultaneously with regression coefficients.
+
+# Particular Models
+
+Some special cases of semiparametric models are as follows.
+
+* The log-rank test is a special case of the Cox PH model, and so it must assume proportional hazards.
+* The Wilcoxon-Mann-Whitney two-sample rank-sum test and the Kruskal-Wallis test are special cases of the proportional odds model^[Multiple explanations for the Wilcoxon test assuming proportional odds are given [here](https://fharrell.com/post/powilcoxon)].
+
+In randomized clinical trials, researchers often seek to avoid making a PO assumption by dichotomizing ordinal $Y$.  The costs of this simplification are having to count events of vastly different severities as if they were the same (e.g., hospitalization same as death) and greatly reduced power/increased sample size to achieve the same power as a PO analysis.  In general, designers do not weigh costs of oversimplification but only see costs of model assumptions.  Dichotomization of $Y$ involves a severe _data assumption_.  One of the blog articles discusses the ramifications of the PO assumption in detail.
+
+## Example Model
+
+Consider a discrete case with response variable $Y=0,1,2,3$ representing pain levels of none, mild, moderate, severe.  Let the covariates $X$ represent an indicator variable for sex (0=female, 1=male) and treatment (0=control, 1=active).  A PO model for $Y$ could be
+
+$$\Pr(Y \geq y | X) = \mathrm{expit}(\alpha_{y} + \beta_{1}[\mathrm{male}] + \beta_{2}[\mathrm{active}])$$
+
+where $$\mathrm{expit}(z) = \frac{1}{1 + \exp(-z)}, \alpha_{1}=1, \alpha_{2}=0, \alpha_{3}=-1, \beta_{1}=-0.5, \beta_{2}=-0.4$$  The male:female OR for $Y\geq y$ for any $y$ is $\exp(-0.5) = 0.61$ and the active:control OR is $\exp(-0.4) = 0.67$.
+
+Consider probabilities of outcomes for a male on active treatment.  The $\beta$ part of the model is -0.9.  The probabilities of outcomes of level $y$ or worse are as follows:
+
+| $y$ | Meaning | log odds($Y\geq y$) | $\Pr(Y\geq y)$ |
+|-|-|-|-|
+| 1   | any pain           |  0.1    | 0.52 |
+| 2   | moderate or severe | -0.9    | 0.29 |
+| 3   | severe             | -1.9    | 0.13 |
+
+: {tbl-colwidths="[3,15,10,10]"}
+
+The probability that the pain level will be moderate is 0.29 - 0.13 = 0.16.  The probability of being pain free is 1 - 0.52 = 0.48.
+
+A model for continuous $Y$ would look the same, just have many more $\alpha$s.
+
+# Tutorials and Course Material
+
+For a gentle introduction see Section 7.6 in Biostatistics for Biomedical Research, below.
+
+**Regression Modeling Strategies [Text](https://hbiostat.org/rms) and its Online [Course Notes](https://hbiostat.org/rmsc)**
+
+* [Chapter 13](http://hbiostat.org/rmsc/ordinal.html): Ordinal logistic regression
+* Chapter 14: Detailed case study for a discrete ordinal $Y$
+* [Chapter 15](http://hbiostat.org/rmsc/cony.html): Ordinal regression for continuous $Y$ with detailed case study
+
+**[Biostatistics in Biomedical Research](https://hbiostat.org/bbr)**
+
+| **Topic** | **Section** |
+|:-|:-|
+| [Ordinal variables](http://hbiostat.org/bbr/descript.html#ordinal-variables) | 4.1.2 |
+| [Ordinal outcomes in clinical trials](http://hbiostat.org/bbr/overview.html#sec-overview-ychoice) and [here](http://hbiostat.org/bbr/htest.html#sec-htest-mult) | 3.6 and 5.12.5 |
+| [Checking assumption of the Wilcoxon test](http://hbiostat.org/bbr/nonpar.html#checking-assumptions-of-the-Wilcoxon-test) | 7.7 |
+| [Proportional odds model](http://hbiostat.org/bbr/nonpar.html#generalization-of-the-wilcoxonkruskal-wallis-test)             | 7.6 |
+| [Power calculations tailored to Wilcoxon/PO](http://hbiostat.org/bbr/nonpar.html#tailoring-power-calculations-to-the-wilcoxon-test) | 7.8.3 and [here](https://fharrell.com/post/pop) |
+| [Bayesian PO model](http://hbiostat.org/bbr/nonpar.html#bayesian-proportional-odds-model)                                   | 6.10.3 |
+
+
+: {tbl-colwidths="[20,10]"}
+
+
+# Arguments In Favor of Wider Use of the PO Model
+
+For reasons that can only be explained by unfamiliarity, many reviewers question the reliance on ordinal model assumptions even when they do not insist on verification of equal variance, normality, or proportional hazards assumptions in other settings.  Some arguments to assist in interactions with such reviewers are the following.
+
+* All statistical methods have assumptions
+   + $t$-test: normality, equal variance; QQ plots: two parallel **straight lines** of normal inverse cumulative distributions
+   + PO model: two parallel **any shape** curves of logit of cumulative distributions
+   + Assumptions of PO model far less stringent than the $t$-test (PO uses only rank ordering of $Y$)
+* Assumptions
+   + The PO assumption is a **model assumption** that may or may not hold
+   + Splitting an ordinal outcome at a cutpoint is a **data assumption** that is **known** not to hold
+      - assuming e.g. hospitalization is the same as death
+   + Interest is often in whether patients improve, i.e., whether there is a shift in their outcome distribution from being on different treatments.  Interest is often not confined to whether a single threshold was achieved.
+   + Just as with the proportional hazards assumption, PO analysis can provide meaningful summary ORs even when PO as violated, unless the violation is in the form of a major reversal in the direction of the treatment effect for certain cutoffs (where the sample sizes support cutoff-specific estimation)   
+* Examining treatment effects over all cutoffs of the outcome for examining the PO assumption is not reliable (wide confidence intervals for ORs)
+   - Designing a study to be able to test/estimate a specific cutoff's OR requires much larger sample size than using the whole ordinal spectrum
+* PO = Wilcoxon test when there is no covariate adjustment $\rightarrow$ **The PO model is an extension of the Wilcoxon test handling covariates** 
+   + Wilcoxon test is an accepted way to assess whether one treatment has higher patient responses than other, when the response is continuous or ordinal
+   + Scaling the Wilcoxon statistic to [0,1] yields a concordance probability $c$ (which is the Mann-Whitney $U$ statistic)
+      - Probability that a randomly chosen patient on treatment B has a higher $Y$ value than a randomly chosen patient on treatment A
+   + Over a wide variety of simulated clinical trials the $R^2$ between the PO model log OR and logit($c$) is 0.996
+   + Mean absolute error in computing the Wilcoxon statistic (scaled to [0,1]) from the OR is 0.008
+   + Simple conversion formula $c = \frac{\mathrm{OR}^{0.65}}{1 + \mathrm{OR}^{0.65}}$
+   + The numerator of the score $\chi^2$ statistic from the PO model is identical to the Wilcoxon statistic
+   + For detailed simulations with all R code provided see <https://fharrell.com/post/powilcoxon>
+* Interpretation of PO model results
+   + Treatment OR is interpreted just as OR from a binary outcome, just need to pool outcomes
+   + E.g. OR for $Y\geq 3$ vs. $Y<3$ in place of OR for $Y=1$ vs. $Y=0$
+   + Side-by-side stacked bar charts
+      - proportion of patients at each level of $Y$ for each treatment
+      - same but from the model for a specific covariate setting
+
+# Testing the PO Assumption
+
+[Peterson and Harrell (1990) _Applied Stat_ **39**:205-217](https://www.jstor.org/stable/2347760) showed that the score test for proportional hazards is anti-conservative, i.e., can have highly inflated $\alpha$ from $p$-values being far too small^[This was pointed out to the author of SAS PROC LOGISTIC in 1990, and the author elected to ignore this finding in implementing the very problematic score test in the procedure.].  As Peterson and Harrell state on p. 215:
+
+> The simulations reveal that both tests often give blatantly erroneous results when the cross-tabulation table for the response variable by an explanatory variable contains empty cells at an inner value of $Y$, i.e., $1 < Y < k$.  Less blatant, but still suspicious, results are occasionally obtained if the table suffers from a general sparseness of cell sizes.  The score test also suffers if the number of observations at one of the levels of $Y$ is small relative to the total sample size.
+
+Peterson and Harrell did not study operating characteristics of the likelihood ratio (LR) $\chi^2$ test for proportional odds, but in general LR tests have better performance than Wald and score tests^[See [this paper](https://conservancy.umn.edu/bitstream/handle/11299/166205/ThomasA_TheProportionalOddsModel.pdf?sequence=1) by Andrew Thomas who studied the likelihood ratio test for PO.].  See [this](https://fharrell.com/post/impactpo), which emphasizes the importance of assessing the (minimal) impact of the PO assumption rather than testing it, for details
+
+# Relaxing the PO Assumption
+
+[Peterson and Harrell (1990)](https://www.jstor.org/stable/2347760) developed the partial PO model to relax the PO (equal slopes / parallelism) assumption for one or more predictors.  See **Software** below for implementations, and see the blog article on borrowing information across outcome levels.
+
+# Blog Articles on [Statistical Thinking](https://fharrell.com)
+<a class="anchor" id="articles"></a>
+
+* [Borrowing information across outcomes](https://www.fharrell.com/post/yborrow)
+* [Violation of proportional odds is not fatal](https://www.fharrell.com/post/po)
+   +  $U$ statistics, concordance probabilities and rank correlations, simple simulations to relate $c$ to OR
+* [If you like the Wilcoxon test you must like the proportional odds model](https://www.fharrell.com/post/wpo)
+   + Details how to convert between $c$ and the original Wilcoxon statistic, discrete and continuous data examples
+* [Equivalence of Wilcoxon statistic and proportional odds model](https://www.fharrell.com/post/powilcoxon)
+   + Detailed simulations with better approximation
+   + Derivation of Wilcoxon from the PO assumption
+   + Quantify the amount of non-PO and show how it relates weakly to approximation error
+* [Assessing the proportional odds assumption and its impact](https://www.fharrell.com/post/impactpo)
+   + Detailed road map including ordinal vs. binary analyses using cutoffs
+   + Volatility and inefficiency from using different cutoffs
+   + Testing PO vs. assessing impact of **not** assuming PO
+   + Goodness of fit tests vs. estimation accuracy
+   + Using the bootstrap to get CL for absolute different in probability estimates between PO and a relaxed model
+   + PO results are meaningful even if PO is violated
+      - Extreme non-PO in covariate effects does not harm the treatment assessment
+* [Information gain from using ordinal instead of binary outcomes](https://fharrell.com/post/ordinal-info.html)
+* [Proportional odds model power calculations for ordinal and mixed ordinal/continuous outcomes
+](https://fharrell.com/post/pop)
+* Using the partial PO model to [borrow information across outcomes](https://www.fharrell.com/post/yborrow)
+* [Ordinal models for paired data](https://www.fharrell.com/post/pair)
+
+
+* [PDF versions of some of the articles](https://hbiostat.org/ordinal)
+
+# The Big Picture
+
+* Parametric models for continuous $Y$ assume that the proper transformation of $Y$ is known; the PO semiparametric model is unaffected by (monotonic) transformations of $Y$ except when the mean $Y$ is estimated
+* Ordinal models assume nothing about spacing between $Y$ levels
+* Semiparametric models are robust, powerful, and varied
+   + Cox PH model, logistic forms (PO, continuation ratio, etc.), other forms (probit, etc.)
+   + Handle discrete ordinal and continuous $Y$
+   + Handle clinical event overrides
+   + Besides Cox PH, the Walker & Duncan 1967 PO model is the most popular
+      - also called cumulative logit
+      - better: a cumulative probability model
+* Ordinal models work great for continuous $Y$
+* Ordinal models work great with extreme clumping of $Y$ values
+* The models give rise to a variety of estimands
+   + Cell probability $\Pr(Y=j | X)$
+   + Exceedance probability $\Pr(Y \geq j | X)$
+   + $E(Y|X)$ if $Y$ is equal-spaced
+   + Quantiles of $Y$ if $Y$ is continuous
+* The Wilcoxon test is derived under the PO assumption and assumes PO under the alternative hypothesis
+* The Wilcoxon test is a special case of the PO model
+* Both Wilcoxon and PO model preserve $\alpha$ perfectly
+   + Under H$_0$ PO is satisfied by definition because treatment is ignorable
+   + PO model handles ties better
+* Under non-PO for covariates, the PO model under-adjusts for baseline outcome heterogeneity
+* Under non-PO for treatment Wilcoxon & PO model loses some of its power
+* Wilcoxon and PO are numerically equivalent even under extreme non-PO
+* Linearly translate Wilcoxon statistic to concordance probability $c$
+   + $c = \frac{\text{OR}^{0.65}}{1 + \text{OR}^{0.65}}$ with $\overline{|\text{error}|} = 0.004$
+   + Wilcoxon statistic is at its null ($c = \frac{1}{2}$) if and only if the MLE of the OR is 1.0
+* Under strong non-PO the PO model will give inaccurate cell or exceedance probabilities for at least one level of Y
+* Under strong non-PO the PO model still gives the right answer for which treatment is better
+   + With regard to stochastic ordering
+   + $\Pr(Y_{B} > Y_{A})$ for two randomly chosen participants, one on treatment A one on B
+* Assessing impact of assumptions is more valuable than testing assumptions
+* The PO model is readily extended to allow for non-PO
+   + With regard to all variables: polytomous (multinomial) logistic model
+   + Selective relaxation of PO: partial PO model (Peterson & Harrell 1990), constrained PPO model
+   + $\rightarrow$ more accurate cell and exceedance probabilities
+   + With the PPO model once can formally test whether treatment has a difference effect on a fatal outcome vs. a nonfatal outcome
+* The PO and PPO models are readily generalizable to longitudinal using a Markov process, random effects, or GEE (GEE assumes MCAR)
+
+# Other Issues
+
+* A fundamental efficacy question: Does the worst thing that happens to a patient tend to be better for treatment B than treatment A?
+* Separate the validity of the study primary endpoint from the statistical model
+   + Outcome must be clinically/patient relevant and should be high-resolution
+   + Most important assumption of ordinal analysis: clinical consensus about which level of a continuous or ordinal outcome is worse than which level
+* Separate the underlying statistical estimand (e.g., OR) from the clinical readout
+   + Think stacked bar chart, one color per $y$
+   + $\Pr(Y = y | \text{Tx}, X)$
+   + $\Pr(Y \geq y | \text{Tx}, X)$
+   + $\Pr(Y \geq y | \text{Tx=B}, X) - \Pr(Y \geq y | \text{Tx=A}, X)$
+   + When no baseline variables interact with Tx, $P$-values and posterior probabilities of benefit are identical for every covariate setting
+   + Can also [show](http://hbiostat.org/bbr/nonpar.html#fig-nonpar-powerwmean) how OR relates to difference or ratio of means
+* Model assumptions have little to do with $\alpha$ and a lot to do with $\beta$
+   + CLT helps protect $\alpha$ and does not protect $\beta$
+   + $\rightarrow$ $t$-test [is not robust](http://hbiostat.org/bbr/nonpar.html#when-to-use-non-parametric-methods) with regard to efficiency
+   + [Example](http://hbiostat.org/bbr/htest.html#central-limit-theorem): CLT does not work with $n=50,000$ for a log-normal distribution
+   + Power is related to the degree to which PO is met
+* What happens when PO is violated with respect to Tx?
+   + Power will not be optimal
+   + PO model still gets stochastic ordering correct
+   + Estimated outcome probabilities may not be accurate for specific outcome levels
+* What if mortality is of interest but deaths are too infrequent (or the disease is rare)?  Must assume one of:
+   + Wilcoxon (concordance probability; PO OR) still allows one to choose the better treatment
+   + Tx effect on mortality is similar to effect on other parts of the outcome
+   + Sponsor and regulator can agree on the prior distribution for how different the mortality effect is from the nonfatal outcome effect, i.e., the amount of borrowing between outcomes to be allowed
+   + **Note**: current practice punts the ball down the field ...
+* How does one communicate results when there are multiple endpoint components?
+   + Start with ORs
+   + There are possibly $k-1$ ORs for $k$ levels of $Y$
+   + All ORs are the same if PO is assumed
+   + In a Bayesian unconstrained partial PO model there are $k-1$ distinct ORs
+   + Report all and include e.g. $\Pr(\text{mortality benefit})$ and $\Pr(\text{benefit on nonfatal endpoints})$
+   + Mortality is not an intercurrent event or a competing risk; it is part of the primary endpoint and is penalized for $\rightarrow$ interpretations are unconditional and simple
+* What about methods such as Benkeser and Díaz et al that estimate average ORs with apparently fewer assumptions?
+   + Detailed rebuttal [here](https://www.fharrell.com/post/ipp)
+   + The PO model already provides an optimum weighted average OR and already agrees with Wilcoxon
+
+# Other Resources
+
+* R `rmsb` package [Bayesian proportional odds model with random effects](https://hbiostat.org/R/rmsb) and implementing the partial proportional odds model to allow pre-specified departures from the proportional odds assumption
+* [Bayesian sample size and power for ordinal outcomes](https://hbiostat.org/bayes/bet/design#sec-design-popower)
+* Nathan James' `R` package for the [Bayesian proportional odds model](https://github.com/ntjames/bayesCPM/tree/master/pkg)
+* [Stan code](ordered_logit.stan) from Ben Goodrich (Columbia University) for the PO model and [Ben's notes](goodrich.txt)
+* [Inner workings of Stan ordinal models](https://hbiostat.org/R/rmsb/notes.html) and [Github](https://github.com/harrelfe/stan/blob/master/notes.md)
+* [Simulating ordinal outcome data](https://www.rdatagen.net/post/generating-probabilities-for-ordinal-categorical-data) by Keith Goldfeld
+* [Risk prediction models for discrete ordinal outcomes: Calibration and the impact of the proportional odds assumption](https://onlinelibrary.wiley.com/doi/10.1002/sim.9281) by M Edlinger, M van Smeeden, H Alber, M Wanitschek, B Van Calster
+
+# Longitudinal Ordinal Models
+* [Resources home page](https://hbiostat.org/proj/covid19)
+* [References](https://hbiostat.org/bib) related to ordinal longitudinal and Markov models
+* [Papers](http://hbiostat.org/papers/serialData/ordinal) about statistical modeling of longitudinal ordinal responses
+
+# Clinical Trial Design Resources
+* [Power and sample size calculation](https://hbiostat.org/bbr), Section 7.8
+* [Bayesian power and sample size calculations for ordinal outcomes](https://hbiostat.org/bayes/bet/design#sec-design-popower)
+* [Paper](https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/2786012) exemplifying game playing in choice of RCT endpoint and how things go seriously wrong with time to symptom resolution as an endpoint (authors had to ignore emergency department visits)
+* [Formulating outcomes in clinical trials](https://hbiostat.org/proj/covid19/statdesign.html#outcomes)
+* [Sample size calculation with Stata for ordinal outcomes with allowance for non-PO](https://journals.sagepub.com/doi/full/10.1177/1536867X231161934) by IR White et al.
+
+# Contrasting Proportional Odds Model Analysis with Dichotomized Outcome Analysis
+
+* [PO Model vs. Binary Logistic Model Map](https://atlas.mindmup.com/vbiostat/po)
+* [Power, precision, and arbitrariness problems](https://fharrell.com/post/impactpo) from **not** using an ordinal model
+
+# Software
+**R**
+
+* [`rms` package](http://hbiostat.org/R/rms)
+   + [`lrm` function](https://www.rdocumentation.org/packages/rms/versions/6.2-0/topics/lrm) for discrete Y or continuous Y having not more than a couple of hundred distinct levels, only implements the logit link
+   + [`orm` function](https://www.rdocumentation.org/packages/rms/versions/6.2-0/topics/orm) is intended for continuous Y and efficiently handles up to several thousand distinct values; multiple link functions are handled
+* [`VGAM` package](https://www.stat.auckland.ac.nz/~yee/VGAM) for discrete Y implements a huge number of link functions and allows for general relaxation of proportional odds and related assumptions, allowing one to fit the partial proportional odds model
+* [`rmsb` package](http://hbiostat.org/R/rmsb)
+   + [`blrm` function](https://search.r-project.org/CRAN/refmans/rmsb/html/blrm.html) implements Bayesian proportional odds, partial PO, and constrained partial PO models with optional random intercepts for Y with up to perhaps 200 distinct values (execution time is linear in the number of distinct Y)
+* `Hmisc` package [`popower` and `posamsize`](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/popower) functions for power and sample size calculations for unadjusted PO comparisons and the Wilcoxon test
+
+**Other**
+
+All major statistical software packages have a proportional odds model.  The partial PO model is probably only implemented in R, and only `SAS JMP` has an efficient implementation like `rms::orm` for continuous Y.
+
+# General References
+
+* [hbiostat.org/bib/ordinal.html](https://hbiostat.org/bib/ordinal.html) which includes tutorials such as the one by Susan Scott _et al_.
+
+-----
+
+First version published 2022-05-05

@@ -1,0 +1,56 @@
+---
+title: Fundamental Principles of Statistics
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2017-01-18
+date-modified: 2023-10-16
+categories: [design, measurement, principles, 2017, 2023]
+description: "This brief note catalogs what I feel are some of the most important principles to guide statistical practice."
+---
+
+There are many principles involved in the theory and practice of statistics, but
+here are the ones that guide my practice the most.  [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+1.  Use methods grounded in theory or extensive simulation
+2.  Understand uncertainty, and realize that the most honest approach to inference is a Bayesian model that takes into account what you don't know (e.g., Are variances equal?  Is the distribution normal? Should an interaction term be in the model?)
+3.  Design experiments to maximize information
+4.  Understand the measurements you are analyzing and don't hesitate to question how the underlying information was captured
+5.  Be more interested in [questions than in null hypotheses](https://academic.oup.com/clinchem/article/56/7/1080/5622360), and be more
+    interested in estimation than in answering narrow questions
+6.  Verify that the sample size will support the intended analyses, or pre-specify a simpler analysis for which the sample size is adequate; live within the confines of the information content of the data
+7.  Rather than making dichotomous decisions about inclusion of variables or complexities (nonlinearities, interactions, unequal variances, etc.) in the model, which results in uncertainty intervals that are too narrow, put parameters in the model for aspects you don't know.  Bayesian models that put priors on complexities provide continuous solutions that automatically relax assumptions as the sample size grows.  The resulting uncertainty intervals will not be falsely confident since model uncertainty is taken into account.
+8.  Use all information in data during analysis
+9.  Use discovery and estimation procedures not likely to claim that
+    noise is signal
+10.  Strive for optimal quantification of evidence about effects
+11.  Give decision makers the inputs (*other* than the utility function) that optimize decisions
+12. Present information in ways that are intuitive, maximize information content, and are correctly perceived
+13. Give the client what she needs, not what she wants
+14. Teach the client to want what she needs
+
+-----
+
+::: {.quoteit}
+
+... the statistician must be instinctively and primarily a logician and a scientist in the broader sense, and only secondarily a user of the specialized statistical techniques.
+<br><br>
+In considering the refinements and modifications of the scientific method which particularly apply to the work of the statistician, the first point to be emphasized is that the statistician is always dealing with probabilities and degrees of uncertainty.  He is, in effect, a Sherlock Holmes of figures, who must work mainly, or wholly, from circumstantial evidence.
+<br><br>
+Malcolm C Rorty: Statistics and the Scientific Method<br>JASA 26:1-10,
+1931
+<br><br>
+The statistical method is more than an array of techniques. The statistical method is a mode of thought; it is sharpened thinking; it is power.
+<br><br>
+William Edwards Deming, International Statistical Institute Meeting, Sept 1953
+<br><br>
+Science is not about falsifying hypotheses. Science is about determining what component of a set of observations are reproducible, and then trying to determine the mechanism or rule to explain those observations... again, reasoning from data, not by starting with an axiom.
+<br><br>
+[David J Glass](https://twitter.com/davidjglassMD/status/1186074984701145088)
+
+:::
+
+-----
+
+See [this post](../improve-research) for related thoughts.

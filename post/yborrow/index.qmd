@@ -1,0 +1,334 @@
+---
+title: "Borrowing Information Across Outcomes"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2024-04-30
+date-modified: last-modified
+categories: [bayes, design, RCT, accuracy-score, inference, ordinal, 2024]
+description: "In randomized clinical trials, power can be greatly increased and sample size reduced by using an ordinal outcome instead of a binary one.  The proportional odds model is the most popular model for analyzing ordinal outcomes, and it borrows treatment effect information across outcome levels to obtain a single overall treatment effect as an odds ratio. When deaths can occur, it is logical to have death as one of the ordinal categories.  Consumers of the results frequently seek evidence of a mortality reduction even though they were not willing to fund a study large enough to be able to detect this with decent power.  The same goes when assessing whether there is an increase in mortality, indicating a severe safety problem for the new treatment.  The partial proportional odds model provides a continuous bridge between standalone evidence for a mortality effect and obtaining evidence using statistically richer information on the combination of nonfatal and fatal endpoints.  A simulation demonstrates the relationship between the amount of borrowing of treatment effect across outcome levels and the Bayesian power for finding evidence for a mortality reduction."
+---
+
+## Background
+
+As explained [here](/post/ordinal-info), the power for a group comparison can be greatly increased over that provided by a binary endpoint, with greater increase when an ordinal endpoint has several well-populated categories or has a great many categories, in which it becomes a standard continuous variable.  When a randomized clinical trial (RCT) is undertaken and deaths can occur, there are disadvantages to
+
+* excluding the death and analyzing responses only on survivors
+* using death as a competing risk, which makes for hard-to-interpret results and doesn't penalize efficacy for death
+* using a complex estimand that involves counterfactuals or other complexities
+
+By making death the worst level of an ordinal response $Y$, nothing is swept under the rug, and a treatment having more deaths is penalized for that.  Evidence for treatment effectiveness may be driven by the nonfatal outcomes.  Suppose for example that $Y$ is renal function at 6 weeks, measured by serum creatinine, with death coded as a value higher than the highest observed creatinine (it doesn't matter how high for ordinal analyses).  Evidence for treatment effectiveness in improving $Y$ may be stated as "the treatment improved renal function accounting for death".
+
+Often sponsors want evidence for a specific effect on mortality, even though they are unwilling to budget for a study large enough to provide evidence for a mortality benefit on its own.  In that case, the only way to have Bayesian or frequentist power to detect a mortality improvement is to assume that some of the treatment benefit on nonfatal outcome components spills over to mortality.  The partial proportional odds (PO) semiparametric ordinal logistic regression model by [Peterson & Harrell, 1990](https://www.jstor.org/stable/2347760) when coupled with a [Bayesian implementation of the model](https://hbiostat.org/r/rmsb) provides a very formal way to borrow treatment effect information across levels of Y.
+
+Suppose that for simplicity we ignore power-enhancing baseline covariates, and have an outcome variable $Y=0, 1, \ldots, k$ where $Y=k$ represents death.  The PO model can be written as
+
+$$\Pr(Y \geq y) = \mathrm{expit}(\alpha_{y} + X\beta)$$
+
+where $y > 0$, $\mathrm{expit}(x) = \frac{1}{1 + \exp(-x)}$ (inverse logit), $\alpha_y$ is the intercept corresponding to a $Y$ cutoff of $y$ ($y = 1, \ldots, k$), $X=1$ for treatment B and $X=0$ for treatment A, and $\beta$ is the B:A log odds ratio.  Hence $\exp(\beta)$ is the B:A odds ratio (OR).  Under the PO assumption the $k$ possible B:A ORs for $Y \geq y$ are the same for all $y$.  For example the treatment effect on death is $\exp(\beta)$, just like the treatment effect on the last three $Y$ categories combined, for example $Y \geq 3$ if $k=5$.
+
+Peterson and Harrell proposed the _partial PO model_ and the _constrained partial PO model_.  Using the latter we allow for a special effect of treatment only on Y=$k$ and assume a constant OR for all other $Y$-cutoffs, for example.  This constrained partial PO model is
+
+$$\Pr(Y \geq y) = \mathrm{expit}(\alpha_{y} + X\beta + X[Y=k]\tau)$$
+
+where $[Y=k]$ is an indicator variable that is $1$ if $Y=k$, $0$ otherwise.  $\tau$ represents a "special effect of treatment B" for $Y=k$.  So the B:A odds ratio for $Y=k$ is $\exp(\beta + \tau)$.
+
+If the model is fitted using a frequentist maximum likelihood approach, or using a Bayesian procedure that puts a non-informative prior on $\tau$, the precision of $\beta + \tau$ (or its anti-log, the OR for mortality) will come from the effective sample size for a pure death outcome.
+
+## Example Partial Proportional Odds Analysis
+
+Suppose that we have a parallel-group two-treatment randomized trial, and are in the bizarre situation where there are no patient risk factors, i.e., patient outcomes are homogeneous within treatment so that no covariates are needed.  The treatment is designed to keep hospitalized patients from requiring mechanical ventilation, and hopefully also to lower in-hospital mortality.  Suppose the outcomes are $Y=0, 1, 2$ for alive and not on ventilator, alive and on ventilator, or dead, respectively.  Suppose the following outcome frequencies and summary statistics arise.
+
+```{r}
+require(Hmisc)
+require(rmsb)
+require(data.table)
+require(ggplot2)
+options(prType='html',
+        datatable.print.topn=50, datatable.print.class=FALSE,
+        mc.cores=4, rmsb.backend='cmdstan')
+cmdstanr::set_cmdstan_path(cmdstan.loc)    # cmdstan.loc is in ~/.Rprofile
+k <- rbind(A = c(300, 70, 30),
+           B = c(335, 40, 25))
+colnames(k) <- c('0', '1', '2')
+p  <- k / 400
+cs <- function(x) rev(cumsum(rev(x)))
+cp <- rbind(A=cs(p[1,]), B=cs(p[2,]))
+or <- function(p) {
+  ob <- p[2] / (1 - p[2])
+  oa <- p[1] / (1 - p[1])
+  ob / oa
+}
+OR <- c(or(cp[, 2]), or(cp[, 3]))
+names(OR) <- c('Y>=1', 'Y=2')
+
+rOR <- OR[2] / OR[1]
+
+printL(Frequencies=k, Proportions=p, 'Cumulative Proportions'=cp,  # printL in Hmisc
+       'B:A Odds Ratios'=OR, 'Y=2 : Y>=1 Ratio of Odds Ratios'=rOR, dec=4)
+```
+
+Create a one row per patient dataset and fit a Bayesian constrained partial PO model using the `rmsb` package `blrm` function.  Start by using noninformative priors for the overall B:A treatment effect $\beta$ and the extra treatment effect on death, $\tau$.
+
+```{r}
+# Create one row per patient
+w <- expand.grid(tx=c('A', 'B'), y=0:2)
+setDT(w)
+d <- w[, .(y=rep(y, k[tx, as.character(y)])), by=.(tx, y)]
+# Define the form of non-PO: special effect for death
+g <- function(y) 1 * (y == 2)
+# Second formula given to blrm specifies predictors allowed
+# to operate in non-PO
+set.seed(11)
+f <- blrm(y ~ tx, ~ tx, cppo=g, data=d)
+f
+```
+
+From the output there is a very low probability that $\beta > 0$, i.e., a very high probability that $\beta < 0$, i.e., that treatment B is beneficial.
+
+Compute posterior mode odds ratios from this fit and compare to the observed ORs.
+
+```{r}
+h <- function(f) {
+  k <- coef(f, stat='mode')
+  beta <- k['tx=B']
+  tau  <- k['tx=B x f(y)']
+  or <- c(exp(beta), exp(beta + tau), exp(tau))
+  names(or) = c('B:A overall', 'B:A Y=2', 'Y=2:Y>=1')
+  printL('Posterior mode odds ratios'=or)
+}
+h(f)
+```
+
+The Bayesian estimates are virtually the same as the empirical estimates.
+
+Now add informative priors.  For the overall treatment effect $\beta$ the prior is chosen so that there is only a 0.025 chance of the OR exceeding 4 and a 0.025 chance of being below $\frac{1}{4}$.  For the departure from PO, $\tau$ represents the log of the ratio of the OR for death to the OR for the general effect of treatment denoted by $\log(r)$.  The prior of $\tau$ is chosen so that there is a 0.9 chance that $r$ is in the interval $[\frac{1}{2}, 2]$.  So we are assuming it is unlikely that the treatment effect on death differs from the general effect by more than a factor of 2 in either direction.
+
+For the `blrm` function priors are stated in terms of contrasts so that convenient user data units can be used.
+
+```{r}
+. <- list    # convenient abbreviation
+# Contrast for beta
+sigma    <- log(4) / qnorm(0.975)
+pcon     <- .(sd=sigma, c1=.(tx='B'), c2=.(tx='A'),
+              contrast=expression(c1 - c2))
+npcon    <- pcon
+npcon$sd <- log(2) / 1.644854
+
+f <- blrm(y ~ tx, ~ tx, cppo=g, data=d,
+          pcontrast=pcon, npcontrast=npcon)
+f
+h(f)
+```
+
+The parameters are attenuated by the skeptical priors.
+
+Compute the probability of an overall effect, a treatment effect on mortality, and the probability that the the differential treatment effect on mortality vs. overall is by more than a factor of 1.2.
+
+```{r}
+# The rmsb function PostF makes it easy to compute posterior probs.
+# of any assertions (by computing proportion of posterior draws 
+# meeting the conditions)
+P <- PostF(f, pr=TRUE)
+printL('Pr(beta < 0)'       = P(b1 < 0),
+       'Pr(beta + tau < 0)' = P(b1 + b2 < 0),
+       'Pr(ratio of ORS > fold change of 1.2)' = P(abs(b2) > log(1.2)), dec=4)
+```
+
+We see strong evidence for an overall treatment benefit, moderate evidence for a mortality reduction, and little evidence for a strong non-PO effect, i.e., ratio of ORs $> 1.2$ or $< \frac{1}{1.2}$.  In other words, there is not much evidence for an inconsistent treatment effect.  To be fair, there is not much evidence for a consistent treatment effect either, using a cutoff for $r$ of 1.2 or its reciprocal.
+
+
+## Six-level Outcome Example and Frequentist Power
+
+Suppose that in the control group we expect the following proportions of levels of $Y$.
+
+```{r}
+p <- c(.2, .32, .2, .105, .1, 0.075)
+names(p) <- paste0('Y=', 0:5)
+p
+```
+
+So the probability of death in treatment A is 0.075.  Say we want to detect a common OR of 0.65 with 0.9 power at $\alpha=0.05$ with equal sample sizes in the two groups.  The needed sample size for the full ordinal outcome is computed below using the R `Hmisc` package `posamsize` function. [This function needs the average probabilities over the two treatments so we have move the probabilities by the square root of the odds ratio to get the averages and still set up for the target OR in the B:A comparison.  The `pomodm` function in `Hmisc` does the needed OR shifting of probabilities.]{.aside}  For us to have any hope of detecting a mortality difference, set the binary outcome power to 0.5. 
+
+```{r}
+or   <- 0.65
+pmid <- pomodm(p=p, odds.ratio=sqrt(or))
+pB   <- pomodm(p=p, odds.ratio=or)
+round(rbind(A=p, B=pB, Average=pmid), 3)
+nord <- round(posamsize(p=pmid, odds.ratio=or, power=0.9)$n)
+printL('Sample size needed for ordinal Y' = nord)
+pdeath1 <- p[length(p)]
+pdeath2 <- plogis(qlogis(pdeath1) + log(or))
+printL('Probabilities of death for the two treatments' = c(pdeath1, pdeath2), dec=4)
+nbin <- round(sum(bsamsize(pdeath1, pdeath2, power=0.5)))
+printL('Sample size needed for binary Y' = nbin)
+n <- max(nord, nbin)
+# Check OR for mortality
+printL('OR for mortality:' = (0.05/0.95)/(0.075/0.925), dec=3)
+```
+
+Select as the study sample size the minimum of the sample sizes needed for the ordinal comparison (at 0.9 power) and for the binary comparison (at 0.5 power).  The total sample size needed is $n$=`r n`.
+
+As a check, compute the power for the standalone mortality comparison using the PO/Wilcoxon test formula.
+
+```{r}
+printL('Binomial test power' = bpower(0.075, odds.ratio=or, n=n), dec=3)
+pmA   <- c(1 - p[6], p[6])
+pmMid <- c(1 - pmid[6], pmid[6])
+printL('Ordinal test power for binary Y' = popower(p=pmMid, odds.ratio=or, n=n))
+```
+
+## More About Bayesian Borrowing
+
+The assumption we'll make is that there is some similarity of treatment effect on $Y=1, \ldots, 4$ as there is on $Y=5$ (death).  Similarity will be expressed as how likely it is for the effect on $Y=5$ to be very different than the effect on $Y=1, \ldots, 4$.  The similarity of treatment effects is captured by the ratio of two odds ratios---the B:A OR for $Y=5$ and the B:A OR for $Y\geq y$ where $0 < y < 5$ : $\frac{\exp(\beta + \tau)}{\exp(\beta)} = \exp(\tau)$.  Let's put a prior on $\tau$, the log ratio of ORs, such that it is equally likely that the ratio falls is below 1 as it is above 1.  Use a Gaussian (normal) prior distribution for the log ratio, $\tau$, with mean zero to accomplish this.  Then select the standard deviation of the normal distribution to control the amount of borrowing of treatment effect information across $Y$ levels.
+
+Let $r$ be the ratio of ORs as before.  Skepticism against $r$ being far from 1.0 (closeness to 1.0 indicating a belief that the mortality effect is similar to the other effects) can be specified in many ways.  One way is by selecting an interval $[a, b]$ for which one believes there is a chance of 0.9 of $r$ being in that interval.  Let's make the tail areas equal so that $\Pr(r < a) = \Pr(r > b) = 0.05$.  If $a = \frac{1}{b}$ then $\log(a) = -\log(b)$ and if $\log(r)$ has a normal distribution with mean $\mu$ and standard deviation $\sigma$ then $\mu=0$ in this symmetric case.  In general $\mu = \frac{\log(b) + \log(a)}{2}$ and $\sigma=\frac{\log(b) - \log(a)}{2q}$ where $q = \Phi^{-1}(0.95) = 1.645$, the 0.95 quantile of the standard normal distribution.
+
+For a variety of $a, b$ here are the corresponding prior distribution mean and standard deviations.  All but the last has $a = \frac{1}{b}$ and so has a mean of zero.  The last one, $[1, 7]$, gives only a 0.05 chance for the treatment effect on mortality to be better (smaller OR) than the effect on the other outcome levels. 
+
+```{r}
+bv <- c(1.1, 1.25, 1.5, 1.75, 2:7, 7)
+av <- c(1 / bv[1 : 10], 1)
+w  <- data.table(a=av, b=bv, mu=(log(bv) + log(av)) / 2,
+                 sigma=(log(bv) - log(av)) / (2 * 1.644854))
+g <- function(x) ifelse(x >= 1,  x, paste0('1/', 1/x))
+u <- w[, .(Interval=paste0('[', g(a), ', ', b, ']'),
+           mu=round(mu, 3), sigma)]
+print(u, digits=3)
+```
+
+Here are the prior distributions for $\log(r)$ for the above $[a, b]$.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 4.5
+x <- seq(-3.5, 3.5, length=300)
+f <- function(mu, sigma) list(x=x, y=dnorm(x, mu, sigma))
+w <- u[, f(mu, sigma), by=.(mu, sigma, Interval)]
+br  <- sort(log(c(1/c(1,2,3,4,6,9), 2:9)))
+br2 <- sort(log(c(1/(1:10), 2:10)))
+ggplot(w, aes(x, y, col=Interval)) + geom_line() +
+  scale_x_continuous(breaks=br, labels=g(exp(br)),
+                     minor_breaks = br2) +
+  xlab('Ratio of ORs') + ylab('') 
+```
+
+
+## Bayesian Power Simulation
+
+Bayesian power is taken to mean the probability that the posterior probability of a benefit on mortality exceeds 0.95.
+For a total $n$=`r n` use the `blrm` function to fit the constrained partial PO model with a variety 0.9 intervals for $r$.  The intervals are symmetric in $\log(r)$.  By simulating 1000 upper $r$ 0.9 interval values we don't need to replicate any one of them in the simulations as we can just interpolate/smooth over the iterations to estimate Bayesian power as a function of the 0.9 interval chosen.
+
+The constraint for partial PO will be such that it applies to death ($Y=5$).  The prior for the main treatment effect $\beta$ will be left as non-informative, and the prior for the mortality-differential treatment effect $\tau$ is specified through a non-PO contrast (argument `npcontrast` to `blrm`).
+
+In this simulation, the data generating mechanism is such that the treatment effect is constant (OR=0.65) across all levels of outcomes.  The analysis of a mortality-specific effect does not have access to this information.
+
+```{r sim}
+w <- data.table(b = seq(1.01, 4, length=1000))   # using intervals [1/b, b]
+w[, sigma := log(b) / 1.644854]
+
+# Function to simulate one sample and compute the posterior probability
+# of treatment benefit on mortality
+sim1 <- function(n, pcontrol, or=0.65, sigma) {
+  # n: number of pts in each group
+  # pcontrol: vector of outcome probabilities for control group
+  # or: odds ratio to detect
+  
+  i <<- i + 1
+  cat(i, '\n', file='/tmp/z')
+
+  # Compute outcome probabilities for new treatment
+  ptr <- pomodm(p=pcontrol, odds.ratio=or)
+  k <- length(pcontrol) - 1
+  tx <- c(rep(0, n), rep(1, n))
+  y  <- c(sample(0 : k, n, replace=TRUE, prob=pcontrol),
+          sample(0 : k, n, replace=TRUE, prob=ptr) )
+
+  # Set prior on the "treatment by Y interaction" contrast
+  npcon    <- list(sd=sigma, c1=list(tx=1), c2=list(tx=0),
+                   contrast=expression(c1 - c2))
+  f <- blrm(y ~ tx, 
+            y ~ tx, cppo=function(y) y == 5,
+            npcontrast=npcon,
+            loo=FALSE, method='sampling', iter=1000)
+  beta <- f$draws[, 'tx']
+  tau  <- f$draws[, 'tx x f(y)']
+  list(p1=mean(beta < 0), p2=mean(beta + tau < 0), p3=mean(abs(tau) > 0.2))
+}
+
+g <- function() {
+  set.seed(7)
+  R <- copy(w)
+  R[, sim1(round(n / 2), p, sigma=sigma), by=.(sigma, b)]
+}
+
+i <- 0
+R <- runifChanged(g, w, n, file='sim.rds')
+```
+
+Look at the distribution of the three posterior probabilities.
+
+```{r}
+u <- meltData(p1 + p2 + p3 ~ b, tall='left', data=R)
+lb <- c(p1='beta < 0', p2='beta + tau < 0', p3='abs(tau) > 0.2')
+u[, variable := lb[variable]]
+cnt <- c(1:5, 10, 25, 50)
+ggplot(u, aes(x=b, y=value)) +
+  stat_binhex(aes(fill=cut2(after_stat(count), cnt)), bins=75) +
+  facet_wrap(~ variable, nrow=3, label='label_parsed') +
+  guides(fill=guide_legend(title='Frequency')) +
+  xlab('0.9 Interval Upper Limit b') +
+  ylab('Posterior Probability')
+```
+
+Show Bayesian power vs. $b$, which summarizes the amount of endpoint borrowing.  Powers of three assessments are shown:
+
+* treatment effect on ordinal outcome: $\beta < 0$ (top curves)
+* treatment effect on mortality: $\beta + \tau < 0$ (middle curves)
+* strength of non-PO: $|\tau| > 0.2$ (bottom curves)
+
+Use binary logistic regression and overlapping moving window proportions to interpolate/smooth the results.
+
+```{r}
+v <- u[, hit := 1 * (value > 0.95), by=.(variable, b)]
+m <- movStats(hit ~  b + variable,
+              eps=100, lrm=TRUE, lrm_args=list(maxit=30, tol=1e-13),
+              nignore=0, data=v, melt=TRUE)
+ggplot(m,
+       aes(x=b, y=hit, col=variable, linetype=Type)) + geom_line() +
+  geom_hline(yintercept=0.8, alpha=0.3) +
+  scale_x_continuous(breaks=seq(1, 7, by=1),
+                     minor_breaks=seq(1, 7, by=.25)) +
+  scale_y_continuous(breaks=seq(0, 1, by=0.1),
+                     minor_breaks=seq(0, 1, by=0.05)) +
+  scale_colour_discrete(labels = scales::parse_format()) +
+  guides(color=guide_legend(title='')) +
+  ylab('Bayesian Power')
+# Find b such that power is 0.8
+b8 <- m[variable=='beta + tau < 0' & Type=='LR',
+        approx(hit, b, xout=0.8)$y]
+b8 <- round(c(1 / b8, b8), 3)
+printL('0.9 Interval for r yielding 0.8 power for mortality assessment' = b8)
+```
+
+The posterior probability that $|\tau| > 0.2$ hovered around zero, which is good since data were generated assuming PO.  Bayesian power for the overall treatment effect is nearly 1.0.  The minimum value of $b$ required to achieve 0.8 Bayesian power is `r b8[2]`.
+
+::: {.callout-note collapse="true"}
+## A Note About Time To Event
+
+Our example considers death as a binary event.  Analyzing it instead as time-to-event in its own model will allow for variable follow-up time and will increase power if deaths are common.  If the incidence of death is low as in our simulation design, little power is gained from utilizing event times.
+
+A [Markov longitudinal ordinal model](https://hbiostat.org/rmsc/markov) can jointly analyze ordinal responses as well as time to event while allowing for variable follow-up.
+
+:::
+
+## Summary
+
+The partial proportional odds model provides a formal way to quantify evidence for a treatment effect on a given interval of an ordinal outcome.  When one of the outcomes is very important but relatively rare, it is difficult to size studies to have power to show a treatment effect on that outcome without borrowing some information from the treatment effect on the outcomes that have a higher effective sample size.  The question is how much borrowing is clinically acceptable.  The above simulation example shows how much borrowing is required for power for a treatment comparison on the highest outcome level to be adequate.  Researchers can run similar simulations for their situations, and judge whether the amount of borrowing needed for adequate Bayesian power is justifiable.  In the simulation, the required amount of borrowing to achieve at least 0.8 Bayesian power for mortality assessment involves assuming that the differential treatment effect on mortality (ratio of two odds ratios) is in the interval $[`r b8[1]`,`r b8[2]`]$ with 0.9 probability, or is in a narrower interval.
+
+A separate simulation was done using $\frac{1}{2}$ the sample size.  The amount of borrowing needed to achieve 0.8 Bayesian power for a mortality assessment was $b=1.3$.  A good rule of thumb may be to expect to need a power of a standalone mortality assessment to be at least 0.5 for the Bayesian power to be sufficient with a reasonable amount of borrowing. 
+
+When a study doesn't have a good chance of demonstrating a mortality difference with little or no borrowing of information across levels of $Y$, it may be important to clinically pre-specify the prior for the inconsistency of mortality and non-fatal effects before the study, and to stick with that for computing the posterior probability of a mortality benefit.
+
+It is important to note that because the PO model [is always consistent](https://fharrell.com/post/powilcoxon) with a Wilcoxon test in terms of the direction of a treatment effect (and whether the effect is zero), the more powerful PO model that does not include the partial PO parameter for a special effect of treatment on mortality will have strong ability to discern which treatment is better overall, penalizing for death, if there is clinical consensus on the outcome rankings.  This is despite the problem caused by strong violation of PO for the treatment variable: the PO model may give the wrong assessment of the isolated effect of treatment on mortality.

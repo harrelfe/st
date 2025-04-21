@@ -1,0 +1,207 @@
+---
+title: R Workflow
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2022-06-25
+categories: [2022, data-science, graphics, r, reproducible]
+description: "An overview of R Workflow, which covers how to use R effectively all the way from importing data to analysis, and making use of `Quarto` for reproducible reporting."
+---
+
+
+# Overview
+
+This article is an overview of the [R Workflow electronic book](https://hbiostat.org/rflow), which also contains an R primer and many examples with code, output, and graphics, with many of the graphs interactive.  Here I  outline analysis project workflow that I've found to be efficient in making reproducible research reports using R with `Rmarkdown` and now `Quarto`.  I start by covering importing data, creating annotated analysis files, examining extent and patterns of missing data, and running descriptive statistics on them with goals of understanding the data and their quality and completeness.  Functions in the `Hmisc` package are used to annotate data frames and data tables with labels and units of measurement, show metadata/data dictionaries, and to produce tabular and graphical statistical summaries.  Efficient and clear methods of recoding variables are given.  Several examples of processing and manipulating data using the `data.table` package are given, including some non-trivial longitudinal data computations.  General principles of data analysis are briefly surveyed and some flexible bivariate and 3-variable analysis methods are presented with emphasis on staying close to the data while avoiding highly problematic categorization of continuous independent variables.  Examples of diagramming the flow of exclusion of observations from analysis, caching results, parallel processing, and simulation are presented in the e-book.  In the process several useful report writing methods are exemplified, including program-controlled creation of multiple report tabs.   [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+A video covering many parts of the first 13 chapters of `R Workflow` may be found [here](https://youtu.be/ULWClhwrN2U).
+
+`R Workflow` is reviewed by Joseph Rickert [here](https://rviews.rstudio.com/2022/06/17/frank-s-workflow).  See [this article](https://github.com/matloff/TidyverseSkeptic) by Norm Matloff for many useful ideas about learning R.
+
+
+# Computing Tools
+
+Key tools for doing modern, high-quality, reproducible analysis are [R](https://www.r-project.org) for data import, processing, analysis, tables, and graphics, and [`Quarto`](https://quarto.org) for producing high-quality static and interactive reports.  Users of [`R Markdown`](https://rmarkdown.rstudio.com) will find it easy to make small changes in syntax to convert to `Quarto`.  Both `Quarto` and `R Markdown` rely on the R [`knitr`](https://cran.r-project.org/web/packages/knitr) package to process a blend of sentences and code to insert the tabular and graphical output of the code into the report.
+
+# The Research Process
+
+An oversimplified summary of the research process is shown in the following diagram.
+
+```{mermaid}
+%%| fig-height: 14
+flowchart TD
+St[Research question] --> M[Determine what<br>to measure<br>based on<br>subject matter<br>knowledge]
+M --> Design[Design]
+Design --> Exp[Experimental]
+Design --> Obs[Observational]
+EM[Seek high-resolution<br>high-precison response variables]
+BV[Measure key influencers<br>of responses]
+Exp --> EM --> BV --> Rsim[R simulations to<br>optimize design<br>estimate sample size<br>study performance of<br>analysis methods] --> Ran[Randomization] --> RR[Extra demand<br>for reproducibility]
+Obs --> Comp[Between-Group Comparison]
+Obs --> OO[Longitudinal and Other] --> OM[Careful model<br>choices as with<br>comparative studies]
+Comp --> Und[Understand factors used<br>in group assignment<br>decisions]
+Rat[See which data are<br>available only after<br>detailing which<br>measurements are needed<br><br>Don't rationalize<br>adequacy of variables by<br>being biased by<br>what is available<br><br>Confounding by indication<br>can be managed if indicators<br>are measured reliably]
+Und --> MS[Make sure those factors are measured] --> Rat
+Rat & RR & OM --> Acq[Data acquisition] --> PA[Principled efficient reproducible analysis<br>respecting information in raw data] --> Rw[R Workflow]
+```
+
+R and `Quarto` play key roles at several points in this process
+
+# R Workflow
+
+The R Workflow detailed at [hbiostat.org/rflow](https://hbiostat.org/rflow) has many components depicted in the diagram that follows.
+
+
+```{mermaid}
+%%| column: page
+%%| fig-width: 13
+flowchart TD
+R[R Workflow] --> Rformat[Report formatting]
+Rformat --> Quarto[Quarto setup<br><br>Using metadata in<br>report output<br><br>Table and graph formatting]
+R --> DI[Data import] --> Annot[Annotate data<br><br>View data dictionary<br>to assist coding]
+R --> Do[Data overview] --> F[Observation filtration<br>Missing data patterns<br>Data about data]
+R --> P[Data processing] --> DP[Recode<br>Transform<br>Reshape<br>Merge<br>Aggregate<br>Manipulate]
+R --> Des[Descriptive statistics<br>Univariate or simple<br>stratification]
+R --> An[Analysis<br>Stay close to data] --> DA[Descriptive<br><br>Avoid tables by using<br>nonparametric smoothers] & FA[Formal]
+R --> CP[Caching<br>Parallel computing<br>Simulation]
+```
+
+The above components are greatly facilitated y `Quarto`, the [`data.table`](https://hbiostat.org/R/data.table), [`Hmisc`](https://hbiostat.org/R/Hmisc) and [`ggplot2`](https://ggplot2.tidyverse.org) packages.  The importance of `data.table` to the R workflow cannot be overstated.  `data.table` provides a unified, clear, concise, and cohesive grammar for manipulating data in a huge number of ways.  And it does this without having _any_ dependencies, which makes software updates much easier to manage over the life of long projects.  The `R Workflow` book covers the most commonly needed data processing operations with many examples of the use of `data.table`.
+
+`R Workflow` also makes extensive use of the Github repository [`reptools`](https://github.com/harrelfe/rscripts/blob/master/reptools.r) which contains a number of functions exemplified in the book.
+
+# Report Formatting
+
+Formatting can be broken down into multiple areas:
+
+* Formatting sentences, including math notation, making bullet and numbered lists, and cross-referencing
+* Formatting tabular and graphical output
+* Using metadata (i.e., variable labels and units of measurements) to enhance all kinds of output
+* Using `Quarto` capabilities to extend formats using for example collapsible sections, tabbed sections, marginal notes, and graph sizing and captioning
+
+
+# Initial Workflow
+
+The major steps initially are
+
+* importing csv files or binary files from other systems
+* improving variable names
+* annotating variables with labels and units
+* viewing data dictionaries
+* recoding
+
+Having a browser or `RStudio` window to view data dictionaries, especially to look up variable names and categorical values, is a major help in coding.
+`R Workflow` also shows how to import and process a large number of datasets in one step, without repetitive programming, and how to import metadata from an external source.
+
+For ease and clarity of coding it is highly suggested that variable labels be clear and not too long, and that variable labels be used to provide the full description.  Variable labels can be looked up programmatically at any point during the analysis, for inclusion in tables and graph axes.
+
+# Missing Data
+
+Missing data is a major challenge for analysis.  It is important to understand and to document the extent and patterns of missingness.  The `Hmisc` package and `reptools` repository provides comprehensive looks at missingness including which variables tend to be missing on the same subjects.  The multiple ways to summarizing missing data patterns are best reported as multiple tabs.  The `reptools` repository makes it easy to create tabs programmatically, and this is used in the `reptools` `missChk` function exemplified in the book.  `missChk` fits an ordinal logistic regression model to describe which types of subjects (based on variables with no `NA`s) tend to have more variables missing.
+
+# Data Checking
+
+Spike histograms often provide the best single way of checking validity of continuous variables.  The `reptools` `dataChk` function allows the user to easily check ranges and cross-variable consistency by just providing a series of R expressions to run against the data table.  `dataChk` summarizes the results in tabs, one tab per check, and includes in addition two overall summary tabs.
+
+# Data Overview
+
+It is valuable to know how the analysis sample came to be.  Filtering of observations due to study inclusion/exclusion criteria and due to missing data is often documented with a [Consort diagram](http://www.consort-statement.org/consort-statement/flow-diagram).  The [`consort` package](https://cran.r-project.org/web/packages/consort) makes it easy to produce such diagrams using R data elements to insert denominators into diagram nodes.  Alternatively, the `R/knitr/Quarto` combination along with the [`mermaid`](https://mermaid-js.github.io/mermaid) natural diagramming language can be used to make data-fed `consort`-like flowcharts among many other types of diagrams.
+
+Another type of data overview is based on computing various metrics on each variable.  These metrics include
+
+* number of distinct values
+* number of `NA`s
+* an information measure that for numeric variables compares the information in the variable to that in a completely continuous variable with no ties
+* degree of asymmetry of the variable's distribution
+* modal variable value (most frequent value)
+* frequency of modal value
+* minimum frequency value
+* frequency of that value
+
+The `reptools` `dataOverview` function computes all these metrics and plots some of them on a scatterplot where hover text will reveal details about the variable represented by the point.
+
+# Descriptive Statistics
+
+The best descriptive statistic for a continuous variable is a spike histogram with 100 or 200 bins.  This will reveal bimodality, digit preference, outliers, and many other data features.  Empirical cumulative distributions, not covered in `R Workflow`, are also excellent full-information summaries.  The next best summary is an extended box plot showing the mean and multiple quantiles.  Details and examples of extended box plots are covered in `R Workflow`.
+
+Tables can summarize frequency distributions of categorical variables, and measures of central tendency, selected quantiles, and measures of spread for continuous variables.  When there is a truly discrete baseline variable one can stratify on it and compute the above types of summary measures.  Tables fail completely when one attempts to stratify on a continuous baseline variable after grouping it into intervals.  This is because categorization of continuous variables [is a bad idea](https://discourse.datamethods.org/t/categorizing-continuous-variables).  Among other problems,
+
+* categorization misses relationships occurring in an interval (this happens most often when an interval is wide such as an outer quartile)
+* categorization loses information and statistical power because within-interval outcome heterogeneity is ignored and between-interval ordering is not utilized
+* intervals are arbitrary, and changing interval boundaries can significantly change the apparent relationship
+* with cutpoints one can easily manipulate results; one can find a set of cutpoints that results in a positive relationship and a different set [that results in a negative relationship](https://www.tandfonline.com/doi/abs/10.1080/09332480.2006.10722771)
+
+So tables are not good tools when describing one variable against a continuous variable.  For that purpose, nonparametric smoothers or flexible parametric models are required.  When the dependent variable Y is binary or continuous, the `loess` nonparametric smoother is an excellent default choice.  For binary Y, `loess` estimates the probability that Y=1.  For continuous Y, `loess` estimates the mean Y as a function of X.  In general we need to estimate trends in more than the mean.  For example we may want to estimate the median cholesterol as a function of age, the inter-quartile-range of cholesterol as a function of age, or 1- and 2-year incidence of disease vs. a continuous risk factor when censoring is present.  A general-purpose way to get smoothed estimates against continuous X is though moving statistical summaries.  The moving average is the oldest example.  With moving statistics one computes any statistic of interest (mean, quantile, SD, Kaplan-Meier estimate) within a small window (of say $\pm 15$ observations), then moves the window up a few (say 1-5) observations and repeats the process.  For each window the X value taken to represent that window is the mean X within the window.  Then the moving estimates are smoothed with `loess` or the "super smoother".  All this is made easy with the `reptools` `movStats` function, and several examples are given in `R Workflow`.
+
+In randomized clinical trials, it is common to present "Table 1" in which descriptive statistics are stratified by assigned treatment.  As imbalances in characteristics are almost by definition chance imbalances, Table 1 is [counter-productive](https://discourse.datamethods.org/t/should-we-ignore-covariate-imbalance-and-stop-presenting-a-stratified-table-one-for-randomized-trials).  Why not present something that may reveal unexpected results that mean something?  This is readily done by replacing Table 1 with a multi-panel plot showing how each of the baseline variables relates to the clinical trial's main outcome variable.  Some examples are presented in `R Workflow`.  These examples include augmenting trend plots with spike histograms and extended box plots to how the marginal distribution of the baseline variable.
+
+## Longitudinal Data
+
+`R Workflow` provides several examples of graphical descriptions of longitudinal data:
+
+* representative curves for continuous Y
+* three types of charts for longitudinal ordinal data
+  + multiple event charts
+  + state transition proportions over all time periods
+  + state occupancy proportions over all time periods and by treatment
+* event chart for continuous time-to-event data
+* while often not longitudinal, adverse event charts for comparing safety profiles in clinical trials using a dot chart that includes confidence intervals for differences in proportions
+
+## Describing Variable Interrelationships
+
+Variable clustering, using a similarity measure such as Spearman's $\rho$ rank correlation, are useful for helping the analyst and the investigator to understand inter-relationships among variables.  Results are presented as tree diagrams (dendrograms).
+
+
+# Data Manipulation and Aggregation
+
+`R Workflow` has many examples, including the following
+
+* use of `data.table`
+* subsetting data tables (or data frames) and analyzing the subset
+* counting observations
+* running separate analysis or just computing descriptive statistics by one or more stratification variables
+* adding and changing variables
+* selecting variables by patterns in their names
+* deleting variables
+* recoding variables in many ways
+* table look-up
+* automatically running all possible marginal summaries (e.g., subtotals)
+* merging data tables
+* reshaping data tables (e.g., wide to tall and thin)
+* flexible manipulation of longitudinal data on subjects including "overlap joins" and "non-equi" joins
+
+
+# Graphics
+
+[ggplot2](https://ggplot2.tidyverse.org) and [plotly](https://plotly.com/r) play key rolls in graphical reporting.  Several examples are given, and methods for pulling from data dictionaries to better annotate graphs are given (e.g., putting variable labels on axes, plus units of measurement in a smaller font).  the `Hmisc` package `ggfreqScatter` function is demonstrated.  This allows one to create scatterplots for any sample size, handling coincident points in an easy-to-understand way.
+
+# Analysis
+
+Analysis should be driven by [statistical principles](https://www.fharrell.com/post/principles) and be based to the extent possible on a statistical analysis plan to avoid double-dipping and too many "investigator degrees of freedom", referred to as the [garden of forking paths](http://www.stat.columbia.edu/~gelman/research/published/ForkingPaths.pdf).  Analyses should be completely reproducible.  They should use the raw data as much as possible, never dichotomizing continuous or ordinal variables.[One exception: an ordinal predictor with few levels can be modeled as a categorical variable but using all possible dichotomizations (less one) with indicator variables.]{.aside}  Don't [fall into the trap](http://hbiostat.org/bbr/md/change.html) of computing change from baseline in a parallel-group study.
+
+## Descriptive Analysis
+
+This can involve simple stratified estimation when baseline variables are truly categorical and one does not need to adjust for other variable.  In general a model-based approach is better as it can adjust for any number of other variables while still providing descriptive results.
+
+To respect the nature of continuous variables, descriptive analyses can use the general "moving statistics in overlapping windows" approach outlined above, or if the mean is only of interested, `loess`.
+
+Recognize that the usual Table 1 is devoid of useful information, instead opting for useful outcome trends.
+
+Don't make the mistake of interchanging the roles of independent and dependent variables.  Many papers in the medical literature show a table of descriptive statistics where there are two columns: patients with and without an event.  Not only is this presentation ignoring the timing of events, but it is using the outcome as the sole _independent variable_.  Instead show nonparametric trends predicting the _outcome_ instead of using the outcome to predict baseline variables.  `R Workflow` has many such examples.
+
+
+## Formal Analysis
+
+Bayesian approaches are generally recommended, but whether using frequentist, Bayesian, or likelihoodist approaches one should use best statistical practices as detailed in [Regression Modeling Strategies](https://hbiostat.org/rms) and [Biostatistics for Biomedical Research](https://hbiostat.org/bbr/md).
+
+Uncertainty intervals (UIs) such compatibility intervals, confidence intervals, Bayesian credible intervals, and Bayesian highest posterior density intervals are important tools in understanding effects of variables such as treatment.  In randomized clinical trials (RCTs) an extremely common mistake, and one that is forced by bad statistical policies of journals such as NEJM, is to compute UIs for outcome tendencies for a single treatment arm in a parallel group study.  As RCTs do not sample from a patient population but rely on convenience sampling, there is no useful inference that one can draw from a single group UI.  RCTs are interesting because of what happens _after_ patient enrollment: investigator-controlled randomization to a treatment.  The only pertinent UIs are for _differences_ in outcomes.
+
+When the UI is approximately symmetric one can have UIs on the same graphs as treatment-specific point estimates by using "half confidence intervals".  In the frequentist domain, these intervals have the property that the point estimates touch the interval if and only if a statistical test of equality is not rejected at a certain statistical level.  `R Workflow` has numerous examples, showing special value of this approach when comparing two survival curves.
+
+# Caching and Parallel Computing
+
+`knitr` used by `R Markdown` and `Quarto` provides an automatic caching system to avoid having to run time-consuming steps when making only cosmetic changes to a report.  But often one wants to take control of the caching process and the accounting for software and data dependencies in the current step.  The `runifChanged` function makes this easy.  Another way to save time is with the use of multiple processors on your machine.  `R Workflow` shows simple examples of both caching and parallel computing.
+
+# Simulation
+
+Simulations are used for many reasons including estimation of Bayesian and frequentist power for a study design, trying different designs to find an optimum one, and assessing the performance of a statistical analysis procedure.  To minimize coding and be computationally efficient, multi-dimensional arrays can be used when there are many combinations of parameters/conditions to study.  For example if one were varying the sample size, the number of covariates, the variance of Y, and a treatment effect to detect, one can set up a 4-dimensional array, run four nested `for` statements, and stuff results into the appropriate element of the array.  For charting results (using for example a `ggplot2` dot chart) it is easy to string out the 4-dimensional array into a tall and thin dataset where there is a variable for each dimension.  `R Workflow` provides a full example, along with another method using a data table instead of an array.

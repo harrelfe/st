@@ -1,0 +1,42 @@
+---
+title: "Adjudication and Statistical Efficiency"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2024-10-17
+date-modified: last-modified
+categories: [classification, decision-making, diagnosis, endpoints, judgment, measurement, medical, design, RCT, accuracy-score, inference, ordinal, subgroup, 2024]
+description: "This article addresses some statistical issues related to adjudication of clinical conditions in clinical and epidemiologic studies, concentrating on maximizing statistical information, efficiency, and power.  This has a lot to do with capturing disagreements between adjudicators and uncertainty within an adjudicator."
+---
+
+## Background
+
+In clinical and epidemiologic studies one is frequently tasked with maximizing accuracy when assessing the presence of clinical conditions (symptoms, diagnoses, syndromes, etc.) or verifying outcome events such as stroke, myocardial infarction, or death from a specific cause.  Prospective studies have the advantage of standardizing definitions of clinical conditions, minimizing bias, and being honest about disagreements about clinical designations.  Many studies have clinical endpoint committees or adjudication committees.  Statistical efficiency and completeness of reporting are optimized by having as many committee members as feasible, and having the members operate as independently as possible.
+
+Statistical efficiency also comes from minimizing forced choices and utilizing gray zones.  For example, if a study has only one adjudicator, and this clinical expert is uncertain about some of the designations, it is best for her to code determinations using at least one level of gray.  The way to understand why this is more statistically efficient than having forced choices is to consider a 3-level (negative, uncertain, positive) clinical outcome that is being correlated with a 5-level severity of a symptom.  Uncertain outcomes may occur more often for patients having a middle symptom severity.  Making use of 3 levels of outcome will capitalize on this to increase power.
+
+Sometimes the clinical condition needs to be used not as a multilevel ordinal outcome but is instead used in subsetting patients.  For example, one may want to analyze a subset of the cohort consisting of patients designated as having a certain clinical syndrome at baseline.  It is not hard to analyze subsets when the subsetting is uncertain. For example, if one translated an adjudication to the probability the patient has a syndrome, one can easily use multiple imputation to analyze subsets under uncertainties.  If a given patient has a probability of 0.6 of having syndrome X, 10 imputations of the binary syndrome can be generated.  In the long run, $\frac{6}{10}$ of the imputations will be positive for the syndrome.  The needed subset analysis can be done by including, for each of the multiple imputations, all the patients imputed to be positive for X.  By repeating this process over, say, 10 multiple imputations, noise in this process will average out and one-time forced choice classification is unnecessary.
+
+Even if one does not want to use multiple imputation or Bayesian models to account for adjudication uncertainties, it is important to design the adjudications to lead to an optimum final negative/positive designation.
+
+## A Hierarchy of Statistical Information and Power
+
+Besides having independent adjudicators, statistical information is maximized when one delays forced-choice designations as much as possible and respects gray zones to the extent possible.  Here is a hierarchy of statistical information/efficiency/power from highest to lowest, for various strategies.
+
+* Have each adjudicator record the probability the patient is in the clinical category of interest, then average these probabilities to yield a final result that is used in analyses.  When the clinical category is used as an outcome variable, ordinal regression may be used in the final analysis.  This can be used to estimate the probability that the outcome is at a certain level $y$ or higher, for any $y$ and for any level of baseline variables.
+* Classify the patient as negative/positive depending on whether this average probability the condition exists exceeds a pre-specified level.
+* Have each adjudicator record a forced choice of negative/positive.  Code the final result as the proportion (over adjudicators) of positives.
+* Have each adjudicator record a forced choice of negative/positive.  Code the final result as negative/positive depending on a majority rule.  One would need to have an odd number of reviewers for this rule.
+
+When one has a probability of being in a clinical class and such probabilities are not all near 0 or 1, the probabilities are self-contained in terms of capturing the difficulty of the task of classifying patients.  This translates directly to quantifying the arbitrariness of forced-choice classifications.
+
+## Resources
+
+* [Probabilistic readjudication of heart failure hospitalization events in the PARAGON-HF study](https://www.ahajournals.org/doi/pdf/10.1161/CIRCULATIONAHA.121.054496) by GM Felker, J Butler, JL Januzzi, AS Desai, JJV McMurray, SD Solomon (includes a multiple imputation approach)
+* [A comparison of approaches for adjudicating outcomes in clinical trials](https://trialsjournal.biomedcentral.com/articles/10.1186/s13063-017-1995-3) by BC Kahan, B Feagan, V Jairath
+* Descriptive approach to [analyzing observer variability](https://hbiostat.org/bbr/obsvar)
+* How [breaking ties in a variable](https://fharrell.com/post/ordinal-info) increases statistical power
+* [Against diagnosis](https://www.acpjournals.org/doi/10.7326/0003-4819-149-3-200808050-00010) in favor of matters of degree, by AJ Vickers, E Basch, MW Kattan
+* [Probabilistic prediction in patient management and cinical trials](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.4780050506) by DJ Spiegelhalter
+* [The end of the "syndrome" in critical care](https://discourse.datamethods.org/t/the-end-of-the-syndrome-in-critical-care) by Lawrence Lynn

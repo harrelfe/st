@@ -1,0 +1,317 @@
+---
+title: "Heterogeneity in Prediction Model Development and Validation"
+author:
+  - name: Ewout Steyerberg
+    affiliation: Department of Biomedical Data Sciences<br>Leiden University Medical Center, Leiden, NL<br>`@ESteyerberg`
+    url: https://scholar.google.com/citations?user=_75LDyMAAAAJ&hl=nl
+    email: e.w.steyerberg@lumc.nl
+draft: true
+date: 2022-11-07
+contents: [prediction, validation, performance assessment, heterogeneity, model uncertainty, 2022]
+description: 'An individual patient data meta-analysis (IPD MA) offers opportunities to explore heterogeneity in predictor effects, predictions, and performance between settings. In this blog, various approaches are illustrated to assessment of heterogeneity in prediction model research.'
+format: 
+  html:
+    code-fold: true
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+require(knitr)
+require(rms)
+require(table1)
+require(metamisc)
+require(kableExtra)
+require(gridExtra)
+
+# devtools::install_github("BavoDC/CalibrationCurves",force = TRUE)
+require(CalibrationCurves)
+require(PerformanceAnalytics)
+source('chart.Correlation.R')
+
+mycolors = c('black' = 1,  'Red'= '#ED0000', 'CongressBlue' = '#00468B',
+             'Apple'= '#42B540', 'BondiBlue' = '#0099B4', 'TrendyPink' = '#925E9F',
+             'Carmine'= '#AD002A', 'CodGray' = '#1B1919', 'MonaLisa' = '#FDAF91',
+             'Edward' = '#ADB6B6')
+
+options(digits=3)
+mu <- markupSpecs$html    # in Hmisc
+
+```
+
+## Heterogeneity in Prediction Models
+
+### The Classic Dilemma of Statistical Analysis: Bias vs Variance
+
+Prediction models that are developed from small samples are prone to statistical overfitting, and may therefore show poor performance when applied to new patients. Better prediction models can be derived with larger numbers of patients. If these larger numbers of individual patient data (IPD) come from different sources, we may aim to develop a *global prediction model*, with improved validity across multiple settings or populations. A global model can be derived by simply merging all IPD sets and estimating a common baseline risk and set of predictor effects (see for example [\[JCO 1995\]](https://pubmed.ncbi.nlm.nih.gov/7537801/ "Development of a model with data from 6 study groups"). This *merging* (or 'lumping') strategy ignores possible differences between studies.
+
+Access to data from different studies allows us to assess between setting heterogeneity rather than ignoring it, following principles from meta-analysis (MA) \[[Riley, BMJ 2016](https://pubmed.ncbi.nlm.nih.gov/27334381/ "Heterogeneity in IPD MA: 'Big Data'")\].
+
+Key tools for assessing heterogeneity in prediction models include
+
+-   forest plots, as common in meta-analysis
+
+-   1-to-1 plots to compare predictions from different studies (or centers, cohorts)
+
+-   internal-external validation (a variant of cross-validation by leaving out each study once).
+
+### Heterogeneity: Where Is It in Prediction Models?
+
+Between-study differences may show up as heterogeneity in various aspects of prediction models. Here, the focus is on heterogeneity in:
+
+1.  case-mix (covariate and endpoint distributions)
+
+2.  predictor effects
+
+3.  predictions
+
+4.  model performance
+
+Assessments of heterogeneity may serve two main purposes \[[Stat Med 2019](https://pubmed.ncbi.nlm.nih.gov/30050328/ "Heterogeneity assessment in prediction models")\]:
+
+-   to support or refute the idea of a **global prediction model**
+
+-   to appropriately indicate the **uncertainty** when applying a global model across different populations
+
+## Illustration in Testicular Cancer Dataset
+
+We consider the data from 1094 men with testicular cancer who underwent surgery after chemotherapy for metastasized disease. About half had residual tumor tissue (active cancer or teratoma). For these men, the surgery may be considered beneficial. The other half had fully benign tissue and might have been spared the surgery.
+
+We developed a prediction model \[[JCO 1995](https://pubmed.ncbi.nlm.nih.gov/7537801/ "Development of a model with data from 6 study groups")\], with a large scale validation & updating study \[[Eur Urol 2007](https://pubmed.ncbi.nlm.nih.gov/16911854/ "Validation study in 1094 patients")\]. The perspective was to provide a global model, applicable throughout different settings. The available data came from top reference centers in Europe and the USA, including the Norwegian Radium Hospital, Klinikum Grosshadern München, several Dutch hospitals, Indiana University and Memorial Sloan Kettering Cancer Center. These hospitals are grouped in 6 clusters. An updated model was fitted in the combined data set, with a main effect of the cluster (`HOSP3` variable, referred to as 'study' below).
+
+We assess 4 aspects of heterogeneity in this case study: case-mix (covariate and endpoint distributions); predictor effects; predictions; model performance.
+
+## 1. Heterogeneity in Case-Mix {#sec-Heterogeneity}
+
+Heterogeneity in case-mix is defined as variation in the distribution of patient characteristics across studies.
+
+-   We consider 5 predictors; their distribution is examined for the 6 clusters of hospitals.
+
+-   A summary statistic for the case-mix is presented by the linear predictor, where the predictors are weighed by their prognostic relevance according to the global model (`lp.global`).
+
+-   We can also examine a summary measure of case-mix similarity between studies using a membership model, where we quantify how well we can separate patients from different studies from each other (using the *c*-statistic). We estimate this *c*-statistic based on predictor values only (`cstatX`), and with the outcome variable too (`cstatXY`).
+
+```{r IDA.testis,results='asis' }
+# load(url('http://hbiostat.org/data/tall.rda'))
+
+tall <- read.csv('testis1094.csv')[,-(1:2)]
+
+options(prType='html')
+
+# Create c for membership statistics per study
+cstatsX   <- cstatsXY  <- rep(NA, nrow(tall))
+
+# loop through 6 clusters
+for (i in 1:6) {
+  cstatsX[tall$HOSP3==i] <- lrm(HOSP3==i ~ TER + PREAFP + PREHCG + SQPOST + REDUC10, 
+                                data = tall)$stats[6]
+  cstatsXY[tall$HOSP3==i] <- lrm(HOSP3==i ~ TER + PREAFP + PREHCG + SQPOST + REDUC10 + TUM,
+                                 data = tall)$stats[6] }
+
+# overall global model, ignoring clustering
+# 5 predictors for tumor (TUM) as the event / outcome
+f <- TUM ~ SQPOST + REDUC10 + TER + PREAFP + PREHCG
+fit.all <- lrm(f, data=tall, x=T, y=T, linear.predictors=T)
+
+# combine results
+tall.c <- cbind(tall, lp.global=fit.all$linear.predictors, cstatsX, cstatsXY)
+
+## Differences in case-mix; can we identify which cohort a patient belongs to with c statistic for membership?
+table1(~ TER + PREAFP + PREHCG + SQPOST + REDUC10 + TUM + lp.global + cstatsX + cstatsXY |
+         HOSP3, data=tall.c,
+       render.continuous = function(x){if(sd(x)==0) sprintf("%0.3f",mean(x)) else
+         if (mean(x)<1) with(stats.default(x), sprintf("%0.2f (%0.2f)", MEAN, SD))
+         else with(stats.default(x), sprintf("%0.1f (%0.1f)", MEAN, SD)) },
+       caption="Characteristics of the 6 study groups {#tbl-1}")
+
+```
+
+We note that **Study 5** is most deviant from the other studies. The mean of the linear predictor values (`lp.global)` is substantially higher than the means for the other studies. This matches with the overall higher event rate (frequency of `TUM`). Study 5, from Indiana University, included 315 patients with relatively large post-chemotherapy residual masses. The most separating factors between studies is `SQPOST`, which is the square root of the postchemotherapy mass size (sqrt(post.size)); and `REDUC10`, the reduction in size during chemotherapy (per 10% decrease).
+
+The membership model tries to define membership of a particular study, here **Study 5**, compared to the other studies.
+
+-   The simplest membership model considers the event rate only: `STUDY==5~TUM`.
+
+-   The first more serious membership model considers X variables only: how different is Study 5 with respect to the case mix in predictors: `STUDY==5~X`?
+
+-   The second membership model considers X variables plus the outcome Y: can we define Study 5 by case mix in predictors and the event rate: `STUDY==5~X+TUM`?
+
+```{r print.fits}
+
+# Simplest model: event rate
+cat("\n0. Study 5 membership: Y variable only, event rate")
+print(lrm(HOSP3==5 ~ TUM, data = tall))
+
+# Most separating factor among case-mix X: SQPOST, sqrt(post.size)
+cat("\n1. Study 5 membership: X variables only")
+print(lrm(HOSP3==5 ~ TER + PREAFP + PREHCG + SQPOST + REDUC10, data = tall))
+# Also if we consider the outcome, TUM
+cat("\n2. Study 5 membership: X variables plus outcome Y")
+print(lrm(HOSP3==5 ~ TER + PREAFP + PREHCG + SQPOST + REDUC10 + TUM, data = tall))
+```
+
+In contrast to what some researchers might anticipate, the difference in event rate (frequency of finding tumor) was NOT the explanation for between study differences; the difference in size of the tumor postchemotherapy (`SQPOST`) was relevant. Once we adjust for that difference, the univariate difference in tumor frequency was not so relevant to distinguish Study 5 from the other studies in a membership model.
+
+## 2. Heterogeneity in Predictor Effects {#sec-2}
+
+The global prediction model was prespecified based on a [literature review](https://pubmed.ncbi.nlm.nih.gov/7999405/ "Predictors of post-chemotherapy residual mass histology"). Below, we examine the regression coefficients of the predictors per study and overall.
+
+```{r stratified}
+## stratified analyses
+
+# store coefs in matrix
+matrix.coefs <- matrix(rep(coef(fit.all), 7), nrow=7, byrow = T, 
+                       dimnames=list(c(paste("Study",1:6),"Overall"),names(coef(fit.all))))
+
+# How different are the coefficients?
+for (i in 1:6) {
+  matrix.coefs[i,] <- coef(update(fit.all, data=tall[tall$HOSP3 == i,])) }
+
+kable(round(as.data.frame(matrix.coefs), 2), 
+      caption="Predictor effects in the 6 study groups {#tbl-2}") %>% 
+  kable_styling(full_width=F, position="left")
+```
+
+The predictor effects seem rather similar across the clusters. Meta-analysis tools might be used for further insight, such as forest plots with random effects summary estimates.
+
+## 3. Heterogeneity in Predictions {#sec-3}
+
+Predictor effects may show some heterogeneity across studies, but what matters most is the heterogeneity in predictions that would arise by considering different data sources. Correlation between predictors within the studies may make that the predicted probabilities between studies for a patient with the same characteristics are still quite close.
+
+In a previous paper \[[Stat Med 2019](https://pubmed.ncbi.nlm.nih.gov/30050328/ "Heterogemeity assessment in prediction models")\] we proposed to consider differences between predictions for all covariate patterns that occur across the studies. We hereto may construct scatter plots of predicted probabilities according to models fitted in each of the individual studies. We label this approach a **1-to-1 comparison of study-specific model predictions**, since predictions from models from each study are each compared to each other (using the `chart.Correlation` function). For the case study, each comparison is made for the 1094 patients from the 6 studies.
+
+```{r stratified.predictions, fig.width=8, fig.height=8}
+#| label: fig-1
+#| fig-cap: Predictions from each study
+
+data.cor <- matrix(NA,nrow=nrow(tall), ncol=max(tall$HOSP3), dimnames=list(NULL,paste("Study", 1:6)))
+
+# Estimate stratified models
+for (i in 1:6) {
+  fit.train <- update(fit.all, data=tall[tall$HOSP3 == i,])
+  data.cor[,i] <- plogis(predict(fit.train, tall)) } # lp for each cohort, predicted for all patients
+
+# a variant is available without the stars
+
+chart.Correlation(data.cor, histogram = TRUE, method = "pearson", ylim=c(0,1))
+
+# mtext(side=3, "Predictions from each study", line=3)
+```
+
+We note that some studies provide rather similar predictions. The strongest correlation was noted between predictions from Study 2 and Study 3 (*Pearson r=0.98*). Other predictions were also rather similar, with correlations over 0.9 for predictions obtained from different clusters. Some weaker correlations were noted with Study 5 (1-5, r=0.82; 3-5, r=0.81). Study 5 also had the most deviant case-mix, as explored above in @sec-Heterogeneity (case-mix heterogeneity).
+
+The effect of differences in predictor strengths on the predictions (see @sec-2) can be seen from the "veins" in the plot, e.g. for **Study 1 vs Study 5 with r=0.82**. The coefficients for `TER`, `PREAFP`, and `PREHCG` were quite different indeed.
+
+```{r Study1.5, echo=FALSE}
+cat("\nCoefficients in Study 1 and 5")
+kable(round(as.data.frame(matrix.coefs[c(1,5),4:6]), 1)) %>% 
+  kable_styling(full_width=F, position = "left")
+```
+
+## 4. Heterogeneity in Performance {#sec-4}
+
+For predictive performance we focus here on calibration and discrimination measures. Calibration can well be assessed graphically, with some summary statistics such as calibration intercept and calibration slope. Discrimination of prediction models is commonly assessed by a concordance statistic (*c*). For each of these measures, a natural approach is to consider the cross-validated performance, where models are developed for all studies minus one. This has been labeled "**internal-external validation**"; or "**leave-one-study-out cross-validation**".
+
+We first use the `CalibrationCurves::val.prob.ci.2()` function to show calibration and discriminative ability in validation plots. This function is a variant of `rms::val.prob()`. Then we use `metamisc::metapred()` and `metamisc::forest()` functions for summary assessments on heterogeneity in performance.
+
+```{r performance, fig.width=10, fig.height=7}
+#| label: fig-17.6
+#| fig-cap: Validation plots in 6 groups
+#| layout-ncol: 3
+
+# in base R 2 x 3 = 6
+# par(mfrow = c(2,3), mar=c(4.5,4.5,4,.5))
+par(mar=c(4.5,4.5,4,.5))
+
+for (i in 1:6) {
+  fit.train <- update(fit.all, data=tall[tall$HOSP3 != i,]) 
+  # this ignores clustering in the model fitting
+  
+  test <- tall[tall$HOSP3 == i,]
+  # validate on left out study
+  lp.test <- predict(fit.train, test)
+  val.prob.ci.2(y=test$TUM, logit=lp.test, smooth = c("loess"),
+                CL.smooth="fill",lty.smooth=1,col.smooth=mycolors[i+1],
+                lwd.smooth=2, nr.knots=5,
+                xlab = ifelse(i>3,"Predicted probability", ""), 
+                ylab = ifelse(i==1 |i==4, "Observed proportion", ""), 
+                xlim = c(-0.02, 1.09),ylim = c(-0.15,1.05), g=5, 
+                legendloc =  c(1.50 , 0.27), statloc = c(0,.85), 
+                cex=1, cex.leg = 0.75,cex.lab=2, 
+                d0lab="Necrosis", d1lab="Tumor", 
+                cex.d01=1, dist.label=-0.95, line.bins=-.05, dist.label2=.03,
+                y.intersp=1,lty.ideal=1,col.ideal="red",lwd.ideal=2, dostats=T)
+  title(paste("Study=", i, ", n=", nrow(test), sep =""), col.main=mycolors[i+1], cex.main=2)
+} # End loop over 6 units
+
+```
+
+We note overall satisfactory calibration, and an overall *c*-statistic around 0.80. These results were published as [Fig 17.6](http://www.clinicalpredictionmodels.org/ "Validation plots") before.
+
+The variability in performance measures can further be visualised and summarised in forest plots using the `metamisc` library (maintained by Thomas Debray, \@TPA_Debray).\
+
+```{r forest.performance, fig.width=4, fig.height=2}
+
+## Plot the calibration and discrimination summary measures
+# a: calibration in the large
+par(mfrow = c(1,3), mar=c(4.5,4.5,4,.5))
+fit <- metapred(tall, strata = "HOSP3", formula = f, scope = f, two.stage = F,
+                perfFUN="cal.int", family = binomial) 
+plot.int <- forest(fit, method = "REML",  
+                   xlab = "Intercept", title="Calibration-in-the-large ",
+                   sort="n", nrows.before.summary = .3, 
+                   label.summary = "Pooled estimate", label.predint = "Pred Interval",
+                   study.digits = 1, xlim=c(-.8,.8)) + geom_hline(yintercept=0, lwd=1)
+
+# b: calibration slope
+fit <- metapred(tall, strata = "HOSP3", formula = f, scope = f, two.stage = F,
+                perfFUN="cal.slope", family = binomial) 
+plot.slope <- forest(fit, method = "REML",  xlab = "Slope", title="Calibration slope ", 
+                     sort="n", nrows.before.summary = .3, 
+                     label.summary = "Pooled estimate", 
+                     label.predint = "Pred Interval") + geom_hline(yintercept=1, lwd=1)
+
+#c: discrimination
+fit <- metapred(tall, strata = "HOSP3", formula = f, scope = f, two.stage = F,
+                perfFUN="auc", family = binomial) 
+# as.numeric(fit$stepwise$s0$cv$unchanged[13]) # this is the overall c statistic value
+plot.auc <- forest(fit, method = "REML",  xlab = "AUC", title="Discriminative ability ",
+                   sort="n", nrows.before.summary = .3, 
+                   label.summary = "Pooled estimate", 
+                   label.predint = "Pred Interval") + 
+  geom_hline(yintercept=as.numeric(fit$stepwise$s0$cv$unchanged[13]), lwd=1)
+
+```
+
+A great element in these forest plots is that **prediction intervals** are shown in addition to the random effect summary estimates. We note that the calibration intercept is relatively heterogeneous (**"Calibration-in-the-large"**); so after adjustment for the 5 key predictors in the prediction model, some heterogeneity remains in the **baseline risk of tumor at resection**.
+
+Note that the intercept and slope estimates are identical between the internal-external procedure as shown with the `val.prob.ci.2` function ([Fig 17.6](http://www.clinicalpredictionmodels.org/ "Validation plots") above) versus the `metapred` function results (final 3 plots). Both evaluate a model on a study that was left out from a merged set of data ('one step approach'), ignoring the clustering nature at model development.
+
+------------------------------------------------------------------------
+
+## Conclusion on Global Model and Uncertainty
+
+A global model might be used for individual patients with non-seminomatous testicular cancer after chemotherapy in different centers, but substantial uncertainty should be acknowledged. The uncertainty by heterogeneity goes beyond statistical uncertainty from having access to 1094 rather than infinite numbers patients.
+
+------------------------------------------------------------------------
+
+## Literature
+
+The term 'internal-external validation' was used in various papers; see e.g. [Royston, Stat Med 2004](https://pubmed.ncbi.nlm.nih.gov/15027080/ "Construction and validation of a prognostic model across several studies, with an application in superficial bladder cancer"); [Debray, JCE 2015](https://pubmed.ncbi.nlm.nih.gov/25179855/ "A new framework to enhance the interpretation of external validation studies of clinical prediction models"); [Steyerberg&Harrell JCE 2016](https://pubmed.ncbi.nlm.nih.gov/25981519/ "Prediction models need appropriate internal, internal-external, and external validation")
+
+Richard Riley *et al* illustrated approaches to performance assessment in a IPD MA context \[[BMJ 2016\]](https://pubmed.ncbi.nlm.nih.gov/27334381/ "Heterogeneity in IPD MA: 'Big Data'").
+
+Thomas Debray, Daan Nieboer and Hans van Houwelingen were working with me on analyses in traumatic brain injury patients illustrated in a paper in [Stat Med 2019](https://pubmed.ncbi.nlm.nih.gov/30050328/ "Heterogeneity assessment in prediction models").
+
+|                                                                                                                                                                                                                                                                                                        |                                            |
+|---------------------------------------------------------|---------------|
+| In Chapter 17 of my book [Clinical Prediction Models (2019)](http://www.clinicalpredictionmodels.org/ "Book website (fully revised Oct 2022)"), I also presented an illustration with men treated for testicular cancer from different study groups, with presentation options for risk in Chapter 18. | ![](images/ClinPredModels.png){width="99"} |
+
+------------------------------------------------------------------------
+
+## Session Info
+
+```{r echo=FALSE}
+print(installed.packages()[names(sessionInfo()$otherPkgs), "Version"],
+      quote=FALSE)
+```

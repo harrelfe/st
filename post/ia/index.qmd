@@ -1,0 +1,407 @@
+---
+title: Implications of Interactions in Treatment Comparisons
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2020-03-03
+modified: 2020-07-19
+categories: [RCT, drug-evaluation, generalizability, medicine, observational, personalized-medicine, prediction, subgroup, 2020]
+description: "This article explains how the generalizability of randomized trial findings depends primarily on whether and how patient characteristics modify (interact with) the treatment effect.  For an observational study this will be related to overlap in the propensity to receive treatment."
+format:
+  html:
+    toc-depth: 4
+---
+
+[[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+::: {.quoteit}
+Transportability of treatment effect estimates depends on the nature of interactions.  In the absence of interactions, an effect estimated on a highly selected sample will apply to a much different population.  In an observational study, the corresponding condition is that there need be no overlap in the baseline distribution of non-interacting factors.  When there is an interaction, one can live with only a small to moderate amount of overlap in characteristics (between randomized vs. population target or between characteristics of treated vs. non-treated patients in an observational study) **if** the interaction is of a simple form.  With more overlap, interactions can be complex (if modeled) and results from analysis of the sample will allow estimation of treatment effect in a different population.  In the absence of significant overlap, confidence bands allowing for interaction properly inform the researcher about uncertainties in treatment effects.<br>
+
+Randomized clinical trials do not require representative patients; they require representative treatment effects.  Generalizability of randomized trial findings for relative efficacy comes from one of three things:
+
+1. true absence of interactions,
+1. interacting factors have a similar distribution in the RCT as in the target population, or
+1. the RCT sample has enough representation of the distribution of interacting factors to allow them to be modeled and used to estimate treatment effects in target patients, and the researcher knows to include these interactions in her model.
+
+:::
+
+**Note**: For shaded boxes marked with ⮩ click on the box to view the associated text.
+
+<!--
+<details><summary>Table of Contents ⮩</summary>
+<div id="boxes"><div id="leftbox">
+Hyperlinking to a section from the table of contents will not work unless that section is currently expanded.
+</div><div id="rightbox">
+{{% toc %}}
+</div></div><div class="clear"></div>
+</details>
+-->
+  
+# Background
+
+It is a commonly held belief that clinical trials, to provide treatment effects that are generalizable to a population, must use a sample that reflects that population's characteristics.  The confusion stems from the fact that if one were interested in estimating an average outcome for patients given treatment A, one would need a random sample from the target population.  But clinical trials are not designed to estimate _absolutes_; they are designed to estimate _differences_ as discussed further [here](../rct-mimic).   These differences, when measured on a scale for which treatment differences are allowed mathematically to be constant (e.g., difference in means, odds ratios, hazard ratios), show remarkable constancy as judged by a large number of published forest plots.   What would make a treatment estimate (relative efficacy) not be transportable to another population?  A requirement for non-generalizability is the existence of interactions with treatment such that the interacting factors have a distribution in the sample that is much different from the distribution in the population.
+
+A related problem is the issue of overlap in observational studies.   Researchers are taught that non-overlap makes observational treatment comparisons impossible.  This is only true when the characteristic whose distributions don't overlap between treatment groups interacts with treatment.  The purpose of this article is to explore interactions in these contexts.
+
+As a side note, if there is an interaction between treatment and a covariate, standard propensity score analysis will completely miss it.
+
+For the following I assume that there is at most one variable (patient age) interacting with treatment effect.  The data generating and analysis models are logistic models containing only age and treatment.  I also assume that the goal is to assess efficacy isolated from net clinical benefit, e.g., we are not taking side effects into account.
+
+Situations addressed below come from the following 2 × 2 × 2 × 3 combinations:
+
+* randomized vs. observational study
+* true data generating process has no interaction with age vs. has a linear interaction
+* overlap in ages between RCT sample and target population (or between treatments in an observational study) is completely absent vs. partial overlap in the age distribution
+* fitted model is linear with no interaction, has a linear interaction, or has a spline function of age interacting with treatment
+
+I'll explore what happens when interaction should be included in a model but is omitted, when an interaction is not needed but is included in the model, and when the interaction is simple but is allowed to be complex.
+
+```{r setup, echo=FALSE}
+require(rms)
+options(prType='html')
+txt <- function(design, model='', overlap='', part='') {
+  w <- list(
+list(design='rct', text='When the outcome generating process in a randomized clinical trial (RCT) is such that treatment does not interact with any baseline patient characteristic over the range of characteristics seen in the union of the RCT and the population, the estimate of relative efficacy (e.g., odds ratio) of treatment applies to every patient in the population.  In addition to computing patient-specific odds ratios (ORs), one can easily compute patient-specific absolute risk reductions from treatment as shown [here](../ehrs-rcts).  If one allows for needless interaction terms, it is possible to get poor extrapolation of treatment benefit in unrepresented patient groups, unless the estimated interaction effects are very small (not guaranteed until the sample size is very large).'),
+
+list(design='rct', model='noia', overlap='none', text='As an example, consider a simulated study of about 2500 patients with a binary outcome where the model contains only age and treatment, the age effect is linear, and there is no interaction.  The following R code simulates the data from a hypothetical population, fits a binary logistic model, and displays estimated log odds of outcome vs. age and treatment (left panel) and the estimated age-specific treatment effect (right panel), along with the true population values for both panels over the whole range of age.  The RCT excluded those with age < 50 but the target population is exactly those patients.  Tick marks on fitted curves display treatment-specific raw data spike histograms.'),
+
+list(design='rct', model='noia', overlap='partial', text='Instead of having non-overlapping age distributions between the RCT sample and the target population, let\'s include screened patients with probabilities that are functions of age as shown in the first graph below.  Then again consider the simplest logistic model.'),
+
+list(design='obs', model='noia', overlap='none', text=''),
+
+list(design='rct', model='noia', overlap='none', part='interp additive fit',
+     text='Extrapolation to the younger population is fine even with no younger patients in the RCT.  Confidence bands are computed under the assumption of an additive linear age effect.'),
+
+list(design='rct', model='noia', overlap='none', part='interp linear ia',
+     text='Note that the close-to-zero estimated interaction in the trial sample led to an appropriate extrapolation to the target population of age < 50, with the confidence bands getting wider.\n\nNow see what happens when age is unnecessarily allowed to have a nonlinear non-additive effect, by fitting a model that is quadratic in age interacting with treatment.'),
+
+list(design='rct', model='noia', overlap='none', part='interp nonlinear ia',
+     text='By allowing not only an unnecessary interaction but also allowing the interaction to be nonlinear, when the predicted values are for a region completely outside the sample data, the extrapolation is still reasonable but the (honest) confidence intervals are much wider.  We don\'t know much at all about the relative treatment effect with age < 50 when we allowed the two treatments to have differently shaped age effects in the trial data.  A Bayesian model that put a skeptical prior on either the nonlinear or the interaction effect would have credible intervals that are not so wide on the left.'),
+
+list(design='rct', model='ia', overlap='none',
+     text='Next turn to the case where the true data generating model has a linear treatment by age interaction which we may or may not include in our model.  The true model has a treatment effect of -1.0 for age 50 patients, and each year below 50 results in a further reduction by 0.03 in the effect.'),
+
+list(design='rct', model='ia', overlap='none', part='interp linear ia',
+     text='Because of the more limited age range in the trial there was insufficient power to provide definitive statistical evidence for an interaction, but the point estimate for the interaction effect is not unreasonable.  Though confidence bands are wide because of no overlap, the extrapolated treatment effects are reasonable as a result.'),
+
+list(design='rct', model='ia', overlap='partial',
+     text='Sticking with the true treatment effect interacting with age, we generate data with the same partial overlap as before, and repeat the same analyses.  We start by fitting a model that is oblivious to interaction.'),
+
+list(design='rct', model='ia', overlap='partial', part='interp linear ia',
+     text='The amount of interaction estimated from the larger older sample extrapolated well to the younger target population.'),
+
+list(design='rct', model='ia', overlap='partial', part='interp nonlinear ia',
+     text='The spline interaction estimates did not extrapolate well to the very young.'),
+
+list(design='obs', text='When a categorical baseline characteristic has all of the patients in one of its categories getting a single treatment, one cannot estimate efficacy in that category unless (1) there is no interaction between treatment and the variable or (2) the baseline variable does not relate to outcome.  If one of these conditions is not satisfied, one would have to do a conditional analysis, i.e., to estimate efficacy in patients not in the offending category.  If a continuous baseline variable has an interval for which every patient in that interval received only one treatment, then one cannot estimate the treatment effect in that interval unless (1) there is no interaction (linear or nonlinear) between the variable and treatment or (2) the variable is irrelevant to outcome.  So when you hear that non-overlap implies that only a conditional treatment comparison can be done, be aware of the true underlying assumptions.  Note that non-overlap on a variable implies non-overlap for one or more values of a propensity score.
+
+To illustrate these points, consider an observational study where the data generating process is from the same population logistic model as used above, but instead of considering generalizability to a population, consider the in-sample comparison of treatments a and b adjusted for age.  We start with a sample in which all those with age ≥ 50 got treatment b and all those with age < 50 got treatment a.'),
+
+list(design='obs', model='noia', overlap='none', part='interp additive fit',
+     text='The model-based covariate adjustment provided the correct estimate of the treatment effect even with no overlap, since the specified model is the correct model.'),
+
+list(design='obs', model='noia', overlap='none', part='interp linear ia',
+     text='With no age overlap, the treatment by age interaction is estimated very inefficiently and in this case incorrectly.  Wide confidence bands correctly capture the difficulty of the task of estimating age-specific treatment effects.'),
+
+list(design='obs', model='noia', overlap='none', part='interpret spline ia',
+     text='With no overlap and a very flexible interaction effect modeled, age-specific treatment effect estimates are wild and the confidence band width tells us not to trust anything.'),
+
+list(design='obs', model='noia', overlap='partial',
+     text='Now consider an observational study, again with confounding by indication, related to age.  Partial overlap is defined by specifying separate study inclusion probability functions.  Given the age and treatment these functions specify the probability that a patient would be included in the observational study.  The first plot shows the inclusion probabilities separately for treatments a and b.  Then the result of a linear no-interaction model are shown.  As before, blue curves depict true data-generating model log odds.'),
+
+list(design='obs', model='noia', overlap='partial', part='interp linear ia',
+     text='The confidence bands are correctly registering that there is little information about the treatment effect outside of the heavier overlap region.'),
+
+list(design='obs', model='noia', overlap='partial', part='interp spline ia',
+     text='Even with partial overlap in ages, over-modeling the interaction with a spline resulted in unreliable estimates with wide confidence bands.'),
+		 
+list(design='obs', model='ia', overlap='none',
+     text='Return to the data generating model used in the RCT simulation, for which there is truly a linear interaction with treatment, and start with the no overlap case.'),
+
+list(design='obs', model='ia', overlap='none', part='interp additive fit',
+     text='The treatment effect is incorrect example at age=50.'),
+
+list(design='obs', model='ia', overlap='none', part='interp linear ia',
+     text='The extrapolation is excellent.  Now try the overkill model.'),
+
+list(design='obs', model='ia', overlap='none', part='interp nonlinear ia',
+     text='Extrapolation failed, and the failure was thankfully signaled by very wide confidence bands for age-specific treatment effects.'),
+
+list(design='obs', model='ia', overlap='partial', part='interp additive fit',
+     text='The no-interaction model missed the boat.  Now fit the correct linear interaction model.'),
+
+list(design='obs', model='ia', overlap='partial', part='interp linear ia',
+     text='There is reasonable extrapolation.  Now for the overkill model.'),
+
+list(design='obs', model='ia', overlap='partial', part='interp nonlinear ia',
+     text='Extrapolated treatment effect estimates are so-so.')
+		
+  )
+  g <- function(x, y) (! length(x) && y == '') || (length(x) && y == x)
+
+  for(x in w) {
+    if(g(x$design, design) && g(x$model, model) && g(x$overlap, overlap) && g(x$part, part)) {
+      ct(x$text)
+      break
+    }
+  }
+  return(invisible())
+}
+
+lmarg <- function(x) paste0('<span class="lm">', x, '</span>')
+```
+
+```{r main, results='asis', fig.show='hide', echo=FALSE}
+gendatrct <- function(n, popmodel, inclusion, pr=TRUE) {
+    set.seed(1)
+    age <- rnorm(n, 50, 10)
+		ager <- round(range(age), 1)
+    tx  <- sample(c('a', 'b'), n, replace=TRUE)
+    y   <- ifelse(runif(n) <= plogis(popmodel(age, tx)), 1, 0)
+    # Inclusion in the RCT is marked by having non-missing outcome
+    # inclusion is a function of age computing P(include in RCT)
+    y   <- ifelse(inclusion(age) >= runif(n), y, NA)
+    d   <- data.frame(age, tx, y)
+		if(pr)
+    cat('The original age range is', ager[1], '-', ager[2], 'in', n,
+        'subjects, and the clinical trial includes', sum(! is.na(d$y)),
+        'of the subjects.<br>')
+    d
+}
+
+gendatobs <- function(n, popmodel, incla, inclb) {
+    set.seed(1)
+    age <- rnorm(n, 50, 10)
+    tx  <- sample(c('a', 'b'), n, replace=TRUE)
+    y   <- ifelse(runif(n) <= plogis(popmodel(age, tx)), 1, 0)
+    # incla is a function of age computing P(include in study if a)
+    # inclb is the same for tx=b
+    prob <- ifelse(tx == 'a', incla(age), inclb(age))
+    i <- runif(n) <= prob
+    data.frame(age, tx, y)[i, ]
+}
+
+
+# Plot fitted relationship between logit(y) and age by treatment
+# along with theoretical true relationship
+pl <- function(popmodel, ylim=NULL) {
+    ar <- range(d$age)
+    g <- ggplot(Predict(f, age=seq(ar[1], ar[2], length=100), tx),
+           rdata=subset(d, ! is.na(y)), ylim=ylim) +
+         annotate('line', x=ar, y=popmodel(ar, 'a'), col='blue', alpha=.4) +
+         annotate('line', x=ar, y=popmodel(ar, 'b'), col='blue', alpha=.4) +
+         theme(legend.position=c(.9, .17)) +
+         labs(caption='Estimated log odds of outcome along with true (blue) values.\nTick marks show raw data density stratified by treatment')
+    g
+}
+
+# Estimated and true treatment effect as a function of age
+plc <- function(popmodel, ages=10:80, ylim=c(-3, 1)) {
+    k <- contrast(f, list(tx='b', age=ages),
+                     list(tx='a', age=ages))
+    w <- as.data.frame(k[c('age','Contrast','Lower','Upper')])
+    g <- ggplot(w, aes(x=age, y=Contrast)) +
+        geom_ribbon(aes(ymin=Lower, ymax=Upper), fill='grey80') +
+        geom_line() +
+        xlab('Age') + ylab('b - a Treatment Difference') +
+        annotate('line', x=ages,
+                 y=popmodel(ages, 'b') - popmodel(ages, 'a'),   
+                 col='blue', alpha=.4) +
+        ylim(ylim) +
+        labs(caption='Estimated (black) and true (blue)\ntreatment effect as a function of age\nBands are 0.95 confidence bands')
+		g
+}
+
+plb <- function(popmodel) {
+    g <- cowplot::plot_grid(pl(popmodel), plc(popmodel))
+		cat('\n')
+    print(g)
+		cat('\n\n')
+    invisible()
+    }
+ct <- function(...) cat('\n\n', ..., '\n\n', sep='')
+
+# Function to manually output html figure inclusion markup
+# With loops even with fig.show='asis' knitr doesn't always output
+# figures soon enough.  Taking control in this way also allows
+# figure sizes to vary within the loop
+
+figincl <- function(figno, type='png', width=672) {
+  cname <- knitr::opts_current$get('label')
+  filename <- knitr::fig_chunk(cname, type, figno)
+	# Next filename is for running locally
+  # filename <- paste0('../../_site/post/ia/', filename)
+	filename <- paste0('/post/ia/', filename)
+  cat('\n<img src="', filename, '" width="', width, '" />\n\n', sep='')
+	invisible()
+}
+# filename is index_files/figure-html/main-#.png
+# But png files stored in _site/post/ia/index_files/figure-html/
+# When running from permanent site need to reference (/=_site)
+# /post/ia/filename
+
+
+# Function to enclose a left margin note in a div and to open a div for the
+# usual right hand side content
+lmargin  <- function(x) c('<div id="boxes"><div id="leftbox">', x,
+                          '</div><div id="rightbox">')
+closebox <- function() ct('<br></div></div><div class="clear"></div><br>')
+lmargin  <- function(x) paste0('::: {.column-margin}\n', x, '\n\n:::')
+closebox <- function(...) {}
+
+opendetails <- function(x, y) ct(paste0('<details><summary>', x,
+  ' ⮩</summary>\n\n#### ', y))
+closedetails <- function() ct('</details>')
+opendetails <- function(x, y)
+  ct(paste0('::: {.callout-note collapse="true"}\n',
+            '#### ', y))
+closedetails <- function() ct(':::')
+
+
+h1 <- c(rct = 'Generalizability of Randomized Clinical Trials',
+        obs = 'Ability to Compare Treatments in Observational Studies')
+h2 <- c(noia = 'True Model Has No Treatment Interactions',
+        ia   = 'Case Where Treatment Truly Interacts with Age')
+
+figno <- 0
+for(design in c('rct', 'obs')) {
+  ct('# ', h1[design])
+  h3 <- switch(design,
+               rct = c(none    = 'Estimation of Treatment Effect in Population With No Overlap',
+                       partial = 'RCT Sample Partially Overlaps with Target Population'),
+               obs = c(none    = 'No Overlap Between Treatment Groups',
+                       partial = 'Some Overlap in Ages Between Treatments'))
+  txt(design)
+  for(model in c('noia', 'ia')) {
+    ct('## ', h2[model])
+    popmodel <- switch(model,
+                       noia = function(age, tx) -1 + (age - 50) / 15 - 1.0 * (tx == 'b'),
+                       ia   = function(age, tx) -1 + (age - 50) / 15 +
+                                 (tx == 'b') * (-1 - 0.03 * (age - 50)) )
+
+    for(overlap in c('none', 'partial')) {
+      ct('### ', h3[overlap])
+      txt(design, model, overlap)
+
+      # Function if age that is P(inclusion in RCT)
+      incl <- switch(overlap,
+                     none    = function(age) ifelse(age >= 50, 1, 0),
+                     partial = function(age)
+                        approx(c(0,    25,   40,  45, 50),
+                               c(0, 0.075, 0.15, 0.5,  1), rule=2, xout=age)$y)
+      # Functions of age that are P(selection to be in tx a group) and also for b group
+      incla <- switch(overlap,
+                      none    = function(age) ifelse(age < 50, 1, 0),
+                      partial = function(age)
+                         approx(c(0,    25,   40,  45, 50, 55),
+                                c(0, 0.075, 0.15, 0.5,  1,  1),
+                                xout=age, rule=2)$y)
+      inclb <- function(age) 1 - incla(age)
+
+      if(model == 'noia') {
+        switch(overlap,
+          none = switch(design,
+                        rct = '',
+                        obs = ct('All patients age < 50 had treatment a, and those ≥ 50 had b.')),
+          partial = {
+            a <- seq(10, 80, length=100)
+            switch(design,
+              rct = {
+              plot(a, incl(a), type='l', xlab='Age', ylab='P(Inclusion)', ylim=c(0,1))
+							figno <- figno + 1; figincl(figno, width=500)
+              },
+            obs = {
+              ct('The graph below shows the probability of selection into each of the observed treatment groups as a function of age.')
+              w <- list(a=list(x=a, y=incla(a)), b=list(x=a, y=inclb(a)))
+              labcurve(w, pl=TRUE, xlab='Age', ylab='P(Inclusion)')
+							figno <- figno + 1; figincl(figno, width=500)
+            })}) 
+        }
+     # Generate a sample that meets our requirements
+     d <- switch(design,
+                 rct = gendatrct(5000, popmodel, inclusion=incl,
+                                 pr=model == 'noia'),
+                 obs = gendatobs(6000, popmodel, incla=incla, inclb=inclb))
+     dd <- datadist(d, q.display=c(0,1)); options(datadist='dd')
+		 if(model == 'noia') switch(design,
+		        rct = {ct('Age distributions in the target population as compared to the RCT sample are shown below.')
+						       with(d, histbackback(age[is.na(y)], age[! is.na(y)],
+                        brks=13:89, xlab=c('Target Population','RCT'), ylab='Age'))
+                   figno <- figno + 1; figincl(figno, width=500) },
+            obs = {ct('Age distributions in the observed treatment groups are shown below.')
+                   with(d, histbackback(age[tx == 'a'], age[tx == 'b'],
+                        brks=13:89, xlab=c('a','b'), ylab='Age'))
+                   figno <- figno + 1; figincl(figno, width=500) }
+     )
+
+     opendetails('No-Interaction Model', 'Model Without Interaction')
+		 marg <- switch(model,
+		   noia = 'This is the correct model.',
+		   ia   = 'This model failed to include a needed interaction term.')
+     f <- lrm(y ~ tx + age, data=d)
+     # To render html from a chunk in a loop, must create html character strings
+     # with print() then output the strings with cat() (called by ct())
+     # Earlier options(prType='html') made print() create html for fit objects, anova
+     ct(lmargin(marg), print(f))
+     ct(print(anova(f)))
+		 plb(popmodel)
+		 figno <- figno + 1; figincl(figno)
+     txt(design, model, overlap, part='interp additive fit')
+		 closebox()
+		 closedetails()
+
+		 opendetails('Linear Interaction Model', 'Model With Linear Interaction')
+		 marg <- switch(model,
+       noia = 'This model included an unnecessary linear interaction term.',
+       ia   = 'This is the correct model.')
+     f <- lrm(y ~ tx * age, data=d)
+     ct(lmargin(marg), print(f))
+     ct(print(anova(f)))
+     plb(popmodel)
+		 figno <- figno + 1; figincl(figno)
+
+     txt(design, model, overlap, part='interp linear ia')
+     closebox()
+     closedetails()
+
+     opendetails('Spline Interaction Model', 'Model with Spline Interaction')
+     marg <- switch(model,
+       noia = 'This model included unnecessary linear and nonlinear interaction terms.',
+       ia   = 'This model correctly captures linear interaction, but also allows for unnecessary nonlinear interaction.')
+
+     form <- switch(design,
+                    rct = y ~ tx * rcs(age, c(55, 60, 70, 80)),
+                    obs = y ~ tx * rcs(age, c(35, 50, 65)))
+     f <- lrm(form, tol=1e-12, data=d)
+     ct(lmargin(marg), print(f))
+     ct(print(anova(f)))
+     plb(popmodel)
+		 figno <- figno + 1; figincl(figno)
+ 
+     txt(design, model, overlap, part='interp nonlinear ia')
+     closebox()
+     closedetails()
+    }
+  }
+}
+```
+
+# Summary
+
+With respect to relative efficacy (or both relative and absolute efficacy for continuous repsonse variables), clinical trials do not require having a representative sample of the target clinical population if there are no interactions with treatment.  If there are interactions, let M denote the levels of interacting factors that are well represented in the target population.  In our examples, M represents younger patients.  Even with interaction present, the randomized trial still does not need to be on a representative patient sample if either (1) the trial sample <em>is</em> representative with respect to M (in which case omitting interactions from the model is not fatal), or (2) there is just enough representation in the sample with respect to M,  and those interacting factors are appropriately modeled in the randomized trial.  Unless M is richly represented in the trial, using statistical testing to decide on which interactions to include in the model is not advised, due to low power of such interaction tests.  Suspected interactions, even statistically weak ones, should be included in the model when some degree of extrapolation is sought.  When M is very poorly represented in the trial, extrapolation to the target population makes strong model assumptions.  Thankfully confidence intervals for extrapolated efficacy estimates will be properly wide to reflect the weak basis for such extrapolation.
+
+In a similar vein, observational treatment comparisons can be appropriate if factors that do not overlap between treatment groups do not interact with treatment.  So a key to understanding both overlap and clinical trial generalizability is interactions.
+
+# Further Reading
+
+* [Why representativeness should be avoided](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3888189) by Rothman, Gallacher, and Hatch
+* [Treatment effects may remain the same even when trial participants differed from the target population](https://www.jclinepi.com/article/S0895-4356(19)30818-2/pdf) by MJ Bradburn et al.
+
+----
+
+# Questions and Discussion
+
+Go [here](http://datamethods.org/t/rct-generalizability-and-interactions-with-treatment).
+
+----

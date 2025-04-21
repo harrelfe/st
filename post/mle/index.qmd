@@ -1,0 +1,1354 @@
+---
+title: "Statistical Computing Approaches to Maximum Likelihood Estimation"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2024-11-28
+date-modified: last-modified
+categories: [computing, data-science, inference, likelihood, ordinal, prediction, r, regression, "2024"]
+description: "Maximum likelihood estimation (MLE) is central to estimation and development of predictive models.  Outside of linear models and simple estimators, MLE requires trial-and-error iterative algorithms to find the set of parameter values that maximizes the likelihood, i.e., makes the observed data most likely to have been observed under the statistical model.  There are many iterative optimization algorithms and R programming paradigms to choose from.  There are also many pre-processing steps to consider such as how initial parameter estimates are guessed and whether and how the design matrix of covariates is mean-centered or orthogonalized to remove collinearities.  While re-writing the R `rms` package logistic regression function `lrm` I explored several of these issues.  Comparisons of execution time in R vs. Fortran are given.  Different coding styles in both R and Fortran are also explored.  Hopefully some of these explorations will help others who may not have studied MLE optimization and related statistical computing algorithms."
+bibliography:
+  - grateful-refs.bib
+code-fold: false
+---
+
+# Overview 
+
+Maximum likelihood estimation (MLE) is a gold standard estimation procedure in non-Bayesian statistics, and the likelihood function is central to Bayesian statistics (even though it is not maximized in the Bayesian paradigm).  [If you think that ROC area or classification accuracy are good objective functions/optimality criteria, please think again.]{.aside}  MLE may be unpenalized (the standard approach) or various penalty functions such as L1 (_lasso_, absolute value penalty), and L2 (_ridge_ regression; quadratic) penalties may be added to the log-likelihood to achieve shrinkage (aka regularization).  I have been doing MLE my entire career, using mainly a Newton-Raphson algorithm with step-halving to achieve rapid convergence.  I never stopped to think about other optimization algorithms, and the R language has a good many excellent algorithms included in the base `stats` package.  There is also an excellent [`maxLik`](https://cran.r-project.org/web/packages/maxLik) R package devoted to MLE (not used here), and two of its vignettes provide excellent introductions to MLE.  General MLE background and methods including more about penalization may be found [here](https://hbiostat.org/rmsc/mle), which includes details about how to do QR factorization and to back-transform after the fit.
+
+In this article I'll explore several optimization strategies and variations of them, in the context of binary and ordinal logistic regression.  The programming scheme that is used here is the one used by many R packages: Write functions to compute the scaler objective function (here, -2 log likelihood), the gradient vector (vector of first derivatives), and the hessian matrix (matrix of second derivatives), and pass those functions to general optimization functions.  Convergence (at least to local minima for -2 LL (log of the likelihood function)) is achieved for smooth likelihood functions when the gradient vector values are all within a small tolerance (say $10^{-7}$) of zero or when the -2 LL objective function completely settles down in, say, the $8^\text{th}$ significant digit.[A different strategy is to use the Bayesian system [Stan](https://mc-stan.org) by specifying LL and letting Stan analytically compute the gradient, then using the Stan optimizer to compute MLEs.  If you specify priors, the optimizer provides penalized MLEs.  The likelihood function is **the** bridge between Bayesian and frequentist methods.]{.aside} The gradient vector is all zeros if the parameter values are exactly the MLEs (local minima achieved on -2 LL).  
+
+This article is based on `rms` version 7.0-0, a major new release of the package, which will likely be available on CRAN around 2025-01-08.
+
+# History
+
+The R `rms` package `lrm` function is dedicated to maximum likelihood estimation (MLE) for fitting binary and ordinal (proportional odds) logistic regression models using the logit link, with or without quadratic (ridge) penalization.  _Semiparamteric regression models_, also called _ordinal regression models_, allow one to do efficient analyses without depending on how the dependent variable Y is transformed.  Ordinal models encode the entire cumulative distribution function of Y by having an intercept for each distinct Y level less one.   For ordinal models, versions of `lrm` before `rms` 6.9-0 were efficient for up to 400 distinct Y-values (399 intercepts) in the sense that execution time was under 10 seconds for 10,000 observations on 10 predictors. The `rms` `orm` function is intended for modeling continuous outcome Y variables and was efficient for up to 8000 intercepts prior to `rms` 7.0-0.  `orm` implements 4 link functions other than the logit.  For `rms` 7.0-0, `lrm` and `orm` run in 2.5s for a sample size of 300,000 with continuous Y and 20 predictors, i.e., with 299,999 intercepts (9.5s for 40 predictors). `lrm` uses the R function `lrm.fit` for its heavy lifting, and likewise `orm` uses `orm.fit`.  Much of `lrm.fit` was written in 1980 and served as the computational engine for the first SAS procedure for logistic regression, `PROC LOGIST`.  It used Fortran 77 for computationally intensive work, and used only a Newton-Raphson algorithm with step-halving for iterative MLE.  On rare occasions when serious collinearities were present, such as when multiple continuous variables were fitted using restricted cubic splines (which use a truncated power basis), `lrm.fit` would fail to converge.
+
+## Are Intercepts Regular Parameters?
+
+Let $F$ be a smooth cumulative distribution function.  The cumulative probability class of ordinal semiparametric models can be written as follows.  It is more traditional to state the model in terms of $P(Y \leq y | X)$ but we use $P(Y \geq y | X)$ so that higher predicted values are associated with higher $Y$, and when $F$ is the logistic distribution $\frac{1}{1 + \exp(-x)}$ the ordinal logistic (proportional odds) model reduces exactly to a binary logistic model.  Let the ordered distinct values of $Y$ be denoted by $y_{1}, y_{2}, \dots, y_{k}$ and
+let the $k$ intercepts associated with $y_{1}, \dots, y_{k}$ be
+$\alpha_{1}, \alpha_{2}, \dots, \alpha_{k}$, where $\alpha_{1} =
+\infty$ because $P(Y \geq y_{1}) = 1$.  Let $\alpha_{y} =
+\alpha_{i}, i:y_{i}=y$.  Then the cumulative probability semiparametric model is
+
+$$
+P(Y \geq y | X) = F(\alpha_{y} + X\beta)
+$$
+
+When $F$ is the extreme value type I (also called the Gumbel minimum value) distribution $F(x) = \exp(-\exp(-x))$, the inverse function is the $\log-\log$ link and the model is a proportional hazards (PH) model.  The Cox 1972 PH model uses the only generating distribution $F(x)$ such that the marginal (getting rid of the $\alpha$s) distribution of the ranks of $Y$ can be evaluated without multi-dimensional integrals.  This gives rise to Cox's partial likelihood, which until time-dependent covariates are included can be computationally fast for any number of distinct failure times.  The Cox approach requires a second step to estimate the intercepts (underlying survival curve for a person with some reference value of $X\beta$).  There is some arbitrariness to which second-step estimator is used, e.g., the Breslow estimator or the Kalbfleisch-Prentice estimator.  And variances of $\hat{P}(Y \geq y | X)$ are complicated because uncertainties from both of the steps must be included.
+
+In fact, a partial likelihood, which also makes it difficult to handle interval censoring, is only needed until you realize that
+
+* the maximum likelihood estimate (MLE) of the vector of intercepts $\alpha$ when $\beta=0$ are just the link function of all the one minus cumulative probabilities in the absence of censoring; this gives rise to instantly-computed and convergence-accelerating initial values for iterative MLE estimation
+* the $\alpha$s are always in descending order (ascending if using the more popular statement of ordinal models)
+* the gradient (first derivative) for the log likelihood function can be computed quickly no matter how large is $k$
+* the hessian (second derivatives of the log likelihood function) can be computed in just over twice the time needed to compute the gradient, and takes twice[Twice because the intercept portion of the hessian is tri-band diagonal and one only needs to store the diagonal and above-diagonal elements due to symmetry.]{.aside} the amount of array storage size as the gradient, so MLE scales wonderfully for large $k$
+* for most needs, the entire information matrix (negative hessian) never needs to be inverted; portions of the inverse of the whole can be quickly computed without inverting the whole information matrix
+* the R `Matrix` package is made for efficient storage and calculation on such sparse hessians
+
+Because of the strict ordering of $\alpha$, MLE iterations are fast and the _effective degrees of freedom_ of the model are more like $4 + p$ where $p$ is the number of $\beta$s.  The $4$ comes from the following line of reasoning.  In the no-covariate case, consider confidence bands for the empirical cumulative distribution function (ECDF) for $Y$ [ECDF = $F(\alpha)$ when $\beta=0$]{.aside}, then fit a 4-parameter parametric distribution to the raw $Y$ values.  Confidence intervals for $F(y)$ from this parametric fit will be about the same widths as those from the ECDF.[This exercise would also point out the lack of value in fitting flexible parametric distributions compared to generalizing the ECDF to handle covariates by using a semiparametric model.]{.aside}
+
+
+# Re-Write of `lrm.fit` and `orm.fit`
+
+To modernize the Fortran code, better condition the design matrix $X_{n\times p}$ ($n$ observations and $p$ columns), and to explore a variety of optimization algorithms, I did a complete re-write of the `rms` package `lrm` and `lrm.fit` functions in November, 2024, for `rms` version 6.9-0.  To reduce optimization divergence when there are extreme collinearities, and to better scale $X$, I was interested in implementing mean centering followed by a QR factorization of $X$ to orthogonalize its columns.  Details about how this is done and how the parameter estimates and covariance matrix are converted back to the original $X$ space may be found [here](https://hbiostat.org/rmsc/mle#qr).  QR can be turned on by setting the `lrm.fit` argument `transx` to `TRUE`.  When QR is in play, the rotated columns of $X$ are scaled to have standard deviation 1.0.
+
+Besides dealing with fundamental statistical computing issues, I changed `lrm.fit` to use Therneau's `survival` package [`concordancefit`](https://www.rdocumentation.org/packages/survival/versions/3.6-4/topics/concordancefit) function to compute concordance probabilities used by various rank correlation indexes such as Somers' $D_{xy}$.  This got rid of a good deal of code.  Previously, `lrm.fit` binned predicted probabilities into 501 bins to calculate rank measures almost instantly.  But I decided it was time to use exact calculations now that `concordancefit` is so fast.  Though not used in `rms`, `concordancefit` also computes accurate standard errors.  
+
+A new Fortran 2018 subroutine `lrmll` was written to efficiently calculate the -2 log-likelihood function (the _deviance_), the gradient vector, and the hessian matrix of all second partial derivatives of the log-likelihood with respect to intercept(s) $\alpha$ and regression coefficients (slopes) $\beta$.
+
+`lrm.fit` now implements several optimization algorithms.  When Y is binary and there is no penalization, it has the option to use `glm.fit(..., family=binomial())` which runs iteratively reweighted least squares, a fast-converging algorithm for binary logistic regression (but does not extend to ordinal regression).  `lrm.fit` implements 8 optimization algorithms.
+
+* optional for proportional odds models (according to `lrm.fit` `initglm` argument), does a first pass with `glm.fit` that fits a binary logistic regression for the probability that Y is greater than or equal to the median Y; this fit can then be used for starting values after shifting the default starting intercept values so that the middle intercept matches the intercept from the binary fit[This was inspired by the `MASS` package `polr` function]{.aside}
+* `nlminb`: a function in the `stats` package, tied with `NR` as the fastest algorithm in general; uses hessians.  This uses Fortran routines in the Bell Labs [port](https://netlib.org/port) library for which the original paper may be found [here](https://dl.acm.org/doi/pdf/10.1145/355958.355965).
+* `NR`: Newton-Raphson iteration with step-halving, implemented here as R function `newtonr`.  This algorithm is the default because it has the advantage of having full control over convergence criteria.  It requires convergence with respect to 3 simultaneous criteria: changes in -2 LL, changes in parameter estimates, and nearness of gradient to zero.  The user can relax any of the 3 criteria thresholds to relax conditions.  This is the optimization method used in the old `lrm.fit` function, but written in Fortran there for slightly increased speed.  Defaults for tolerance parameters are such that `eps` (iteration-to-iteration change in -2 LL) will usually dictate when convergence called.
+* `LM`: Levenberg-Marquart algorithm, which is a kind of Newton method with generalized step-halving
+* `glm.fit`: for binary Y without penalization only
+* `nlm`: the `stats` function that is usually recommended for maximum likelihood, but I found it is slower than `nlminb` without offering other advantages
+* [`BFGS`](https://en.wikipedia.org/wiki/Broyden–Fletcher–Goldfarb–Shanno_algorithm) and `L-BFGS-B` using the `stats` `optim` function: fast general-purpose algorithms that do not require the hessian, so these can be used with an unlimited number of intercepts as long as the user sets the `lrm.fit` parameter `compvar` to `FALSE` so that the hessian is not calculated once after convergence
+* `CG` and `Nelder-Mead`: see `optim`
+
+The last four methods do not involve computing the hessian, which is the most computationally intensive calculation in MLE.  But they are still slower overall if you want to get absolute convergence, due to requiring many more evaluations of the object function (-2 LL).
+
+See [this](https://stats.stackexchange.com/questions/9535) for useful comparisons of some of the algorithms.
+
+For `rms` 7.0-0, `lrm.fit` and `orm.fit` were changed to use the R `Matrix` package for much more efficient handling of sparse Hession/information matrices.  Now there are no limitations on the number of distinct Y-values analyzed by `lrm` and `orm`.  The primary differences between the two modeling procedures are
+
+* `lrm` only implements a single link function (logistic)
+* `lrm` implements multiple optimization methods
+* `orm` only implements Newton-Raphson optimization (with step-halving) and Levenberg-Marquardt
+* `lrm` output (from `print.lrm`) includes rank correlation model performance indexes that are more suitable for discrete Y
+* `orm` output (from `print.orm`) includes only Spearman's $\rho$ as a rank predictive discrimination measure; this is more suitable for continuous Y
+* `orm` has a `Quantile` and an `ExProb` method;  both `lrm` and `orm` have `Mean` methods, as means work on discrete numeric Y (unlike quantiles)
+* `lrm` implements `transx` for `QR` orthonormalization of the design matrix $X$
+* `orm` implements `scale` for mean-centering and standard deviation scaling of $X$
+
+# Background: Convergence
+
+The two most commonly used convergence criteria for MLE are
+
+* relative convergence: stop iterations when the change in deviance is small or when the _relative_ change in parameter estimates is small
+* absolute convergence: stop iterations when the first derivative of the log likelihood is small in absolute value for all parameters, or there is a very small absolute change in parameter values
+
+Absolute convergence with respect to the first derivatives (gradients) is similar to demanding that none of the regression parameters change very much since the last iteration.  From the standpoint of what is important statistically, convergence of the deviance (what the gold standard likelihood ratio test is based on) is sufficient with respect to what matters.  Changing parameter values when the deviance does not change in the $6^\text{th}$ decimal place will be buried in the noise.  Absolute convergence may affect $\hat{\beta}$, but relative convergence tends to result in a very stable $\frac{\hat{\beta}}{\text{s.e.}}$.  You might deem convergence satisfactory when parameter estimates between successive iterations change by less than 0.05 standard errors (which would require evaluation of the hessian to know), but approximately this corresponds to relative convergence judged by the deviance.
+
+Despite achieving statistically relevant convergence more easily, there is a real issue of reproducibility.  Different algorithms and software may result in semi-meaningful differences in $\hat{\beta}$ taken in isolation (ignoring how much of $\hat{\beta}$ is noise).  Only by having all the implementations achieve absolute convergence will different analysts be very likely to reproduce each others' work.  If this is important to you, either avoid the BFGS algorithms (for which the R `optim` function does not have an absolute convergence criterion) or use a highly stringent relative convergence criterion, e.g., specify the `lrm.fit` argument `reltol` as $10^{-11}$.  Below I explore how convergence and execution time are affected by `reltol`.
+
+# Overview of Findings
+
+`opt_method='NR'` and `'nlminb'` are the fastest methods, even slightly faster than `glm.fit`.
+
+Limited tests of `transx` in `lrm.fit` to use QR factorization does not show not much benefit, but see below for details.
+
+For ordinal Y, using `opt_method='BFGS'` with `compstats=FALSE` for `lrm` mimics the `polr` function in the `MASS` package.  For a large number of intercepts, `lrm.fit` is much faster due to computing the deviance and derivatives in highly efficient compiled Fortran and capitalizing on sparse matrices.
+
+Setting `initglm=TRUE` tells `lrm.fit` to get initial ordinal model parameter values from a binary logistic `glm.fit` run when cutting Y at the median.  This does not seem to offer much benefit over setting starting values to covariate-less MLEs of $\alpha$ (which are calculated instantly when $\beta=0$) and setting $\beta=0$.  In one example using `nlminb` the algorithm actually diverged with `initglm=TRUE` but ran fine without it.  This is probably due to large intercept values with many distinct Y values.
+
+Extensive tests of `opt_method='BFGS'` show good _stochastic_ performance (convergence to what matters, deviance-wise), but unimpressive execution time if you want absolute convergence by setting `reltol` to a small number.
+
+The best overall algorithm that uses the hessian is `NR` in terms of speed and convergence, with `nlminb` and `LM` close seconds.  `NR` is the method used in the old `lrm.fit`, so for most datasets, the new optimization options are not needed.
+
+Even though `lrm.fit` is optimized for the logistic link function, there is not much difference in execution time between `lrm.fit` and `orm.fit` for binary and ordinal logistic models.
+
+# Validation
+
+Two kinds of validations appear below.
+
+* Validation of the Fortran-calculated deviance and derivatives: for a given small dataset, get parameter estimates from `rms::orm` with tight convergence criteria, and test the Fortran code by evaluating the deviance and derivatives at these parameter values.  The gradient (first derivative) should be very close to zero, and the deviance should be identical to that from `orm`.  The inverse of the negative of the hessian matrix should equal the variance-covariance matrix computed by `orm`.
+* Validate `lrm.fit` overall by letting it pick its usual starting values for iteration, and compare its output to that from `orm` and other fitting functions including the last pre-6.9-0 version of `lrm.fit` which is named `olrm` below.
+
+```{r setup}
+require(rms)
+# Fetch the old lrm.fit (function olrm)
+require(orms)
+
+# Define simple timer functions with and without printing
+
+stime <- function(...) {
+  ti <- system.time(...)['elapsed']
+  cat('Elapsed time: ', ti, 's\n', sep='')
+  invisible(ti)
+}
+
+stim <- function(...) system.time(...)['elapsed']
+
+# Define a function that will time a series of lines of code, repeating each
+# reps times (default is 10).  When only one line of code is given, the
+# elapsed execution time is printed and the result of the line is returned.
+# Otherwise, a vector of run times corresponding to all the lines of code is
+# returned, and the values returned from the lines are stored in the global
+# environment in object Res, with components named according to inputs to tim.
+# When reps > 1 the values from running code lines are from the last rep.
+
+tim <- function(...) {
+  reps <- 10
+  w <- sys.call()
+  n <- names(w)
+  m <- length(n)
+  k <- 2 : m
+  if('reps' %in% n) {
+    i    <- which(n == 'reps')
+    reps <- eval(w[[i]])
+    k    <- setdiff(k, i)
+  }
+  n <- n[k]
+  m <- length(n)
+  r <- numeric(m)
+  Res        <<- vector('list', m)   # put in global environment
+  names(r)   <- n
+  names(Res) <<- n
+  l <- 0
+  for(i in k) {
+    l <- l + 1
+    s <- stim(for(j in 1 : reps)
+    R <- eval(w[[i]], parent.frame())) / reps
+    r[l]      <- s
+    Res[[l]] <<- R
+  }
+  label(r) <- paste('Per-run execution time in seconds, averaged over', reps, 'runs')
+  if(m == 1) {
+    print(r)
+    return(R)
+  }
+  r
+}
+
+m   <- function(x) max(abs(x))
+mad <- function(a, b) c(mad    =     mean(abs(a - b)),
+                        relmad = 2 * mean(abs(a - b) / (abs(a) + abs(b))))
+wratio <- function(r) exp(max(abs(log(r))))  # worst ratio, whether < or > 1.0
+
+# Function creating a table of matrix dimensions for matrices in a list
+mdim <- function(w) {
+  i <- sapply(w, is.matrix)
+  g <- function(x) c(rows=nrow(x), columns=ncol(x))
+  sapply(w[i], g)
+}
+            
+# Function to summarize a series of model fits stored in Res
+smod <- function() {
+  max_abs_u <- sapply(Res, function(x) if(length(x$u)) m(x$u) else NA)
+  iter      <- sapply(Res, function(x) if(length(x$iter)) tail(x$iter, 1) else NA)
+  deviance  <- sapply(Res, function(x) tail(x$deviance, 1))
+  print(data.frame(deviance, max_abs_u, iter))
+  l <- length(Res)
+  n <- names(Res)
+  if(l > 1) {
+    for(i in 1 : l) {
+      r <- Res[[i]]
+      # See if polr or BFGS
+      a <- inherits(r, 'polr') || (length(r$opt_method) && r$opt_method=='BFGS')
+      r$var <- if(inherits(r, 'orm'))
+        vcov(r, intercepts='all') else if(! a) vcov(r)
+      if(inherits(r, 'polr'))
+        r$coefficients <- c(-r$zeta, coef(r))
+      Res[[i]] <- r
+    }
+    
+    cat('\nMaximum |difference in coefficients|,',
+        'Maximum |relative difference|\n',
+        'worst ratio of covariance matrices\n\n')
+    d <- NULL
+    for(i in 1 : (l-1))
+      for(j in (i+1) : l) {
+        ri <- Res[[i]]; rj <- Res[[j]]
+        comp <- paste(n[i], 'vs.', n[j])
+        co <- mad(ri$coefficients, rj$coefficients)
+        w <- data.frame(Comparison         = comp,
+                        `Max |difference|` = co[1],
+                        `Max |rel diff|`   = co[2],
+                        `Cov ratio`        = NA, check.names=FALSE)
+        if(length(ri$var) && length(rj$var)) 
+          w$`Cov ratio` <- wratio(ri$var / rj$var)
+        d <- rbind(d, w)
+        }
+  }
+  d$`Cov ratio` <- ifelse(is.na(d$`Cov ratio`), '', format(d$`Cov ratio`))
+  rownames(d) <- NULL
+  d
+}
+```
+
+## Check -2 Log Likelihood and Derivatives for a Simple Model
+
+First define an R function that makes it easy to run the Fortran subroutine.
+
+```{r}
+rfort <- function(x, y, alpha, beta, what=2L, debug=0L, penhess=1L,
+                  offset=rep(0., n), wt=rep(1., n),
+                  penmat=matrix(0., p, p)) {
+  x  <- as.matrix(x)
+  p  <- ncol(x)
+  n  <- nrow(x)
+  yd <- sort(unique(y))
+  k  <- max(yd)
+  nv <- as.integer(k + p)
+  if(length(yd) != k + 1 || any(yd != 0 : k))
+    stop('y must be coded 0-k for lrmll')
+  storage.mode(x) <- storage.mode(offset) <- storage.mode(wt) <- storage.mode(penmat) <-
+    storage.mode(alpha) <- storage.mode(beta) <- 'double'
+  w <- .Fortran('lrmll', n, as.integer(k), p, x, as.integer(y),
+                 offset, wt, penmat, alpha, beta,
+                 logL=numeric(1), grad=numeric(nv),
+                 a=matrix(0e0, k, 2), b=matrix(0e0, p, p), ab=matrix(0e0, k, p),
+                 what=as.integer(what), debug=as.integer(debug),
+                 penhess=as.integer(penhess), salloc=integer(1))
+  # lrmll creates 3 compact hessian submatrices
+  # Put them together into a single hessian
+  w$hess <- infoMxop(w[c('a', 'b', 'ab')])
+  w
+}
+```
+
+### Binary Y
+
+```{r}
+x <- 1 : 10
+y <- c(0, 1, 0, 0, 0, 1, 0, 1, 1, 1)
+
+# From orm.  Deviance = 13.86294, 10.86673
+alpha <- -2.4412879506377 ; beta <- 0.4438705364796 
+w <- rfort(x, y, alpha, beta)
+w$logL
+w$grad
+w <- rfort(x, y, alpha, beta, what=3L)
+w$hess   # negative inverse of covariance matrix
+- solve(vcov(glm(y ~x, family=binomial(), control=list(epsilon=1e-12))))
+
+Res <- list(glm     = glm(y ~ x, family=binomial(), control=list(epsilon=1e-12)),
+            olrm    = olrm(x, y, eps=1e-10),
+            lrm.fit = lrm.fit(x, y, reltol=1e-12),
+            orm     = orm(y ~ x, eps=1e-10) )
+
+smod()
+```
+
+[`Cov ratio` in the above output is the anti-log of the absolute value of the log of the ratio of elements of two covariance matrices.  So it represents the worst disagreement in the two matrices, with 1.0 being perfect agreement to 7 decimal places.  `Max |difference|` is the highest absolute difference in estimated regression coefficients between two methods, and `Max |rel diff|` is the maximum ratio of absolute differences to the sum of absolute values of two coefficient estimates.]{.aside}
+
+
+### Y=0, 1, 2
+
+```{r}
+x <- 1 : 10
+y <- c(0, 2, 0, 1, 0, 2, 2, 1, 1, 2)
+f <- orm(y ~ x, eps=1e-10) # deviance 21.77800  19.79933
+- solve(vcov(f, intercepts='all'))
+- solve(vcov(lrm(y ~ x, eps=1e-10)))
+- solve(olrm(x, y, eps=1e-10)$var)
+- solve(vcov(MASS::polr(factor(y) ~ x)))
+# Note a problem with VGAM
+- solve(vcov(VGAM::vglm(y ~ x, VGAM::cumulative(reverse=TRUE, parallel=TRUE))))
+- solve(vcov(ordinal::clm(factor(y) ~ x)))
+alpha <- c(-0.8263498291155, -2.3040967379853)
+beta <- 0.3091154153068 
+
+# Analytically compute 2nd derivative of log L wrt beta
+info <- function(x) {
+  p1 <- plogis(alpha[1] + x * beta) 
+  p2 <- plogis(alpha[2] + x * beta)
+  d <- p1 - p2
+  v1 <- p1 * (1 - p1)
+  v2 <- p2 * (1 - p2)
+  v1 - v2
+  w1 <- p1 * (1 - p1) * (1 - 2 * p1)
+  w2 <- p2 * (1 - p2) * (1 - 2 * p2)
+  w1 - w2
+  x * x * ((w1 - w2) * d - (v1 - v2)^2) / d / d
+}
+
+# Compute 2nd derivative of log(p1 - p2) wrt beta numerically
+dif <- function(x, beta) log(plogis(alpha[1] + x * beta) - plogis(alpha[2] + x * beta))
+del = 1e-6
+d2 <- function(x) ((dif(x, beta + del) - dif(x, beta)) / del - (dif(x, beta) - dif(x, beta - del)) / del) / del
+c(info(4), info(8), info(9))
+num <- c(d2(4), d2(8), d2(9))
+print(num)
+sum(num)
+
+w <- rfort(x, y, alpha, beta)
+w$logL
+w$grad
+
+w <- rfort(x, y, alpha, beta, what=3L)
+w$hess
+```
+
+## Simple Ordinal Model With Weights, Offsets, and Penalties
+
+We first ignore weights, offsets, and penalties, then incorporate them.
+
+```{r}
+set.seed(1)
+x1 <- rnorm(50)
+x2 <- rnorm(50)
+X  <- cbind(x1, x2)
+y  <- sample(0:5, 50, TRUE)
+wt <- runif(50)
+wt <- wt / sum(wt)
+of <- rnorm(50)
+pm <- cbind(c(1.2, 0.6), c(0.6, 1.2))
+
+f <- olrm(X, y, eps=1e-15)
+f$deviance
+cof <- coef(f)
+w <- rfort(X, y, cof[1:5], cof[6:7])
+w$logL
+w$grad
+w <- rfort(X, y, cof[1:5], cof[6:7], what=3L)
+range(w$hess + solve(vcov(f)))
+# Needed reltol=1e-15 to get gradient to 1e-8 with BFGS
+# CG achieved 1e-6 with default, with 475 function evaluations
+
+g <- lrm.fit(X, y, trace=1, opt_method='nlm', gradtol=1e-14,
+             transx=TRUE, compstats=FALSE)
+m(g$u); g$iter  # L-BFGS-B tool factor as low as 1e2 to get u=3e-6, 50 iter
+mad(cof, g$coefficients)
+range(f$var / vcov(g))
+```
+
+Now use weights, offset, and penalties.
+
+```{r}
+f <- olrm(X, y, offset=of, weights=wt, penalty.matrix=2*pm, eps=1e-12)
+f$deviance
+cof <- coef(f)
+w <- rfort(X, y, cof[1:5], cof[6:7], offset=of, wt=wt, penmat=2*pm)
+w$logL
+w$grad
+w <- rfort(X, y, cof[1:5], cof[6:7], offset=of, wt=wt, penmat=2*pm, what=3L)
+range(w$hess + solve(vcov(f)))
+
+g <- lrm.fit(X, y, trace=3, offset=of, weights=wt,
+             penalty.matrix=2e0*pm, opt_method='nlminb', compstats=FALSE)
+m(g$u); g$iter
+mad(coef(f), coef(g))
+g$iter
+g$u
+f$deviance
+g$deviance
+range(vcov(f) / vcov(g))
+```
+
+## Check Accuracy Against Old `lrm.fit` For a Variety of Levels of Y
+
+```{r}
+set.seed(1)
+n <- 150
+w <- NULL
+for(i in 1 : 40) {
+  k <- sample(1 : 20, 1, TRUE)
+  y <- sample(0 : k, n, TRUE)
+  x1 <- runif(n)
+  x2 <- exp(rnorm(n))
+  X  <- cbind(x1, x2)
+  f <- olrm(X, y, eps=1e-10)
+  g <- lrm.fit(    X, y, opt_method='nlminb', compstats=FALSE)
+  d <- coef(f) - coef(g)
+  r <- wratio(vcov(f) / vcov(g))
+  w <- rbind(w, data.frame(i, k, mad.beta=m(d), Cov.ratio=r))
+}
+range(w$Cov.ratio)
+with(w, plot(k, mad.beta, log='y'))
+```
+
+# Study Convergence and Timings
+
+## Fortran vs. R
+
+Regarding execution speed, a key question is whether it's worth the effort to code part of the calculations in a compiled language such as Fortran, C, or C++, as compared to just using R.  Let's explore this by coding the gradient vector calculation in R and timing it against the new Fortran code.  Also write a function making the Fortran routine easy to call when computing the gradient.
+
+The code below makes use of the facts that $\frac{\partial \log \text{expit}(x)}{\partial x} = \text{expit}(-x) = 1 - \text{expit}(x)$ and $\frac{\partial \text{expit}(x)}{\partial x} = \text{expit(x)}(1 - \text{expit(x)})$.  The philosophy of this code is that nothing is calculated unless it is relevant, which makes for more lines of code.  For example, the code does not create extra intercepts to yield probabilities of 0 or 1, but instead handles each case Y=0, Y=$k$, $0 < \text{Y} < k$ separately.  For the non-interior levels of Y the gradient is very simple as probabilities are expits and not differences.
+
+```{r}
+grad <- function(alpha, beta, x, y) {
+  k  <- length(alpha)
+  p  <- length(beta)
+  f  <- plogis
+  xb <- as.vector(x %*% matrix(beta, nrow=p))
+  xb <- as.vector(x %*% beta)
+  P1 <- P2 <- numeric(n)
+  i0 <- y == 0
+  ik <- y == k
+  ib <- y > 0 & y < k
+  P1[i0] <- 1e0
+  P2[i0] <- f(alpha[1] + xb[i0])
+  P1[ik] <- f(alpha[k] + xb[ik])
+  P2[ik] <- 0e0
+  P1[ib] <- f(alpha[y[ib]    ] + xb[ib])
+  P2[ib] <- f(alpha[y[ib] + 1] + xb[ib])
+  pq1    <- P1 * (1e0 - P1)
+  pq2    <- P2 * (1e0 - P2)
+  P      <- P1 - P2
+  U      <- rep(0e0, k + p)
+  
+  U[1] <- - sum(1e0 - P[i0])
+  U[k] <-   U[k] + sum(1e0 - P[ik])
+  
+  # Gradiant for intercepts
+  if(k > 1) for(m in 1 : k) {  # only interior y values create complexity
+    if(m < k) U[m] <- U[m] + sum(pq1[y == m] / P[y == m])
+    if(m > 1) U[m] <- U[m] - sum(pq2[y == m - 1] / P[y == m - 1])
+  }
+  # Gradient for slopes
+  for(m in 1 : p) {
+    U[k + m] <-            - sum(x[i0, m] * (1e0 - P[i0]))
+    U[k + m] <-   U[k + m] + sum(x[ik, m] * (1e0 - P[ik]))
+    if(k > 1) for(i in 1 : (k - 1)) {
+    j <- y == i
+    U[k + m] <-   U[k + m] + sum(x[j,  m] * (pq1[j] - pq2[j]) / P[j])
+    }
+  }
+  U
+}
+
+fgrad <- function(alpha, beta, x, y) rfort(x, y, alpha, beta)$grad
+  
+# This calls a version of the Fortran code using the alpha extension approach
+fgrad2 <- function(alpha, beta, x, y) {
+  x <- as.matrix(x)
+  n <- nrow(x)
+  p <- ncol(x)
+  k <- max(y)  # y assumed to be coded 0-k
+  .Fortran('lrmll2',
+           as.integer(n), as.integer(k), as.integer(p),
+           x, y, rep(0e0, n), rep(1e0, n), matrix(0e0, nrow=p, ncol=p),
+           alpha, beta, numeric(1), u=numeric(k + p), numeric(1), 2L, 0L, 0L)$u
+}
+```
+
+But is the elegance of following the letter of the proportional odds model's definition worth the trouble?  What if we used the trick that is most often used in MLE and Bayesian modeling where we define extra intercepts so that all values of Y appear to be interior values and the same difference in probabilities can be computed everywhere, and we did not use special cases to compute derivatives of log likelihood components?  Specifically we can write the model as the following, with y = $0, 1, \ldots, k$ and $\text{expit}(x) = \frac{1}{1 + \exp(-x)}$.
+
+$$\Pr(Y \geq y) = \text{expit}(\alpha_y + X\beta)$$
+
+by expanding the original vector of intercepts $\alpha$ by adding $\alpha_0 = 100$ and $\alpha_{k+1} = -100$.  Then $\Pr(Y = y) = \text{expit}(\alpha_y + X\beta) - \text{expit}(\alpha_{y+1} + X\beta)$ for any $y=0, \ldots, k$.  The $\pm 100$ is chosen so that $\text{expit}(x)$ is indistinguishable from 1 and 0.
+
+We need to run some computational tests to make sure that the upcoming shortcuts do not cause any computational inefficiencies or inaccuracies.
+
+```{r}
+# Check that R computes expit very quickly for extreme values of x
+tim(smallvals = plogis(rep(  1, 100000)),
+    m50       = plogis(rep(-50, 100000)),
+    p50       = plogis(rep( 50, 100000)))
+
+# Check that taking the log of probabilities is as accurate as
+# using plogis' special log probability calculation
+x <- seq(-50, 50, by=1); m(log(plogis(x)) - plogis(x, log=TRUE))
+```
+
+So it appears that the "intercept extension" approach will not cause any numerical problems.  To code this method while computing the gradient, we need the derivative of the log of the difference in probabilities (call this $Q = P_1 - P_2$) given above.  Consider a general parameter $\theta$ which may be one of the (interior) $\alpha$s or one of the $\beta$s.
+
+$$\frac{\partial \log(Q)}{\partial\theta} = \frac{\frac{\partial P_1}{\partial\theta} - \frac{\partial P_2}{\partial\theta}}{Q}$$
+Since the main part of $\frac{\partial \text{expit}(x)}{\partial\theta} = \text{expit(x)}(1 - \text{expit(x)})$,
+
+$$\frac{\partial P_1}{\partial\theta} = P_1 (1 - P_1) \frac{\partial(\alpha_y + X\beta)}{\partial\theta}$$
+$$\frac{\partial P_2}{\partial\theta} = P_2 (1 - P_2) \frac{\partial(\alpha_{y + 1} + X\beta)}{\partial\theta}$$
+
+
+$\frac{\partial(\alpha_{y} + X\beta)}{\partial\theta}$ is the 0/1 indicator function $[y=j]$ when $\theta = \alpha_{j}$ and is $X_{j}$ when $\theta = \beta_{j}$.
+Now code this in R.
+
+```{r}
+grad2 <- function(alpha, beta, x, y) {
+  k     <- length(alpha)
+  p     <- length(beta)
+  xb    <- as.vector(x %*% matrix(beta, nrow=p))
+  xb    <- as.vector(x %*% beta)
+  alpha <- c(100e0, alpha, -100e0)
+  # Must add 1 to y to compute P1 and P2 since index starts at 1, not 0
+  P1    <- plogis(alpha[y + 1] + xb)
+  P2    <- plogis(alpha[y + 2] + xb)
+  Q     <- P1 - P2
+  pq1   <- P1 * (1e0 - P1)
+  pq2   <- P2 * (1e0 - P2)
+  U     <- numeric(k + p)
+  
+  # Gradiant for intercepts
+  for(m in 1 : k)
+    U[m] <- sum((pq1 * (y == m) - pq2 * (y + 1 == m)) / Q)
+  
+  # Use element-wise multiplication then get the sum for each column
+  # Element-wise = apply the same value of the weights to each row of x
+  U[(k + 1) : (k + p)] <- colSums(x * (pq1 - pq2) / Q)
+
+  U
+}
+```
+
+Check that `grad` and `grad2` yield the same answer and check their relative speeds.
+
+```{r}
+set.seed(1)
+n <- 50000; p <- 50; k <- 100
+x <- matrix(rnorm(n * p), nrow=n)
+y <- sample(0 : k, n, TRUE)
+stopifnot(length(unique(y)) == k + 1)
+alpha <- seq(-6, 6, length=k)
+beta  <- runif(p, -0.5, 0.5)
+tim(g1 = grad( alpha, beta, x, y),
+    g2 = grad2(alpha, beta, x, y),
+    reps = 5)   # creates Res
+m(Res$g1 - Res$g2)  # maximum absolute difference
+```
+
+Even though the streamlined code in `grad2` required evaluating a few quantities that are known to be 0 or 1, its vectorization resulted in significantly faster R code.  Later this will be compared with the speed of Fortran code.
+
+::: {.callout-note collapse="true"}
+# Fortran Code for Gradient
+
+Here is the central part of the Fortran code for computing the gradient vector.  Fortran is blazing fast and easier to learn than C and C++, so more users may wish to translate some execution-time critical portions of their R code to Fortran 2018.  R makes it easy to include Fortran code in packages, and it is also easy to include Fortran functions in `RStudio` sessions.
+
+```{fortran eval=FALSE}
+   u = 0_dp
+
+    ! All obs with y=0
+    ! The derivative of log expit(x) wrt x is expit(-x)
+    ! Prob element is expit(-alpha(1) - lp)
+    u(1) = - sum(wt(i0) * (1_dp - d(i0)))
+    if(p > 0) then
+      do l = 1, p
+        u(k + l) = - sum(wt(i0) * x(i0, l) * (1_dp - d(i0)))
+      end do
+    end if
+    ! All obs with y=k
+    ! Prob element is expit(alpha(k) + lp)
+    u(k) = u(k) + sum(wt(ik) * (1_dp - d(ik)))
+    if(p > 0) then
+      do l = 1, p
+        u(k + l) = u(k + l) + sum(wt(ik) * x(ik, l) * (1_dp - d(ik)))
+      end do
+    end if
+    ! All obs with 0 < y < k
+    if(nb > 0) then
+      do ii = 1, nb
+        i = ib(ii)
+        j = y(i)
+        ! For p1, D() = 1 for alpha(j), 0 for alpha(j+1)
+        ! For p2, D() = 0 for alpha(j), 1 for alpha(j+1)
+        u(j)     = u(j)     + wt(i) * v1(i) / d(i)
+        u(j + 1) = u(j + 1) - wt(i) * v2(i) / d(i)
+        if(p > 0) then
+          do l = 1, p
+            u(k + l) = u(k + l) + wt(i) * x(i, l) * (v1(i) - v2(i)) / d(i)
+          end do
+        end if
+      end do
+```
+
+This code can be streamlined using the $\alpha$ extension approach:
+
+```{fortran eval=FALSE}
+    ealpha = [100d0, alpha, -100d0]
+    p1 = expit(ealpha(y + 1) + lp)
+    p2 = expit(ealpha(y + 2) + lp)
+    q  = p1 - p2
+    pq1 = p1 * (1_dp - p1)
+    pq2 = p2 * (1_dp - p2)
+     do j = 1, k
+      u(j) = sum((pq1 * merge(1_dp, 0_dp, y     == j) - &
+                  pq2 * merge(1_dp, 0_dp, y + 1 == j)) / (q / wt))
+    end do
+    if(p > 0) then
+      do j = 1, p
+        u(k + j) = sum(x(:, j) * (pq1 - pq2) / (q / wt))
+      end do
+    end if
+```
+
+But this code runs faster (this is the code tested below):
+
+```{fortran eval=FALSE}
+   do i = 1, n
+      w = q(i) / wt(i)
+      do j = 1, k
+        if(y(i)     == j) u(j) = u(j) + pq1(i) / w
+        if(y(i) + 1 == j) u(j) = u(j) - pq2(i) / w
+      end do
+      if(p > 0) then
+        do j = 1, p
+          u(k + j) = u(k + j) + x(i, j) * (pq1(i) - pq2(i)) / w
+        end do
+      end if
+    end do
+```
+
+:::
+
+First let's compare accuracy and speed of two ways of coding the gradient calculation in Fortran (click above to see both versions).
+
+```{r}
+tim(Fortran  = fgrad (alpha, beta, x, y),
+    Fortran2 = fgrad2(alpha, beta, x, y), reps=44/10 )
+m(Res$Fortran - Res$Fortran2)
+```
+
+Though it produces the same result to within $7\times 10^{-12}$, the streamlined Fortran is $1.5\times$ slower than the longer Fortran code.
+
+Run the R `grad2` function defined above, and the Fortran routine included in the new `rms` package, for $n=50,000$, $p=50$ predictors, and $k=100$ intercepts.
+
+```{r}
+# Check agreement of R and Fortran code
+tim(R       = grad2(alpha, beta, x, y),
+    Fortran = fgrad(alpha, beta, x, y), reps=40 )
+m(Res$R - Res$Fortran)
+```
+
+We see that the compiled Fortran code is $> 7\times$ faster than the R code.  In a nutshell Fortran allows you to not worry about vectorizing calculations, allowing for simpler code (there are many functions in Fortran for vectorizing operations but these are used more for brevity than for speed). [A more vectorized version of the code, written by ChatGPT, gave completely incorrect results but only ran faster by a ratio of 0.84.  After much prompting, ChatGPT could only get the right answer if it re-wrote the code to be very inefficient by using excessive loops.]{.aside}
+
+::: {.callout-note collapse="true"}
+# ChatGPT's Compact But Non-Working Code
+
+As streamlined as this code is, it does not improve execution time over my R `grad` function, taking 1.1s to run on the data given above while yielding the wrong answer.
+
+```{r eval=FALSE}
+gradient_proportional_odds <- function(alpha, beta, X, Y) {
+  n <- nrow(X)  # Number of observations
+  p <- ncol(X)  # Number of predictors
+  k <- length(alpha)  # Number of thresholds (max Y value)
+
+  # Compute linear predictors
+  eta <- X %*% beta  # n x 1 vector
+
+  # Expand eta to match dimensions with alpha
+  eta_matrix <- matrix(eta, n, k, byrow = FALSE)  # n x k matrix
+
+  # Compute expit(alpha_y + eta) for all thresholds y
+  eta_alpha <- eta_matrix + matrix(alpha, n, k, byrow = TRUE)
+  expit_vals <- 1 / (1 + exp(-eta_alpha))  # n x k matrix of expit values
+
+  # Compute probabilities for P(Y = y)
+  expit_upper <- cbind(1, expit_vals)  # P(Y >= 0) = 1
+  expit_lower <- cbind(expit_vals, 0)  # P(Y >= k+1) = 0
+  prob_Y <- expit_upper[, 1:k] - expit_lower[, 1:k]  # P(Y = y)
+
+  # Indicator matrix for observed Y
+  Y_ind <- matrix(0, n, k)
+  for (i in 1:k) Y_ind[, i] <- as.numeric(Y == (i - 1))
+
+  # Compute weights (observed minus predicted probabilities)
+  weights <- (Y_ind - prob_Y)
+
+  # Gradients w.r.t. alpha
+  grad_alpha <- colSums(weights)
+
+  # Gradients w.r.t. beta
+  d_expit <- expit_vals * (1 - expit_vals)  # Derivative of expit
+  grad_beta <- numeric(p)
+  for (j in 1:p) {
+    grad_beta[j] <- sum(weights * d_expit * X[, j])
+  }
+
+  # Combine gradients
+  grad <- c(grad_alpha, grad_beta)
+  return(grad)
+}
+```
+
+:::
+
+The hessian requires about a factor of $\frac{k + p}{2}$ more calculations than the gradient when computed inefficiently, so the Fortran code pays off even more when using hessian-based optimization algorithms or computing the final covariance matrix.  The `lrmll` Fortran code called by the new `lrm.fit`, and `ormll` called by `orm.fit`,  capitalize on the tri-band diagonal form of the hessian for the cumulative probability model.  In `rms` 7.0-0 `lrm.fit` and `orm.fit` were completely re-written to benefit from Fortran code anx to use the `Matrix` package for more efficient sparse matrix handling.
+
+## Efficient Computation of the hessian for General Cumulative Probability Models {#sec-hessformula}
+
+The `lrmll` Fortran subroutine computes the hessian very efficiently for the proportional odds model (logit link), making use of simplifications for the logistic model.  Now consider general links.  For $Y = 1, ..., k - 1, P(Y = j)$ is written in terms of the cumulative probability function $f$ by $f(\alpha_{j} + X\beta) - f(\alpha_{j+1} + X\beta)$.  We need all the second partial derivatives of the log of this difference in cumulative probabilities.  Let's simplify the expression to $f(a + \beta x) - f(b + \beta x)$.  ChatGPT provided the following results, which I simplified somewhat and corrected a sign error in $\frac{\partial^2 g}{\partial b \ \partial \beta}$.
+
+<!-- https://chatgpt.com/c/675d94a9-3488-800a-ac24-580bf7818416 -->
+
+* Let $g(a, b, \beta, x) = \log\left(f(a + \beta x) - f(b + \beta x)\right)$
+* Let $F(a, b, \beta, x) = f(a + \beta x) - f(b + \beta x)$
+* Substitute $d$ for $F(a, b, \beta, x)$ post differentiation
+* Divide all the second partial derivatives below by $d^2$
+
+$$
+\begin{aligned}
+\frac{\partial^2 g}{\partial a^2} &= d f''(a + \beta x) - f'(a + \beta x)^2 \\
+\frac{\partial^2 g}{\partial b^2} &= -d f''(b + \beta x) - f'(b + \beta x)^2 \\
+\frac{\partial^2 g}{\partial \beta^2} &= x^2 d \big(f''(a + \beta x) - f''(b + \beta x)\big) - x^{2} \big(f'(a + \beta x) - f'(b + \beta x)\big)^2 \\
+\frac{\partial^2 g}{\partial a \partial b} &= f'(a + \beta x) \cdot f'(b + \beta x) \\
+\frac{\partial^2 g}{\partial a \partial \beta} &= x d f''(a + \beta x) - x f'(a + \beta x) \cdot \big(f'(a + \beta x) - f'(b + \beta x)\big) \\
+\frac{\partial^2 g}{\partial b \partial \beta} &= -x d f''(b + \beta x) + x f'(b + \beta x) \cdot \big(f'(a + \beta x) - f'(b + \beta x)\big)
+\end{aligned}
+$$
+
+For derivatives with respect only to $\beta$, substitute $x_{i} x_{j}$ for $x^2$ to get second partial derivatives with respect to $\beta_{i}$ and $\beta_{j}$.
+
+Let $d = 1 - f$ for $Y=0$ and $d = f$ otherwise.  For the interior values of $Y$, first consider $Y=0$ which has probability $d = 1 - f(a + x \beta)$.  The second partial derivatives are, when multiplied by $(1 - f)^{2} = d^{2}$,
+
+$$
+\begin{aligned}
+\frac{\partial^2 g}{\partial a^2}            &= - f'^{2} - df'' \\
+\frac{\partial^2 g}{\partial \beta^2}        &= - x^{2} \big(f'^{2} + df''\big) \\
+\frac{\partial^2 g}{\partial a\partial\beta} &= - x\big(f'^{2} - df''\big)
+\end{aligned}
+$$
+
+Here $f$ stands for $f(a + \beta x)$ etc.
+
+For $Y=k$ the hessian elements are, when multiplied by $f^2$,
+
+$$
+\begin{aligned}
+\frac{\partial^2 g}{\partial a^2}            &= d f'' - f'^{2} \\
+\frac{\partial^2 g}{\partial \beta^2}        &= x^{2} \big(d f'' - f'^{2}\big) \\
+\frac{\partial^2 g}{\partial a\partial\beta} &= x\big(d f'' - f'^{2}\big)
+\end{aligned}
+$$
+
+All these formulas are implemented in the `ormll` Fortran subroutine used in the 6.9-1 version of `rms`.
+
+::: {.callout-note collapse="true"}
+## Use of Jacobians to Translate hessian on One Scale To Another Scale
+
+<!-- https://chatgpt.com/c/675d94a9-3488-800a-ac24-580bf7818416 -->
+
+Sometimes it's easier to derive second derivatives on the original scale without logging, and using a Jacobian to translate to the other scale.  ChatGPT provided the following Jacobian solution for our example.  This is not used in the Fortran code because it might slow it down a bit.   I believe that `MASS::polr` uses the Jacobian approach.
+
+---
+
+To systematically compute and represent the transformation of the second partial derivatives of $F(a, b, \beta, x)$ into the second partial derivatives of $g(a, b, \beta, x) = \log(F(a, b, \beta, x))$, we organize the derivatives into a hessian matrix and apply the transformation rules using Jacobian operations.
+
+---
+
+### Step 1: Define the hessian Matrix for $F$
+
+The hessian matrix of $F(a, b, \beta, x)$ with respect to $(a, b, \beta)$ is:
+$$
+\mathbf{H}_F =
+\begin{bmatrix}
+\frac{\partial^2 F}{\partial a^2} & \frac{\partial^2 F}{\partial a \partial b} & \frac{\partial^2 F}{\partial a \partial \beta} \\
+\frac{\partial^2 F}{\partial b \partial a} & \frac{\partial^2 F}{\partial b^2} & \frac{\partial^2 F}{\partial b \partial \beta} \\
+\frac{\partial^2 F}{\partial \beta \partial a} & \frac{\partial^2 F}{\partial \beta \partial b} & \frac{\partial^2 F}{\partial \beta^2}
+\end{bmatrix}.
+$$
+
+Using the expressions for second partial derivatives derived earlier:
+$$
+\begin{aligned}
+\frac{\partial^2 F}{\partial a^2} &= f''(a + \beta x), \quad \frac{\partial^2 F}{\partial b^2} = -f''(b + \beta x), \quad \frac{\partial^2 F}{\partial \beta^2} = x^2 \big(f''(a + \beta x) - f''(b + \beta x)\big), \\
+\frac{\partial^2 F}{\partial a \partial b} &= 0, \quad \frac{\partial^2 F}{\partial a \partial \beta} = x f''(a + \beta x), \quad \frac{\partial^2 F}{\partial b \partial \beta} = -x f''(b + \beta x).
+\end{aligned}
+$$
+
+Thus:
+$$
+\mathbf{H}_F =
+\begin{bmatrix}
+f''(a + \beta x) & 0 & x f''(a + \beta x) \\
+0 & -f''(b + \beta x) & -x f''(b + \beta x) \\
+x f''(a + \beta x) & -x f''(b + \beta x) & x^2 \big(f''(a + \beta x) - f''(b + \beta x)\big)
+\end{bmatrix}.
+$$
+
+---
+
+### Step 2: Define the Transformation for $g = \log(F)$
+
+We apply the chain rule:
+$$
+g = \log(F) \implies \frac{\partial g}{\partial z} = \frac{1}{F} \frac{\partial F}{\partial z},
+$$
+$$
+\frac{\partial^2 g}{\partial z \partial w} = \frac{1}{F} \frac{\partial^2 F}{\partial z \partial w} - \frac{1}{F^2} \frac{\partial F}{\partial z} \frac{\partial F}{\partial w}.
+$$
+
+This can be written compactly in matrix form.
+
+---
+
+### Step 3: Matrix Transformation
+
+Let:
+
+* $\nabla F = \begin{bmatrix} \frac{\partial F}{\partial a} & \frac{\partial F}{\partial b} & \frac{\partial F}{\partial \beta} \end{bmatrix}^\top$
+* $\mathbf{H}_F$ be the hessian matrix of $F$
+* $F$ be the scalar value of $F(a, b, \beta, x)$.
+
+The hessian of $g(a, b, \beta, x)$ is given by:
+$$
+\mathbf{H}_g = \frac{1}{F} \mathbf{H}_F - \frac{1}{F^2} \nabla F \nabla F^\top.
+$$
+
+#### Explanation:
+
+* $\frac{1}{F} \mathbf{H}_F$: Scales the hessian of $F$ by $\frac{1}{F}$
+* $\frac{1}{F^2} \nabla F \nabla F^\top$: Accounts for the interaction of first derivatives of $F$
+
+---
+
+### Step 4: Components of $\nabla F$
+
+From earlier:
+$$
+\frac{\partial F}{\partial a} = f'(a + \beta x), \quad \frac{\partial F}{\partial b} = -f'(b + \beta x), \quad \frac{\partial F}{\partial \beta} = x \big(f'(a + \beta x) - f'(b + \beta x)\big).
+$$
+
+Thus:
+$$
+\nabla F =
+\begin{bmatrix}
+f'(a + \beta x) \\
+-f'(b + \beta x) \\
+x \big(f'(a + \beta x) - f'(b + \beta x)\big)
+\end{bmatrix}.
+$$
+
+---
+
+### Step 5: Compute $\nabla F \nabla F^\top$
+
+The outer product $\nabla F \nabla F^\top$ is:
+$$
+\nabla F \nabla F^\top =
+\begin{bmatrix}
+f'(a + \beta x)^2 & -f'(a + \beta x) f'(b + \beta x) & f'(a + \beta x) x \big(f'(a + \beta x) - f'(b + \beta x)\big) \\
+-f'(a + \beta x) f'(b + \beta x) & f'(b + \beta x)^2 & -f'(b + \beta x) x \big(f'(a + \beta x) - f'(b + \beta x)\big) \\
+f'(a + \beta x) x \big(f'(a + \beta x) - f'(b + \beta x)\big) & -f'(b + \beta x) x \big(f'(a + \beta x) - f'(b + \beta x)\big) & x^2 \big(f'(a + \beta x) - f'(b + \beta x)\big)^2
+\end{bmatrix}.
+$$
+
+---
+
+### Final Hessian of $g$
+
+The hessian of $g(a, b, \beta, x)$ is:
+$$
+\mathbf{H}_g = \frac{1}{F} \mathbf{H}_F - \frac{1}{F^2} \nabla F \nabla F^\top.
+$$
+
+Substitute $\mathbf{H}_F$ and $\nabla F \nabla F^\top$ explicitly to get the full matrix. This provides the second derivatives of $g$ in terms of $F$, its derivatives, and the structure of $f$.
+
+:::
+
+## Check Speed of `NR`, `LM`, `nlminb`, and `glm.fit`
+
+`glm.fit` is tailored to be efficient when Y is binary and there is no penalization, by using iteratively weighted least squares.  How does it stack up against `NR` and `nlminb`?  Let's try fitting a large binary logistic model.
+
+```{r}
+set.seed(1)
+n <- 100000; p <- 100
+X <- matrix(rnorm(n * p), nrow=n)
+y <- sample(0 : 1, n, TRUE)
+tim(NR      = lrm.fit(X, y, compstats=FALSE),
+    LM      = lrm.fit(X, y, opt_method='LM',     compstats=FALSE),
+    nlminb  = lrm.fit(X, y, opt_method='nlminb', compstats=FALSE),
+    glm.fit = glm.fit(cbind(1, X), y), reps=3)
+# transx=TRUE adds 2.3s to lrm.fit
+```
+
+## Check Convergence Under Complete Separation
+
+Consider a simple example where there is complete separation because the predictor values are identical to the response.  In this case the MLE of the intercept is $-\infty$ and the MLE of the slope is $\infty$.  The MLEs are approximated by $\alpha=-50, \beta=100$, yielding predicted logits of $-50$ and $50$ because the $\text{expit}$s are sufficiently close to 0.0 and 1.0.
+
+```{r}
+plogis(-50, log=TRUE)
+plogis( 50, log=TRUE)
+exp(plogis(-50, log=TRUE))
+exp(plogis( 50, log=TRUE))
+```
+
+See how 4 optimization algorithms fare with their default parameters and with some adjustments.  In some of the trace output, the first floating point number listed is -2LL, and following that are the current $\alpha, \beta$ estimates.
+
+```{r}
+set.seed(1)
+x <- sample(0 : 1, 20, TRUE)
+y <- x
+w <- try(lrm.fit(x, y, opt_method='NR', trace=1))  # default opt_method
+w <- try(lrm.fit(x, y, opt_method='LM', trace=1))
+w <- try(lrm.fit(x, y, opt_method='nlminb',  trace=1))
+w <- try(lrm.fit(x, y, opt_method='glm.fit', trace=1))
+w <- try(lrm.fit(x, y, opt_method='BFGS', trace=1))
+```
+
+* `nlminb` took 37 iterations, going so far that the hessian matrix was singular.  It should have stopped with 10.
+* `glm.fit` took 28 iterations; should have stopped with 10
+* `BFGS`: stopped after 50 iterations; should have stopped with 10
+
+Now specify arguments to `lrm.fit` that are tuned to this task.
+
+```{r}
+w <- lrm.fit(x, y, opt_method='nlminb',  abstol=1e-3, trace=1)
+w <- lrm.fit(x, y, opt_method='glm.fit', reltol=1e-3, trace=1)
+w <- lrm.fit(x, y, opt_method='BFGS',    reltol=1e-4, trace=1)
+```
+
+The tolerance parameters are too large to use when infinite coefficients are not a problem.
+
+## Check Algorithms With k=1000
+
+For timings that follow, `compstats=FALSE` is specified to `lrm.fit` so that we can focus on computationally efficiencies of various optimization algorithms.  Some of the differences in run times may not seem to be consequential, but once extremely large datasets are analyzed or one needs to fit models in a bootstrap or Monte Carlo simulation loop, the differences in speed will matter.
+
+When the number of distinct Y values is large, and this far exceeds the number of predictors ($k >> p$), the `rms` `lrm` and `orm` function are highly efficient.  They take into account the sparsity of the intercept portion of the hessian matrix, which is tri-band diagonal and has only $2\times k$ nonzero values for $k+1$ distinct Y values, taking the matrix's symmetry into account.  Outside of `lrm`, `orm` and `SAS JMP`, ordinal regression fitting software treats the hessian matrix as being $k\times k$ and does not capitalize on sparsity. [Note that for Bayesian MCMC this is not an issue as posterior sampling does not need the hessian.]{.aside}
+
+```{r}
+set.seed(1)
+n <- 10000; k <- 1000
+x <- rnorm(n); y <- sample(0:k, n, TRUE)
+length(unique(y))
+
+tim(orm    = orm.fit(x, y, eps=1e-10,           compstats=FALSE),
+    ormlm  = lrm.fit(x, y, opt_method='LM',     compstats=FALSE),
+    bfgs   = lrm.fit(x, y, opt_method='BFGS',   compstats=FALSE, maxit=100),
+    nlminb = lrm.fit(x, y, opt_method='nlminb', compstats=FALSE),
+    nr     = lrm.fit(x, y, opt_method='NR',     compstats=FALSE),
+    nlm    = lrm.fit(x, y, opt_method='nlm',    compstats=FALSE),
+    polr   = MASS::polr(factor(y) ~ x, control=list(reltol=1e-10)),
+    reps= 2)
+smod()
+```
+
+`nlminb` is slower then `NR` because to run `nlminb` requires converting the Hession from a sparse `Matrix` into a regular dense `matrix`.
+
+## Check Timing and Agreement for n=100000, k=10, p=5
+
+Check timing and calculation agreement for n=100000, 10 intercepts, 5 predictors.
+
+```{r}
+set.seed(1)
+n <- 100000
+y <- sample(0 : 10, n, TRUE)
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3 <- rnorm(n)
+x4 <- rnorm(n)
+x5 <- rnorm(n)
+X <- cbind(x1, x2, x3, x4, x5)
+
+tim(old.lrm.fit = olrm(X, y, eps=1e-7),
+    nr          = lrm.fit(X, y, opt_method='NR', compstats=FALSE),
+    lm          = orm.fit(X, y, opt_method='LM', compstats=FALSE),
+    nlm         = lrm.fit(X, y, opt_method='nlm', compstats=FALSE),
+    nlminb      = lrm.fit(X, y, opt_method='nlminb', compstats=FALSE, transx=TRUE),
+    nlminb.notransx = lrm.fit(X, y, opt_method='nlminb', compstats=FALSE, transx=FALSE),
+    bfgs        = lrm.fit(X, y, opt_method='BFGS', compstats=FALSE),
+    bfgs.reltol = lrm.fit(X, y, opt_method='BFGS',
+                          compstats=FALSE, reltol=1e-12),
+    polr        = MASS::polr(factor(y) ~ X,
+                             control=list(reltol=1e-10)),
+    reps = 5)
+smod()
+```
+
+## Other Speed Tests
+
+n=1,000,000, p=100 predictors, k=50 intercepts
+
+* `lrm.fit`: 13.5s (13.6 with `opt_method=nlminb`, 120s with `opt_method='BFGS'`)
+* `orm.fit`: 9s
+* `MASS::polr`: 70s without the hessian
+
+n=300,000, p=20, k=299,999
+
+* `lrm.fit`: 2.25s
+* `orm.fit`: 2s
+
+Execution time is proportional to $k \times p$
+
+
+<!--
+# Compare timing with glm
+
+set.seed(1)
+x <- matrix(rnorm(50*10000), ncol=50)
+y <- sample(0:1, 10000, TRUE)
+system.time(g <- glm.fit(cbind(1, x), y, family=binomial(), singular.ok=FALSE))
+r <- g$qr
+v <- crossprod(qr.R(r))    # negative hessian
+# See https://genomicsclass.github.io/book/pages/qr_and_regression.html
+
+system.time(g <- glm(y ~ x, family=binomial)) # 0.08 vs 0.07 glm.fit
+s <- vcov(g)
+vi <- solve(s)
+table(v / vi)
+
+system.time(f <- lrm.fit(x, y, compstats=FALSE, transx=TRUE))
+# 0.22 with transx first run, 0.07 without (matches glm.fit)
+# After first run: 0.13 repeatedly
+# qrxcenter 0.06  backconversion of v 0.00
+-->
+
+## Check Impact of `initglm` and `transx`
+
+Generate a sample of 500 with 30 predictors and 269 levels of Y where a subset of the predictors are strongly related to Y and there are collinearities.
+
+```{r}
+#| fig.height: 6.5
+set.seed(1)
+n <- 500
+p <- 30
+x <- matrix(runif(n * p), nrow=n)
+x[, 1:8] <- x[, 1:8] + 2 * x[, 9]
+s <- varclus(~ x)$hclust
+plot(as.dendrogram(s), horiz=TRUE, axes=FALSE,
+     xlab=expression(paste('Spearman ', rho^2)))
+rh <- seq(0, 1, by=0.1)
+axis(1, at=1 - rh, labels=format(rh))
+y <- x[, 1] + 2 * x[, 2] + 3 * x[, 3] + 4 * x[, 4]+ 5 * x[, 5] +
+     3 * runif(n, -1, 1)
+y <- round(y, 1)
+length(unique(y))
+f <- function(..., opt_method='NR')
+  lrm.fit(x, y, compstats=FALSE, opt_method=opt_method, maxit=1000, ...)
+# f(initglm=TRUE) (using nlminb) would not work: NA/NaN gradient evaluation
+# This did not happen without collinearities
+tim(default          = f(),
+    transx           = f(transx=TRUE),
+    nlm              = f(opt_method='nlm'),
+    bfgs             = f(opt_method='BFGS'),
+    nlminb           = f(opt_method='NR'),
+    reps = 10 )
+smod()
+```
+
+## `lrm.fit` vs. `orm.fit` as k $\uparrow$
+
+The fitting function for `rms::orm`, `orm.fit`, uses sparse hessian matrices so that the  computation time is roughly proportional to $n (3k + p^{2} + kp)$ where $k$ is the number of intercepts and $p$ is the number of predictors.  Computation of the hessian in `lrm.fit` needs about $n (k + p)^{2}$ computations, but some parts of the computation are faster and there is some overhead of handling sparse matrices in `orm.fit`.   Let's explore execution time as a function of $k$ when $n=10000, p=30$ and $k$ varies.  There should be very little difference.
+
+```{r}
+if(! file.exists('breakeven.rds')) {
+  set.seed(1)
+  n  <- 10000
+  p  <- 30
+  ks <- seq(100, 10000, by=200)
+  l  <- length(ks)
+  t1 <- t2 <- d <- numeric(l)
+  x  <- matrix(rnorm(n * p), nrow=n)
+  for(i in 1 : l) {
+    cat(ks[i], ' ')
+    y     <- rep(0 : ks[i], length=n)
+    t1[i] <- stim(for(j in 1:20) f <- rms::lrm.fit(x, y)) / 20
+    t2[i] <- stim(for(j in 1:20) g <- rms::orm.fit(x, y)) / 20
+    d [i] <- m(coef(f) - coef(g))
+  }
+  w <- llist(ks, t1, t2, d)
+  saveRDS(w, 'breakeven.rds')
+} else {
+  w <- readRDS('breakeven.rds')
+  ks <- w$ks; t1 <- w$t1; t2 <- w$t2; d <- w$d
+}
+# Make sure coefficients agree
+range(d)
+plot(ks, t1, type='b', xlab='k', ylab='Time, seconds', ylim=c(0.02, 0.18))
+points(ks, t2, col='red')
+lines (ks, t2, col='red')
+```
+
+Execution time for both functions is linear in k.  `orm` is consistently a little faster than `lrm`.  Since the code in the `orm.fit` Fortran `ormll` subroutine is more general, currently implementing 5 link functions, there is no real reason to maintain separate code.  In the future I plan to merge the functions to minimize duplication, and having an `lrm` front-end for `orm` for backward compatibility.
+
+## Better Understanding Convergence with BFGS Optimizer
+
+Using the same simulated data just used with k=20, use BFGS to fit an ordinal model with relative tolerance varying from $10^{-2}$ to $10^{-20}$.  Estimates are compared to `orm`.  In addition to comparing parameter estimates as done above we also compute differences in units of standard errors as computed by `orm`.
+
+```{r}
+#| fig.height: 5.5
+#| fig.width: 7
+set.seed(1)
+y  <- sample(0:20, n, TRUE)
+g  <- orm(y ~ x, eps=1e-10)
+se <- sqrt(diag(vcov(g, intercepts='all')))
+length(se)
+
+if(file.exists('bfgs-reltol.rds')) d <- readRDS('bfgs-reltol.rds') else {
+  d <- NULL
+  for(i in 2 : 20) {
+    cat(i, '')
+    s <- stim({
+      for(j in 1:5)
+        f <- lrm.fit(x, y, compstats=FALSE,
+                     opt_method='BFGS',
+                     maxit=1000,
+                     reltol=10^(-i))
+    } )
+  
+  w <- data.frame(i, elapsed=s / 5, maxu=m(f$u),
+                  maxbeta=m(coef(g) - coef(f)),
+                  maxbeta.per.se=m((coef(g) - coef(f)) / se), 
+                  deviance=tail(f$deviance, 1),
+                  iter=tail(f$iter, 1))
+  d <- rbind(d, w)
+}
+rownames(d) <- NULL
+saveRDS(d, 'bfgs-reltol.rds')
+}
+d
+
+z <- c(deviance=8, beta=10, beta.se=6, grad=15)  # minimum i for which success achieved
+h <- function() abline(v=z, col=gray(0.60))
+h <- function() {}    # remove this line to show reference lines
+par(mfrow=c(2, 3), mar=c(4, 4, 1, 1), las=1, mgp=c(2.8, .45, 0))
+with(d, {
+  plot(i, elapsed, type='l'); h()
+  plot(i, maxu, type='l', log='y'); h()
+  plot(i, maxbeta, type='l', log='y'); h()
+  plot(i, maxbeta.per.se, type='l'); h()
+  plot(i, deviance - 3879, type='l', log='y'); h()
+  plot(i, iter, type='l', log='y'); h()
+})
+
+```
+
+See that stochastic convergence, as judged by deviance, occurs by the time the relative tolerance is $10^{-8}$, by $10^{-10}$ to control maximum absolute parameter difference, by $10^{-6}$ to get parameter estimates to within 0.06 standard error, and by $10^{-15}$ to achieve gradients $< 10^{-4}$ in absolute value.
+
+When using BFGS a recommendation is to use a relative tolerance of $10^{-8}$ to nail down estimates to the extent that it matters precision-wise, and use $10^{-10}$ to achieve reproducibility.
+
+Recall that BFGS is only appealing when the number of intercepts is large, you don't need the covariance matrix, and you are not using `orm`.
+
+# Matrix Inversion
+
+The information matrix (negative hessian) must be inverted to compute the variance-covariance matrix.  The default inversion method in R is the `solve` function, which defaults to using the LU decomposition.  This is a fast algorithm, but the Cholesky decomposition is faster and behaves as well as LU numerically.  Another approach uses the QR decomposition, implemented in the `qr.solve` function.  Let's compare speed and accuracy of the three approaches when applied to a high-dimensional almost-singular matrix.
+
+```{r}
+# ChatGPT created this function to generate an almost-singular symmetric
+# positive definite matrix of dimension p x p
+genas <- function(p, epsilon = 1e-8) {
+  # Generate a random symmetric positive definite matrix
+  A <- matrix(rnorm(p^2), p, p)
+  A <- A + t(A) + p * diag(p)  # Symmetric and positive definite
+  
+  # Modify eigenvalues to make the matrix almost singular
+  eigen_decomp <- eigen(A)
+  eigen_decomp$values[p] <- epsilon  # Set the smallest eigenvalue close to zero
+  eigen_decomp$vectors %*% diag(eigen_decomp$values) %*% t(eigen_decomp$vectors)
+}
+set.seed(3)
+x <- genas(750, 1e-9)
+x[1:3, 1:3]
+# LU method
+stime(for(i in 1:3) a <- solve(x))
+mad(x, solve(a))       # reverse the inversion and compare to x
+m(diag(750) - x %*% a)  # compare x inverse * x to identity matrix
+# QR
+stime(for(i in 1:3) b <- qr.solve(x, tol=1e-13))
+mad(x, qr.solve(b, tol=1e-13))
+m(diag(750) - x %*% b)
+# Cholesky
+stime(for(i in 1:3) ch <- chol2inv(chol(x)))
+mad(x, chol2inv(chol(ch)))  # mean |difference| and mean relative difference
+m(diag(750) - x %*% ch)   # mean |difference|
+```
+
+QR takes significantly longer and offers no accuracy advantange.  Inversion via Cholesky decomposition was almost twice as fast as LU, though both methods took less than $\frac{1}{4}$ of a second to invert a $750\times 750$ matrix.  Cholesky was a little more accurate in getting the product of the original matrix and its inverse closer to an identity matrix.  Cholesky was very slightly worse in recovering the original matrix by inverting its inverse.
+
+One of the reasons `lrm.fit` and `orm.fit` are more efficient in `rms` 7.0 is that the entire information matrix is not inverted upon convergence when creating the final fit object.  Much use is made of the `Matrix` package for efficient storage and computation of sparse matrices, and only the 3 minimal submatrices that make up the information matrix are stored.  These are operated on quite generally by the new `rms` `infoMxop` function, which is called by the `vcov` method to invert pieces of the information matrix only as needed.  During Newton-type updating, the `Matrix` `solve` function is used, which is quite fast as it uses sparse representations and does not actually invert the Hession but solves for the inverse of the hessian multiplied by the gradient vector.
+
+Here is an example where only elements 10:20 from the inverse of a 1000 x 1000 matrix are obtained.  This type of coding is used in `infoMxop`.
+
+```{r}
+# Create a 1000 x 1000 symmetric positive definite matrix
+set.seed(1)
+x <- matrix(rnorm(10000 * 1000), ncol=1000)
+v <- crossprod(x)
+i <- 10:20    # submatrix of v inverse that we want
+l <- length(i)
+w <- matrix(0, 1000, l)
+w[cbind(i, 1:l)] <- 1    # w is all zeros except for 1 in i elements
+sum(w)
+stime(vi <- solve(v, w)[i, , drop=FALSE])
+dim(vi)
+stime(vi_slow <- solve(v))
+range(vi - vi_slow[i, i])
+```
+
+What about inverting the kind of sparse matrices that ordinal models deal with?  Let's build one using the `Matrix` package and `rms::infoMxop`.
+
+```{r}
+require(Matrix)
+p <- 200
+k <- 20000
+set.seed(1)
+w <- list(a = cbind(runif(k), runif(k)),
+          b = v[1:p, 1:p],
+          ab= matrix(runif(k * p), k, p) )
+stime(z <- infoMxop(w))
+object.size(w)
+object.size(z)
+# Sparse representation of intercept components used by infoMxop
+ia <- Matrix::bandSparse(k, k=c(0,1), diagonals=w$a, symmetric=TRUE)
+object.size(ia)
+# Time to invert this sparse matrix
+stime(via <- Matrix::solve(ia))
+dim(via)
+# The inverse of a tri-band diagonal matrix is dense but can be represented efficiently
+object.size(via)
+length(via@x)
+# Compute size needed if did not make use of sparsity
+8 * (p + k) ^ 2
+# Get covariate portion of inverted matrix
+stime(ub <- infoMxop(w, i='x'))
+# Get the first intercept and beta portion of the inverse
+i <- c(1, (k + 1) : (k + p))
+stime(u  <- infoMxop(w, i=i))    # 26s for i=one element
+dim(u); dim(ub); range(u[-1, -1] - ub)
+# Don't try this:  infoMxop(w, invert=TRUE))
+```
+
+The specialized method with `i='x'` for getting just the portion of the inverse corresponding to the $\beta$s is very fast.  Otherwise there are speed challenges but the sparse representation does allow the overall inverse to be computed, something not possible with naive matrix calculations.
+
+Now consider execution time for computing the standard errors of predicted values [This also applies to contrasts where differences in $X$ are substituted for $X$.]{.aside}.  Consider a predicted value of the form $\hat{\alpha}_{j} + X\hat{\beta}$ involving a single intercept $\hat{\alpha}_j$.  Let $V$ be the variance-covariance matrix for $\theta = [\alpha_{j}, \beta]$ where $\beta$ is a vector of length $p$.  Let the $m\times (p + 1)$ matrix $X$ consisting of a column of ones followed by $p$ columns of predictor settings.  $m$ is the number of observations for which predictions are sought.  Standard errors of interest are square roots of the diagonal of the variance-covariance matrix $W$ for $\hat{Y} = X\hat{\theta}$, where $W = XVX'$ is an $m\times m$ matrix. 
+
+`rms::infoMxop` makes computations such as $W$ efficient using the following strategy.  Let $J$ be a matrix that is mainly zeros but with ones in positions that indicate which elements of $V^{-1}$ to compute.  Let $I$ denote the information matrix for the entire model, with $k + p$ rows and columns.  Concentrate on computation of $VX'$.  Instead of computing $I^{-1}$ by itself, compute only the needed elements of it by computing `solve(I, J)` to get $V$.  But we quickly want to post-multiply by $X'$ so use `solve(I, JX')`.  Let's see how fast this is when there are 299,999 intercepts.
+
+```{r}
+set.seed(1)
+n <- 300000; p <- 10; x <- matrix(runif(n * p), ncol=p); y <- 1 : n
+k <- length(unique(y)) - 1
+f <- orm(y ~ x)
+# Get intercept number corresponding to median of y
+j <- f$interceptRef
+# Compute all parameter numbers needed
+h    <- c(j, (k + 1) : (k + p))
+info <- f$info.matrix
+mdim(info)   # show dimensions of submatrices
+# Form covariate values for 2 observations for predicting
+X <- rbind(c(1, rep(.2, p)), c(1, rep(.6, p)))
+X
+# Get VX' the slow way
+# system.time(infoMxop(info, invert=TRUE)[h, h] %*% t(X))   5.4s for k=9999
+et <- stime(a <- infoMxop(info, i=h, B=t(X)))
+a
+stime(infoMxop(info, i=h))     # time required to compute needed submatrix of V
+stime(infoMxop(info, i=100))   # time required to retrieve a single intercept
+stime(infoMxop(info, i='x'))   # time to get beta part of v
+```
+
+`r round(et, 2)` seconds to get the variance of predicted values when there are `r format(k)` intercepts is quite sufficient!  The time required to compute the portion of the inverse needed is only 0.1s longer however.
+
+Note that in the source code for `lrm` and `orm` you'll see a shortcut for computing the diagonal elements:
+
+```{r eval=FALSE}
+nx <- ncol(X)
+X  <- cbind(1, X)
+v  <- infoMxop(info, i=c(f$interceptRef, (nrp + 1) : (nrp + nx)), B=t(X))
+se <- drop(sqrt((t(v) * X) %*% rep(1, nx + 1)))
+```     
+
+# What is Fast and What is Slow When $k$ is Large
+
+For continuous Y when there is a large number $k$ of intercepts, here is a breakdown of what kind of computations involving ordinal regression models are fast:
+
+* solving for the MLEs
+* computing the covariance matrix for the $\beta$s alone and using computing it for $\beta$ and a small number of intercepts
+* any assessment that is relative (e.g., odds ratios as opposed to absolute risk estimates)
+   + contrasts
+   + Wald $\chi^2$ tests
+   + likelihood ratio $\chi^2$ tests (which don't require covariance matrices)
+   + standard errors (SEs) and confidence bands for differences on the link (e.g., logit) scale
+   + predicted absolute quantities (exceedance probabilities, cell probabilities, means, quantiles) without SEs or confidence intervals
+   
+Slow operations for very large $k$, e.g., $k > 10000$:
+
+* computing the covariance matrix for all the intercepts or for all parameters combined
+
+For some computations it will be faster to bootstrap the model fit rather than to compute SEs and CLs.  The `rms` `bootcov` function does this efficiently since it uses `lrm.fit` or `orm.fit` with `compstats=FALSE` to streamline the computation of MLEs from bootstrap samples.[`bootcov` needs all the intercepts to be represented in all bootstrap samples.  To minimally group Y values to make this happen, see the new `rms` `ordGroupBoot` function.]{.aside}
+
+But for some "absolute" computations, run time is still exceptionally fast for large $k$, because the entire information matrix does not need inverting, but instead the inverse is multiplied by a vector as was done above, so that `solve` can be used to quickly solve a system of equations instead of fully inverting.  As an example let's time the calculation of the estimation of mean Y without confidence limits, and then with them, for $k=15000$.  The `Mean` function uses the $\delta$-method to estimate the needed standard error for the normal approximation for the confidence interval for a covariate-specific population mean..
+
+```{r}
+set.seed(1)
+n <- 15000
+y <- 1:n
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3 <- rnorm(n)
+dd <- datadist(x1, x2, x3); options(datadist='dd')
+f <- orm(y ~ x1 + x2 + x3, x=TRUE)
+d <- data.frame(x1=0, x2=0, x3=0)
+X <- predict(f, d, type='x')  # need original design matrix for accurate CLs of means
+X
+M <- Mean(f)
+stime(print(M(predict(f, d))))
+stime(print(M(predict(f, d), conf.int=0.95, X=X)))
+stime(print(Predict(f, x1=0, x2=0, x3=0, fun=M)))
+```
+
+This is fast because the limiting step is like this, inside the `M` R function:
+
+```{r}
+info <- f$info.matrix
+mdim(info)   # show dimensions of 3 submatrices
+np   <- sum(dim(info$ab))
+np  # total no. parameters = # rows and cols of info matrix
+# Multiply info inverse times B
+stime(infoMxop(info, B=matrix(runif(np), ncol=1)))
+```
+
+# Other Resources
+
+* [Video by Richad McElreath](https://youtu.be/mt9WKbQJrI4?si=QxpMoj7xfi7flt5x) explaining numerical accuracy issues in log likelihood calculations.
+* [R CRAN Task Views](https://cran.r-project.org/web/views/Optimization.html) on optimizers
+* [Vignettes](https://cran.r-project.org/web/packages/optimx) by John Nash _et al_.
+* [R `ucminf` package](https://cran.r-project.org/web/packages/ucminf)
+* [R `nloptr` package](https://cran.r-project.org/web/packages/nloptr)
+* R code: [`lrm`](https://github.com/harrelfe/rms/blob/master/R/lrm.s) and [`lrm.fit`](https://github.com/harrelfe/rms/blob/master/R/lrm.fit.r)
+* Fortran code: [`lrmll`](https://github.com/harrelfe/rms/blob/master/src/lrmll.f90)
+
+
+# Computing Environment
+
+```{r}
+grateful::cite_packages(pkgs='Session', output='paragraph', out.dir='.',
+    cite.tidyverse=FALSE, omit=c('grateful', 'ggplot2'))
+```
+
+The code was run on `r sessionInfo()$running` on a Macbook Pro M2 Max, running on a single core.
+

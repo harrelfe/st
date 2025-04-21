@@ -1,0 +1,276 @@
+---
+title: RCT Analyses With Covariate Adjustment
+author:
+  - name: Ewout Steyerberg<br><small>`@ESteyerberg`</small>
+    url: https://scholar.google.com/citations?user=_75LDyMAAAAJ&hl=nl
+    email: e.w.steyerberg@lumc.nl
+    affiliation: Leiden University, NL
+date: 2020-07-19
+categories: [2020, drug-evaluation, generalizability, medicine, personalized-medicine, prediction, RCT, regression]
+description: 'This article summarizes arguments for the claim that the primary analysis of treatment effect in a RCT should be with adjustment for baseline covariates.  It reiterates some findings and statements from classic papers, with illustration on the GUSTO-I trial.'
+---
+
+```{r setup, include=FALSE}
+require(blogdown)
+require(rms)
+require(table1)
+require(DescTools)
+require(metafor)
+require(knitr)
+require(kableExtra)
+require(magrittr)
+options(digits=3)
+```
+
+
+The **_[PATH](https://www.ncbi.nlm.nih.gov/pubmed/31711134)_** (Predictive Approaches to Treatment effect Heterogeneity) Statement outlines principles, criteria, and key considerations for applying predictive approaches to clinical trials to provide patient-centered evidence in support of decision making.
+The focus of PATH is on modeling of “heterogeneity of treatment effect” (**_HTE_**), which refers to the nonrandom variation in the magnitude of the absolute treatment effect (**_'treatment benefit'_**) across individual patients.  A more focused definition is that HTE refers to variation of treatment effect on a scale for which it is possible that no such variation exists, even if the treatment has a nonzero effect on the average. [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+
+The recent PATH statement lists a number of principles and guidelines. A key principle is in *[Fig 2](https://www.ncbi.nlm.nih.gov/pubmed/31711134)*:
+
+>    “A risk-modeling approach to RCT analysis is likely to be most valuable when an overall treatment effect is well established; 
+>    subgroup results (including risk-based subgroup results) from overall null trials should be interpreted cautiously.”  
+
+Here I discuss how we establish **_‘overall treatment effect’_**. I reiterate some findings and statements from classic papers in favor of covariate adjustment as the key analysis. 
+
+### Illustration in the GUSTO-I trial
+For illustration we may analyze 30,510 patients with an acute myocardial infarction as included in the GUSTO-I trial. This illustration starts as the blog by **Frank Harrell** on 
+**_[examining HTE](../varyor/)_**.
+
+
+```{r IDA.gusto,results='asis'}
+load(url('http://hbiostat.org/data/repo/gusto.rda'))
+# keep only SK and tPA arms; and selected set of covariates
+gusto <- upData(gusto, subset=tx %in% c('SK', 'tPA'),
+                tx=droplevels(tx),
+                keep=Cs(day30, tx, age, Killip, sysbp, pulse, pmi, miloc, sex))
+
+html(describe(gusto), scroll=FALSE)
+```
+
+#### Overall treatment effect
+
+The simplest analysis of treatment effect is by performing an intention-to-treat analysis of the randomized patients for the primary outcome (30-day mortality). In GUSTO-I, 10,348 patients were randomized to receive tPA; 20,162 to SK and had 30-day mortality status known. The 30-day mortality was 653/10,348 = 6.3% vs 1475/20,162 = 7.3%; an absolute difference of 1.0%, or an odds ratio of 0.85 [0.78-0.94].
+
+```{r overall.tx,results='asis'}
+# simple cross-table
+table1(~ as.factor(day30) | tx, data=gusto, digits=2)  
+
+tab2 <- table(gusto$day30, gusto$tx)
+result <- OddsRatio(tab2, conf.level = 0.95)
+names(result) <- c("Odds Ratio", "Lower CI", "Upper CI")
+
+kable(as.data.frame(t(result))) %>% kable_styling(full_width=F, position = "left")
+
+# BinomDiffCI(x1 = events1, n1 = n1, x2 = events2, n2 = n2, ...)
+CI      <- BinomDiffCI(x1 = tab2[2,1], n1 = sum(tab2[,1]), x2 = tab2[2,2], n2 = sum(tab2[,2]),
+                       method = "scorecc")
+colnames(CI) <- c("Absolute difference", "Lower CI", "Upper CI")
+
+result <- round(CI, 3) # absolute difference with confidence interval
+kable(as.data.frame(result)) %>% kable_styling(full_width=F, position = "left")
+
+```
+
+### Adjustment for baseline covariates
+
+The unadjusted odds ratio of `r round(OddsRatio(tab2, conf.level = 0.95)[1], 3)` is a marginal estimate, while a lot can be said in favor of *conditional estimates*, where we adjust for prognostically important baseline characteristics.
+
+There may be 3 compelling arguments in favor of conditioning on baseline covariates when we consider binary outcomes.
+
+1.	Interpretation
+2.	Statistical power
+3.	Correction for baseline imbalance
+
+#### Support from literature
+
+Let’s look at some supportive points from references on these arguments. 
+
+1.	Interpretation: 
+*[Hauck et al, 1998](https://www.ncbi.nlm.nih.gov/pubmed/9620808)*, provide strong support.
+
+>    **_Abstract:_** “The analyses of the primary objectives of randomized clinical trials often are not adjusted for covariates, except possibly for stratification variables. For analyses with linear models, adjustment is a precision issue only. … 
+>    For nonlinear analyses, omitting covariates from the analysis of randomized trials leads to a loss of efficiency as well as a change in the treatment effect being estimated. We recommend that the primary analyses adjust for important prognostic covariates in order to come as close as possible to the clinically most relevant subject-specific measure of treatment effect. Additional benefits would be an increase in efficiency of tests for no treatment effect and improved external validity.”  
+>    *Controlled Clin Trials 1998;19:249–256.*
+
+
+* So, these authors emphasize argument 1 (*“to come as close as possible to the clinically most relevant subject-specific measure of treatment effect”*), and argument 2 (*“increase in efficiency of tests for no treatment effect”*); while also recognizing a remarkable issue in nonlinear models (*“a change in the treatment effect being estimated”*). This change is different from linear models, where the adjusted and unadjusted effects are on expectation equal. In nonlinear models such as the logistic regression model, effect estimates are **_non-collapsible_**.
+
+
+2.	Statistical power:
+*[Robinson & Jewell 1991](https://www.jstor.org/stable/1403444)* provide a fascinating paper on the impact of covariate adjustment in nonlinear models, such as the logistic regression model: the precision of the estimated treatment effect is worse than without adjustment, while conditioning makes that the expected effect is further from Null. **_Which impact is stronger?_** They show that efficiency is expected to increase (provided that the covariate is prognostic for the outcome).
+
+
+3.	Correction for baseline imbalance
+In RCTs, imbalance will arise by pure chance. It may hamper the interpretation of a treatment effect in a specific RCT if one group has a better prognosis according to baseline characteristics than another.  
+Of course, we can only adjust for observed baseline characteristics. We argued in *[a 2000 AHJ paper](https://www.ncbi.nlm.nih.gov/pubmed/10783203)* that potential imbalances on other, unobserved patient characteristics do not invalidate attempts to correct for observed covariates.
+
+### Practice in medical research
+The statistical model for covariate adjustment can be simple or more complex. In various reviews researchers have noted that typically 5 to 10 baseline covariates are considered.  
+Poor practice was noted for papers published in 2007. *[Pocock et al, Lancet 2000](https://www.ncbi.nlm.nih.gov/pubmed/10744093)* note:  
+
+>    **_FINDINGS_**: Most trials presented baseline comparability in a table. These tables were often unduly large, and about half the trials inappropriately used significance tests for baseline comparison. Methods of randomisation, including possible stratification, were often poorly described. There was little consistency over whether to use covariate adjustment and the criteria for selecting baseline factors for which to adjust were often unclear. Most trials emphasised the simple unadjusted results and covariate adjustment usually made negligible difference. Two-thirds of the reports presented subgroup findings, but mostly without appropriate statistical tests for interaction. Many reports put too much emphasis on subgroup analyses that commonly lacked statistical power.
+>
+>    **_INTERPRETATION_**: Clinical trials need a predefined statistical analysis plan for uses of baseline data, especially covariate-adjusted analyses and subgroup analyses. Investigators and journals need to adopt improved standards of statistical reporting, and exercise caution when drawing conclusions from subgroup findings.
+
+More recent papers show that covariate-adjusted analyses are far [more common](https://www.ncbi.nlm.nih.gov/pubmed/31269898):  
+
+>    *Trials published in 2014 ... reported adjusted analyses in 87% with pre-specified adjustment in analyses in 95% ...*
+
+Importantly, *[EMA guidance](https://www.ema.europa.eu/en/documents/scientific-guideline/guideline-adjustment-baseline-covariates-clinical-trials_en.pdf)* is available on how to do such analyses:
+
+>    **_6.2. Number of covariates in the analysis_**  
+>    No more than a few covariates should be included in the primary analysis. Even though methods of adjustment, such as analysis of covariance, can theoretically adjust for a large number of covariates it is safer to pre-specify a simple model.
+
+
+## Illustration in GUSTO-I: adjust for age
+
+A simple illustration is to examine the impact of age (which is a strong prognostic factor in many diseases) for [adjustment of the primary treatment effect in GUSTO-I](https://www.ncbi.nlm.nih.gov/pubmed/10783203).
+
+```{r unadjusted.tx,results='asis'}
+# Analyses
+options(prType='html')
+f0 <- lrm(day30 ~ tx, data=gusto)
+print(f0) # coef tpa: -0.1586
+```
+So, we note that the **unadjusted** regression coefficient for tpa was `r round(f0$coef[2],4)`. 
+
+Let's continue with age adjustment for the tpa effect.  
+1. How different was the mean age between randomized groups?  
+2. How much of the difference between adjusted and unadjusted effect estimate can be attributed to this imbalance?
+
+```{r adjusted.tx.1,results='asis'}
+# Examine impact of age
+table1(~ age | tx, data=gusto, digits=4) # age 61.03 in tpa vs 60.86 in SK group, delta: 0.17 years
+
+f.age <- lrm(day30 ~ tx + age, data=gusto)
+print(f.age)
+```
+So, we note that the **adjusted** regression coefficient for tPA was `r round(f.age$coef[2],4)`.  
+   
+
+```{r adjusted.tx.2,results='asis'}
+# Difference in tx effect by adjustment
+d.tx.age <- f.age$coefficients[2] - f0$coefficients[2] 
+# Impact of age difference on tx effect
+d.age <- with(gusto, mean(age[tx=='SK']) - mean(age[tx=='tPA']))
+d.tx.ageimpact <- f.age$coefficients[3] * d.age
+
+# Impact of stratification on age
+# d.tx.age # -0.0291 stronger effect
+# d.tx.ageimpact # -0.0138 because of prognostic difference: age difference between randomized groups
+# d.tx.age - d.age # -0.0154 attributable to conditioning on age: stratification effect, non-collapsibility
+
+f.unadjusted <- c("coef"=as.vector(f0$coefficients[2]) , SE=sqrt(f0$var[2,2]), d.coef=NA, d.SE=NA, 
+                  "Imbalance (%)"=NA, "Stratification (%)"=NA)
+f.age.adj <- c("coef"=as.vector(f.age$coefficients[2]) , SE=sqrt(f.age$var[2,2]), 
+               d.coef=f.age$coefficients[2] / f0$coefficients[2] - 1, 
+               d.SE=sqrt(f.age$var[2,2]) / sqrt(f0$var[2,2]) - 1 , 
+               "Imbalance (%)"= d.tx.ageimpact / f0$coefficients[2], 
+               "Stratification (%)"=(d.tx.age - d.tx.ageimpact)/ f0$coefficients[2] )
+kable(as.data.frame(rbind(f.unadjusted, f.age.adj)), digits=3) %>% 
+  kable_styling(full_width=F, position = "left")
+# As Table III in Steyerberg 2000 paper
+```
+
+
+### Summary of impact of adjustment on coefficient and SE
+
+Coefficient behavior: the unadjusted coeffient was -0.159; adjusted for age it is -0.188. This is a difference of -0.029, or +18% in estimate of the treatment effect *[Steyerberg, Bossuyt, Lee; AHJ 2000](https://www.sciencedirect.com/science/article/pii/S0002870300900012)*.  
+Part of this change is attributable to a difference in age at baseline: the tPA group was slightly disadvantaged by a higher age (61.03 years) compared to the SK group (60.86 years). The difference of -0.168 years accounts for a change of -0.014 in the treatment effect estimate:  
+
+>    d.age (in years) x f.age$coef[3] =  
+>    `r round(d.age,3)` x `r round(f.age$coef[3],3)` = `r round(d.age*f.age$coef[3], 3)`.
+
+The remaining difference is:
+
+>    delta coefficient - delta attributable to age imbalance =   
+>    d.tx.age - d.tx.ageimpact =  
+>    `r round(d.tx.age,3)` - `r round(d.tx.ageimpact,3)` = `r round(d.tx.age - d.tx.ageimpact,3)`.
+
+So, the +18% more extreme effect estimate can be attributed for 8.7% to imbalance, and 9.7% to using a conditional rather than an unconditional model: stratification, or non-collapsibility (see also *[Gail et al, 1984](https://academic.oup.com/biomet/article/71/3/431/258100)*).
+
+
+## Conclusions
+
+The GUSTO-I serves well to illustrate the impact of conditioning on baseline covariates when we consider binary outcomes. The age-adjusted estimate of the overall treatment effect has a different interpretation than the unadjusted estimate: the effect for *‘Patients with acute MI’* versus *‘A patient with an acute MI of a certain age’*. The statistical power for testing of the adjusted effect is higher than that of the unadjusted effect. The required sample size is reduced by a factor of approximately ($1 – R^2$). For age, the Nagelkerke $R^2$ was 12%. This implies that an analysis of the age-adjusted treatment effect with 88% of the sample size would have the same power as an **un**adjusted analysis in 100% of the sample. Finally, the age-adjusted treatment corrected for baseline imbalance.
+
+### Implications for estimating heterogeneity of treatment effect
+
+The unadjusted and adjusted estimate of the overall treatment effect discussed above are effect estimates on a relative scale: odds ratios on the odds scale. The translation from relative to absolute scale can be made by explicitly considering the baseline risk. If the baseline risk is low, the treatment benefit can only be small; If the baseline risk is high, the treatment benefit can be large.   
+The recent Predictive Approaches to Treatment Effect Heterogeneity (*[PATH](https://www.ncbi.nlm.nih.gov/pubmed/31711134)*) Statement provides guidance on predictive approaches to heterogeneous treatment effects. The practical implementation of principles from the PATH statement is discussed in another [blog](../path). 
+
+### References
+  
+#### Classics
+
+MH Gail, S Wieand, S Piantadosi - Biometrika, 1984  
+[Biased estimates of treatment effect in randomized experiments with nonlinear regressions and omitted covariates](https://academic.oup.com/biomet/article-abstract/71/3/431/258100)
+
+SJ Senn - Statistics in medicine, 1989  
+[Covariate imbalance and random allocation in clinical trials](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.4780080410?casa_token=4RTA9GQTbWUAAAAA:2u9pfwLTqo-6lcttSyhg7cX5UL6iKqDkuTQ3FNDovgs1rYXmTHo266tS54FAaGhVNRvrj2gfLiVMUNRZ)  
+
+LD Robinson, NP Jewell - International Statistical Review, 1991
+[Some surprising results about covariate adjustment in logistic regression models](https://www.jstor.org/stable/1403444)
+
+WW Hauck, S Anderson, SM Marcus - Controlled clinical trials, 1998  
+[Should we adjust for covariates in nonlinear regression analyses of randomized trials?](https://www.sciencedirect.com/science/article/pii/S0197245697001475)
+
+SJ Pocock, SE Assmann, LE Enos… - Statistics in Medicine, 2002  
+[Subgroup analysis, covariate adjustment and baseline comparisons in clinical trial reporting: current practice and problems](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.1296?casa_token=Rk_5yd2uqQ4AAAAA:qTn_uyj7pROZA4R36TGOyO7cEPGe-aFHsh94HQfCsSgJ1qFuKSbKDzeT-YTRrEwNfr_IrWX7AsR3_eYc)
+   
+  
+#### Illustrations focused on neurotrauma RCTs
+
+AV Hernández, EW Steyerberg, GS Taylor… - Neurosurgery, 2005  
+[Subgroup analysis and covariate adjustment in randomized clinical trials of traumatic brain injury: a systematic review](https://academic.oup.com/neurosurgery/article-abstract/57/6/1244/2744714)
+
+AV Hernández, EW Steyerberg, I Butcher… - Journal of Neurotrauma, 2006  
+[Adjustment for strong predictors of outcome in traumatic brain injury trials: 25% reduction in sample size requirements in the IMPACT study](https://www.liebertpub.com/doi/abs/10.1089/neu.2006.23.1295?casa_token=J7RlMmSOCU4AAAAA:swfxgjHYssZtuezehaUj_8wWW4vTfyBBSoIcOxMOt1alyFeplks08KDUvsGPlNdCHS-ELqLI-MG1)
+
+P Perel,…, EW Steyerberg, CRASH Trial Collaborators - Journal of clinical epidemiology, 2012  
+[Covariate adjustment increased power in randomized controlled trials: an example in traumatic brain injury](https://www.sciencedirect.com/science/article/pii/S0895435611002770)
+  
+#### GUSTO-I references
+
+EW Steyerberg, PMM Bossuyt, KL Lee - American heart journal, 2000  
+[Clinical trials in acute myocardial infarction: should we adjust for baseline characteristics?](https://www.sciencedirect.com/science/article/pii/S0002870300900012)
+
+Gusto Investigators - New England Journal of Medicine, 1993   
+[An international randomized trial comparing four thrombolytic strategies for acute myocardial infarction](https://www.nejm.org/doi/full/10.1056/NEJM199309023291001)
+
+Califf R, …, ML Simoons, EJ Topol, GUSTO-I Investigators - American heart journal, 1997
+[Selection of thrombolytic therapy for individual patients: development of a clinical model](https://www.sciencedirect.com/science/article/pii/S0002870397701649)
+
+#### Other references
+
+EMA 2015: [Guideline on adjustment for baseline covariates in clinical trials](https://www.ema.europa.eu/en/documents/scientific-guideline/guideline-adjustment-baseline-covariates-clinical-trials_en.pdf)
+
+BC Kahan, V Jairath, CJ Doré, TP Morris - Trials, 2014 [The risks and rewards of covariate adjustment in randomized trials: an assessment of 12 outcomes from 8 studies](https://trialsjournal.biomedcentral.com/articles/10.1186/1745-6215-15-139)
+
+AV Hernández, MJC Eijkemans, EW Steyerberg - Annals of epidemiology, 2006  
+[Randomized controlled trials with time-to-event outcomes: how much does prespecified covariate adjustment increase power?](https://www.sciencedirect.com/science/article/pii/S1047279705003248)
+
+AV Hernández, EW Steyerberg… - Journal of clinical epidemiology, 2004  
+[Covariate adjustment in randomized controlled trials with dichotomous outcomes increases statistical power and reduces sample size requirements](https://www.sciencedirect.com/science/article/pii/S0895435603003792)
+
+DD Thompson, HF Lingsma, WN Whiteley, GD Murray, EW Steyerberg - Journal of clinical epidemiology, 2015  
+[Covariate adjustment had similar benefits in small and large randomized controlled trials](https://www.sciencedirect.com/science/article/pii/S089543561400448X)
+  
+
+#### PATH Statement references
+
+**The Predictive Approaches to Treatment effect Heterogeneity
+(PATH) Statement**  
+David M. Kent, MD, MS; Jessica K. Paulus, ScD; David van Klaveren, PhD; Ralph D’Agostino, PhD;
+Steve Goodman, MD, MHS, PhD; Rodney Hayward, MD; John P.A. Ioannidis, MD, DSc; Bray Patrick-Lake, MFS; Sally Morton, PhD;
+Michael Pencina, PhD; Gowri Raman, MBBS, MS; Joseph S. Ross, MD, MHS; Harry P. Selker, MD, MSPH; Ravi Varadhan, PhD;
+Andrew Vickers, PhD; John B. Wong, MD; and Ewout W. Steyerberg, PhD  
+*Ann Intern Med. 2020;172:35-45.*  
+
+[Annals of Internal Medicine, main text](https://annals.org/acp/content_public/journal/aim/938321/aime202001070-m183667.pdf?casa_token=rjMhlqehmZYAAAAA:s2gnJxSo---fGeU5d3BYBJ0s3S8UMxMWhH7RQXNlK8WmHH7WvghrEZJODK1fI_8KsvW1bPavUew)
+
+[Annals of Internal Medicine, Explanation and  Elaboration](https://annals.org/acp/content_public/journal/aim/938321/aime202001070-m183668.pdf?casa_token=HSOwDdYuIfUAAAAA:LprkkDo9-n-qcHqcOC5IHsDWQtjd3CO_SXrSdF0SimqTuIG5I6rKEwhT24ySEZwxTr7GLpn56vM)
+
+[Editorial by Localio et al, 2020](https://annals.org/aim/fullarticle/2755584/advancing-personalized-medicine-through-prediction)

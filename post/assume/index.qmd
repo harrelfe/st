@@ -1,0 +1,196 @@
+---
+title: "What Does a Statistical Method Assume?"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2024-03-23
+date-modified: last-modified
+categories: [inference, hypothesis-testing, regression, 2024]
+description: "Sometimes it is unclear exactly what a specific statistical estimator or analysis method is assuming.  This is especially true for methods that at first glance appear to be nonparametric when in reality they are semiparametric.  This article attempts to explain what it means to make different types of assumptions, and how to tell when a certain type of assumption is being made.  It also describes the assumptions made by various commonly used statistical procedures."
+---
+
+## A Definition
+
+All statistical procedures have assumptions.  Even the most simple response variable (Y) where the possible values are 0 and 1, when analyzed using the proportion that Y=1, assumes that Y is truly binary, every observation has the same probability that Y=1, and that observations are independent.  Non-categorical Y have more assumptions.  Even simple descriptive statistics have assumptions as described below.  But what does it mean that an assumption is required for using a statistical procedure?  I'll offer the following situations in which we deem that a specific assumption (A) is involved in using a specific statistical procedure or estimator (S).
+
+* S performs worse when A is not met and better when A is met; ideally S performs as well as any other method when A is met
+* S is difficult to interpret when A is not met and easier to interpret when A is met
+* S was derived explicitly under A
+* S is a special case of a more general method that was derived under A
+* If S is an estimator and the usual method of estimating uncertainty in S works with A and doesn't when A does not hold
+
+Performance may be of several kinds, for example:
+
+* Bias (in a frequentist procedure)
+* Variance
+* Mean squared error, mean absolute error, etc.
+* Actual type I assertion probability $\alpha$ equals the stated $\alpha$ (in a frequentist procedure)
+* High frequentist or Bayesian power, which is related to high relative efficiency (e.g., variance or sample size ratios)
+* Actual compatibility (confidence) interval coverage equals the stated coverage
+   + For a 2-sided compatibility interval with coverage $1 - \alpha$, $\frac{\alpha}{2}$ of intervals constructed using the procedure should have the lower limit above the true unknown parameter and $\frac{\alpha}{2}$ of such intervals should have the upper limit below the true unknown value
+* Accuracy of uncertainty estimates such as standard error
+
+Most of the usual statistical estimators and procedures have these hidden assumptions:
+
+* the data to be representative of a process to which you want to infer (e.g., the data are a random sample from a population of interest)
+* observations are independent unless dependencies are explicitly taken into account
+* measurements are unbiased unless nonrandom measurement errors are explicitly taken into account
+* observations are homogeneous (all observations have the same statistical tendencies such as mean and variance) with regard to non-adjusted-for factors.  Examples:
+   + A simple proportion for Y=0/1 is intended to be used on a sample where every observation has the same chance of Y=1
+   + A two-sample $t$-test assumes homogeneity within each of the two groups
+   + A linear model for doing analysis of covariance to compare two treatments adjusted for age assumes homogeneity within groups defined by treatment and age combinations
+* certain other aspects of the study design are taken into account
+
+I take it as given that if the output (e.g., parameter estimate or test statistic) of statistical method 1 has a one-to-one relationship with an output of statistical method 2, with the rank correlation between the two outputs equal to 1.0 over all datasets, then method 1 makes the same assumptions as method 2.  In that case method 1 (even if it is an ad hoc procedure) is just method 2 (even if it is a formal model) in disguise.
+
+If violation of assumption A causes equal damage to statistical procedures 1 and 2, those procedures are making assumption A to the same degree.
+
+::: {.callout-note collapse="true"}
+### More About Hidden Assumptions
+
+Some estimators provide reasonable estimates even when there are correlations among observations, but estimates of uncertainties of estimates can be badly affected by correlations.
+
+In a linear model, un-modeled heterogeneity reduces $R^2$ and is added into the error term (residuals are larger).  As detailed [here](https://hbiostat.org/bbr/ancova), heterogeneity in nonlinear models with no error term act much differently, tending to attenuate the regression coefficients of modeled factors towards zero.
+
+:::
+
+::: {.callout-note collapse="true"}
+### Historical Note
+
+The [Wilcoxon-Mann-Whitney two-sample rank-sum test](https://en.wikipedia.org/wiki/Mann–Whitney_U_test) was developed independently by Wilcoxon in 1945 and Mann and Whitney in 1947.  It was developed as a test of equality of distributions against a stochastic ordering alternative.  Neither the exact form of the difference in the two distributions for which the test has optimum sensitivity nor a model from which the test could be derived were known at that time.  Not until a general theory of linear rank tests^[J. Hájek, Z. Sidák, _Theory of Rank Tests_ , Acad. Press (1967)] did a general method for deriving rank tests to detect specific alternatives become available.  Then the Wilcoxon test was derived as the most locally powerful linear rank test for detecting a location shift in two logistic distributions (proportional odds).  In 1980, [McCullagh](https://rss.onlinelibrary.wiley.com/doi/10.1111/j.2517-6161.1980.tb01109.x) showed that the numerator of the Rao efficient score test in the proportional odds model is identical to the Wilcoxon statistic.
+
+In a similar way the log-rank test was proposed in a somewhat ad hoc fashion by Nathan Mantel in 1966 and named the logrank test by R Peto and J Peto in 1972.  Later the log-rank test was put into the context of the general theory of linear rank statistics, from which it is derived as a solution to the type of distributon shift that makes log-rank the locally most powerful rank test.  That particular shift (location shift in Gumbel distributions) represents a proportional hazards alternative.
+
+That the Wilcoxon and log-rank tests are not nonparametric (unlike the Kolmogorov-Smirnov two-sample test) is readily seen by their achieving very low power when the two distribution curves cross in the middle.
+
+:::
+
+## Examples
+
+Consider assumptions that are specific to the method, but keep in mind the hidden assumptions above.  Of the examples below, the ones that could be labeled as truly nonparametric are the simple proportion, quantiles, compatibility interval for a quantile, empirical cumulative distribution, Kaplan-Meier estimator, and Kolmogorov-Smirnov two-sample test.  The other examples are semiparametric or parametric.  But note that even though they are nonparametric procedures, quantiles and the Kolmogorov-Smirnov test assume continuous distributions (i.e., few ties in the data).
+
+### Simple Proportion
+
+For binary (0/1) Y, there are only hidden assumptions, one of which is homogeneity.  When a simple proportion is computed for a heterogeneous sample, the result may be precise but difficult to interpret.  For example, if males and females have different probabilities that Y=1 and sex is not accounted for in computing the proportion, the proportion will estimate a marginal probability that depends on the F:M mix in the sample.  When the sample F:M ratio is not the same as in the population of interest, the marginal estimate will not be very helpful.
+
+That a simple proportion assumes homogeneity is further seen by considering an accepted measure of uncertainty.  The variance of a proportion with denominator $n$ in estimating a population probability that Y=1 of $\theta$ is $\frac{\theta (1 - \theta)}{n}$.  When the observations are heterogeneous, each observation may have a different $\theta$.  Suppose that the observations have true probabilities of $\theta_{1}, \theta_{2}, \ldots, \theta_{n}$.  The variance of the overall proportion is $\sum_{i=1}^{n} \theta_{i} (1 - \theta_{i}) / n^{2}$, which may be much different from $\frac{\bar{\theta}(1 - \bar{\theta})}{n}$ where $\bar{\theta}$ is the average of all $n$ $\theta$s.
+
+### $2 \times 2$ Contingency Table
+
+For binary Y, comparing the probability that Y=1 between groups A and B leads to the Pearson $\chi^2$ test.  This test assumes the Y is truly binary and that there is homogeneity, i.e., every observation in group A has the same probability of Y=1, and likewise for group B.
+
+### Mean
+
+The sample mean assumes that extreme values are not present to the extent of destroying the mean as a measure of central tendency.  When extreme values are present, the mean is not representative of the entire distribution but is heavily swayed by the extreme values.  The mean is used [because it is sensitive to all data values](https://stats.stackexchange.com/questions/14210) which gives it precision when you want such sensitivity and when the tails of the distribution are not heavy.
+
+### Standard Deviation
+
+The standard deviation assumes that Y has a symmetric distribution whose dispersion is well described by a root mean squared measure.  One could argue that when a mean squared difference measure is sought for an asymmetric distribution, then the half-SD should be used.  There are two half-SDs: the square root of the average squared difference from the mean for those observations below the mean, and likewise for those above the mean.  For asymmetric distributions the two half-SDs differ.
+
+When the Y distribution is not symmetric, the SD may not be representative of the overall dispersion of Y, as opposed to measures such as [Gini's mean difference](https://en.wikipedia.org/wiki/Mean_absolute_difference), presenting three quartiles, or using the median absolute difference from the median.
+
+When the true distribution is asymmetric or has tails that are heavier than the normal distribution, it is easy to find examples where adding a point makes the difference in two sample means much greater but makes the $t$ statistic much smaller by "blowing up" the SD.
+
+### Quantiles
+
+The $p^\text{th}$ quantile is the $100\times p^\text{th}$ percentile of a distribution.  The sample median is the 0.5 sample quantile.  The use of sample quantiles in effect assumes a continuous distribution.  This is seen by the fact that sample quantiles can jump suddenly if a single observation is added to the dataset, or can not move at all if several observations are added, if there are many ties in the data.  So in the non-continuous case, sample quantiles can be simultaneously volatile and insensitive to major changes.
+
+### Compatibility Interval for a Quantile
+
+A compatibility interval for a population quantile is one of the few truly nonparametric (other than assuming continuity) uncertainty intervals in statistics.  See [this example](https://hbiostat.org/bbr/nonpar#sec-nonpar-clmed) for computation of the interval for a median.
+
+### Empirical Cumulative Distribution Function and Kaplan-Meier Estimator
+
+The [ECDF](https://en.wikipedia.org/wiki/Empirical_distribution_function), which is a cumulative histogram with bins each containing only one distinct data value, has no explicit assumptions.  The version of the ECDF that deals with right-censored (e.g., lost to follow-up) observations is the [Kaplan-Meier estimator](https://en.wikipedia.org/wiki/Kaplan–Meier_estimator).  K-M assumes that the censoring process is independent of the failure process.
+
+### Kolmogorov-Smirnov Two-Sample Test
+
+The [Kolmogorov-Smirnov test](https://en.wikipedia.org/wiki/Kolmogorov–Smirnov_test) is a test that with sufficient sample size will detect any difference between two distributions. The test assumes that both distributions are continuous.  It also assumes that you are equally interested in all aspects of the distribution.  Otherwise it will suffer power-wise, when compared to tests of [more specific distribution characteristics](https://en.wikipedia.org/wiki/Cucconi_test).
+
+### Two-Sample $t$-test
+
+The standard two-sample $t$ test assumes normality of the raw data, which implies that the mean is a great measure of central tendency and SD is a great measure of dispersion.  The standard test also assumes equality of variances in the two groups.  We know these assumptions are made because if the normality or the equal variance assumption is violated, the $t$-test loses efficiency (power) and can have erroneous $\alpha$ under the null hypothesis that the two populations have the same mean. [A Bayesian $t$-test can easily allow for non-normality and unequal variances]{.aside}  When the two sample sizes are unequal and normality holds but the variances are unequal, $\alpha$ can be [triple its claimed value](https://academic.oup.com/beheco/article/17/4/688/215960).
+
+::: {.callout-note collapse="true"}
+### Central Limit Theorem To The Rescue?
+
+At this point many statisticians will rush to claim that the central limit theorem protects the analyst.  That is not the case.  First of all, it is a _limit theorem_ which is not intended to apply to non-huge sample sizes.  Secondly, when there is high skewness in the data, the asymmetric data distribution makes the SD not independent of the mean (which implies the standard error of the mean difference is also dependent on the means), and neither a $t$ nor a normal distribution applies to the ratio between the difference in means and the standard error of this difference when the two are not independent.  Sample sizes of even 50,000 can result in [poor compatibility interval coverage](https://hbiostat.org/bbr/htest#central-limit-theorem) from the central limit theorem when extreme skewness is present.
+
+Among the many things the central limit theorem **cannot** do for you, getting transformations of continuous Y "right" is one of them.
+
+:::
+
+### Multiple Regression
+
+The standard linear model assumes normality and equal variance of residuals, and assumes the population mean is the specified function of the predictors.  If the mean or variance assumptions is violated, least squares estimates may still provide an overall unbiased mean, but the estimate of the mean may be wrong for some covariate settings, or it may be inefficient.  Non-normality of residuals will lower power and result in inaccurate compatibility interval coverage.  Recall that the best estimate of mean Y when Y has a log-normal distribution is a function of the mean and SD of log(Y).
+
+Suppose the analyst should have taken log(Y) instead of analyzing Y, and that residuals from log(Y) are normal with constant variance.  Suppose further that on the log(Y) scale there is goodness-of-fit for most of the combinations of predictor settings.  A linear model fitted on Y will then have wrong predictions for every observation even though the mean of all the predictions will equal the sample mean of Y.  Every regression coefficient can be meaningless, and false interactions will be induced by analyzing Y on the wrong scale.[Freedom from worrying about how to transform Y is a key reason for using semiparametric (ordinal) regression models, which are Y-transformation invariant.]{.aside}  So the linear model assumes normality of residuals, equal variance, and properly transformed Y.
+
+Having non-normal residuals doesn't necessarily mean that ordinary least squares estimates of regression coefficients are useless, but they are no longer efficient, and non-normal residuals frequently indicate that the transformation used for Y is inappropriate.
+
+### Log-rank Test
+
+The log-rank test is a test for whether two survival distributions are the same, against specific alternatives (types of differences).  It makes a fundamental assumption that there are no important covariates when two groups are being compared.  Ignoring that for now, to uncover its assumptions we have to study which alternatives to the null hypothesis the test was designed to detect.
+
+The log-rank test was derived as the rank test with optimum efficiency for detecting a simple location shift in two extreme-value type I (Gumbel) distributions, with cumulative distribution function $F(x) = 1 - e^{-e^{x}}$.  This optimum rank test is similar to a Wilcoxon test, but instead of using the standard ranks in the calculation it uses a linear combination of logs of the ranks.  A location shift in a Gumbel distribution equates to parallel log-log survival curves, which stated another way means that the two survival curves are connected by $S_{2}(t) = S_{1}(t)^\lambda$ where $\lambda$ is the group 2 : group 1 hazard ratio.  Thus the log-rank test makes the proportional hazards (PH) assumption in order to have full efficiency (optimum power in the homogeous survival distribution comparison).
+
+Another way to conclude that the log-rank test makes the PH assumption is to know that the log-rank test statistic is **exactly** the Rao efficient score test that arises from the semiparametric Cox PH model partial likelihood function, when there are no tied failure times.  It is difficult to come up with an example where one procedure assumes something and the other doesn't when the correlation between the results of the two procedures is 1.0 in real data.  Finally, since the log-rank test is a special case of the Cox model, it makes all of the assumptions of the Cox model, and more (homogeneity of survival distributions within groups, i.e., there are no risk factors or important baseline covariates).  The better likelihood ratio $\chi^2$ statistic from the Cox model has an extremely high rank correlation with the log-rank $\chi^2$ over huge varieties of datasets.  The log-rank test is [asymptotically equivalent to the Cox model likelihood ratio $\chi^2$ test](https://en.wikipedia.org/wiki/Logrank_test).
+
+The log-rank test and the Cox model regression coefficient for group always agree on both the presence and the direction of the treatment effect.  This is because
+
+* the score function is the first derivative of the log-likelihood at $\beta$
+* the Rao score statistic for testing $H_{0}: \beta=0$ has as its numerator the score function at $\beta=0$
+* the maximum likelihood estimate of the log hazard ratio $\beta$ is zero if and only if the score function is zero at $\beta=0$ (hazard ratio 1.0), so that the score statistic is also zero
+* the score statistic is the log-rank statistic and zero on the $z$ scale is its most null value
+* the direction of $\hat{\beta}$ is reflected by the score function at $\beta=0$, and the same thing is reflected in the log-rank $z$ statistic, so the direction of the group effect from log-rank and Cox will be identical
+
+Neither the log-rank test nor the Cox model assumes PH under $H_{0}: S_{1}(t) = S_{2}(t)$ (since PH automatically holds in that case, and the hazard ratio is the constant 1.0) but they both assume PH otherwise, or both will lose power.  The only way for the log-rank test to not assume PH is for the Cox model to not assume PH. I would go even further: the two methods are really one method, if there are no covariates and especially if attention is restricted to score tests. [Kaplan-Meier estimates are nonparametric, only assuming independence of failure time and censoring.  But the average difference between the $\log-\log$ of two K-M curves is the log hazard ratio.]{.aside}  Non-PH hurts the log-rank test to the exact same degree as it hurts analysis based on the Cox model.  The fact that one doesn't immediately see a likelihood function for the log-rank test doesn't mean there is not one lurking in the background.
+
+Whatever one wants to say about the assumptions of the log-rank test, the test assumes PH to exactly the same degree as the Cox model.
+
+### Wilcoxon Test
+
+The Wilcoxon-Mann-Whitney two-sample rank-sum test was derived as the optimum linear rank statistic for detecting a simple location shift in two logistic distributions with density functions like $\frac{1}{1 + e^{-x}}$.  A location shift exists between two logistic distributions when the logits of their cumulative distribution functions are parallel[The proportional odds assumption is an exact analogy to the equal variance assumption in the $t$-test.]{.aside}.  This is the proportional odds (PO) assumption.  Since the Wilcoxon test was designed to have optimum efficiency under a logistic distribution location shift, it has always made the PO assumption.
+
+To bolster this argument, the Wilcoxon statistic is **exactly** the numerator of the Rao efficient score test from the PO model when there are only two groups and no covariates.  Furthermore, consider the Wilcoxon statistic scaled to be in [0, 1].  This simple linear translation results in the [concordance probability](/post/powilcoxon), also known as the $c$-index or probability index.  Consider a random dataset where one computes the scaled Wilcoxon statistic (concordance probability $c$) and the maximum likelihood estimate (MLE) $\hat{\beta}$ of the regression coefficient for treatment group from a PO ordinal regression model.  The MLE of the odds ratio is $e^{\hat{\beta}}$ which I'll denote $\hat{\theta}$.  As shown [here](/post/powilcoxon) $\hat{\theta} = 1.0$ **if and only if** $c=\frac{1}{2}$, the Wilcoxon statistic's most null value.  This is because when $\hat{\beta}$ is the MLE, the first derivative of the log-likelihood is zero, so the score function evaluated at $\hat{\beta}$ is exactly zero.  Since the mumerator of the Rao score statistic is the Wilcoxon statistic, centered so that zero is the null value, the exact agreement of $\hat{\theta} = 1$ and $c=\frac{1}{2}$ follows mathematically.
+
+Furthermore, $c < \frac{1}{2}$ if an only if the estimated OR in the PO model $\hat{\theta} < 1$ and $c > \frac{1}{2}$ if and only if $\hat{\theta} > 1$.  So the Wilcoxon test and the PO model always agree on whether or not there is any group effect, and on the direction of the effect.  Not only do the two procedures computationally agree on presence and direction of group effects, they [agree almost exactly on the estimated effect](/post/powilcoxon).  The $R^2$ between $\hat{\beta}$ and $\text{logit(c)}$ is 0.996 over a huge variety of datasets with with PO and non-PO in play.  The the mean absolute error in estimating the [0,1]-scaled Wilcoxon statistic $c$ from the PO model OR estimate is $< 0.01$ over datasets.  The Wilcoxon statistic is almost perfectly calculated from the estimated odds ratio using the equation $c = \frac{\hat{\theta}^{0.6453}}{1 + \hat{\theta}^{0.6453}}$.
+
+The only way for the Wilcoxon test not to assume PO is for the PO model to not assume PO.  It's not just that both methods make the PO assumption; the methods are essentially one method if there are no covariates.  Non-PO hurts the Wilcoxon test by exactly the same amount that it hurts the PO model.
+
+### Random Intercepts Models
+
+Random intercepts (RI) mixed-effects models apply well to clustered data in which elements of a cluster are exchangeable.  The compound symmetry assumption of an RI model means an assumption of equal correlation between any two measurements in the same subject is being made.  When an individual subject is a cluster, random effects could be used to model rapidly repeated measurements within subject, where elapsed time is not important. [Things are different in longitudinal data](/post/re), for which correlation patterns are almost always such that the correlation between measurements made far apart is less than the correlation between measurements that have a small time gap.  This typical serial correlation pattern is in conflict with the symmetric correlation structure assumed by an RI model, and the failure of the RI model to properly fit the correlation structure can invalidate standard errors, p-values, and confidence intervals from such models. [Adding random slopes to RIs makes the model more flexible correlation structure-wise, but this induces a rather strange correlation pattern that is still unlikely to fit the data.]{.aside}
+
+## Comparison of Parametric and Semiparametric Model Assumptions
+
+Consider two types of observations, with respective covariate settings of $X_1$ and $X_2$.  Let $\beta$ be the regression coefficients, and let $\Delta = X_{1}\beta - X_{2}\beta$.  For covariate-less two-sample tests ($t$-test, log-rank, Wilcoxon), $X_{1}=1$ for group B and $X_{2}=0$ for group A, and $\Delta$ is the group difference (B - A difference in means, log hazard ratio, log odds ratio, respectively).  Let $\Phi(u)$ be the Gaussian (normal) cumulative distribution function, and $\Phi^{-1}(p)$ be its inverse, i.e, the $z$-transformation.  Let $F(y | X)$ be the cumulative distribution function for Y conditional on covariate combination $X$.  Then the models discussed here make these assumptions:
+
+* **Linear model and $t$-test**: $\Phi^{-1}(F(y | X_{1}))$ and $\Phi^{-1}(F(y | X_{2}))$ are parallel straight lines with vertical separation $\Delta$ (parallel lines = equal variances)
+* **Cox PH model and log-rank test**: $\log-\log(1 - F(y | X_{1}))$ and $\log-\log(1 - F(y | X_{2}))$ are parallel curves with vertical separation $\Delta$ (parallel curves = proportional hazards)^[For the Weibull parametric proportional hazards survival model, parallelism and linearity in $\log(t)$ is assumed.]
+
+* **PO model and Wilcoxon test**: $\text{logit}(F(y | X_{1}))$ and $\text{logit}(F(y | X_{2}))$ are parallel curves with vertical separation $\Delta$ (parallel curves = proportional odds)
+
+For the straight line assumption, think of [quantile-quantile, i.e., Q-Q plots](https://en.wikipedia.org/wiki/Q–Q_plot) of observed quantiles vs. theoretical quantiles, where a straight line indicates agreement between the sample and theoretical (assumed) distribution.  Note the vast distinction between assuming something is a straight line and assuming something is a curve.  The straight line assumption equates to a parametric assumption, i.e., assuming a specific shape of distribution, here Gaussian.  The two semiparametric models make no distributional assumption for Y given $X_i$.  All three models make a parallelism assumption.
+
+Both semiparametric models and rank tests are distribution-free, as they don't depend in any way on the shape of a given group's distribution to achieve optimum operating characteristics.  Both models and "nonparametric" tests make an assumption about the connection between two distributions, e.g., proportional hazards or odds, to the same degree.
+
+## Summary
+
+It is important to have a definition in mind for examining whether an assumption is being made.  It is also important to note that even though the label _nonparametric_ is frequently used, there a few truly assumption-free statistical procedures.  "Nonparametric" tests such as the log-rank, Wilcoxon, and Kruskal-Wallis tests are just special cases of semiparametric regression models, so they make all of the assumptions of the semiparametric models and more.  For example, both the log-rank and Wilcoxon tests assumes homogeneity of distributions, i.e., absence of important covariates.  Semiparametric models easily handle covariates.
+
+Sometimes it is said that nonparametric tests make assumptions only under the null hypothesis while statistical models make assumptions under both the null and any alternative.  That this is not the case was discussed above.  For example, for the log-rank and Wilcoxon tests to operate optimally (have maximum local power) under the alternative, the alternative must be, respectively, a proportional hazards or a proportional odds situation.
+
+There are major advantages to stopping the practice of using "nonparametric" tests that are special cases of semiparametric models:
+
+1. There would be less to teach.
+1. Covariate adjustment is readily handled by models.
+1. Semiparametric models have likelihood functions, so they bridge frequentist and Bayesian approaches.  Prior information can be used on treatment effects, and shrinkage priors can be used on covariate effects.
+1. Semiparametric models allow one to not only estimate effect ratios, but also to estimate derived quantities such as exceedance probabilities, means, and quantiles.  Some examples are:
+   + For a Cox model one can estimate hazard ratios, survival probabilities, and mean restricted lifetimes.
+   + For a PO model one can estimate odds ratios, exceedance probabilities, cell probabilities, covariate-specific mean Y (if Y is interval-scaled) and covariate-specific quantiles of Y (if Y is continuous)^[The effect measure that is usually associated with the Wilcoxon test is the [Hodges-Lehmann estimator](https://en.wikipedia.org/wiki/Hodges–Lehmann_estimator), which is the median of all pairwise differences, taking one observation from each group.  It is perhaps not as interpretable as the difference in means or medians that one can obtain from the PO model, and a Bayesian PO model provides exact uncertainty intervals for derived quantities such as these.].
+1. Semiparametric models are easily extended to multilevel and longitudinal models (with serial correlation structures).
+1. Semiparametric models are easily extended to allow for lower and upper detection limits, interval censoring, and other complexities.
+
+

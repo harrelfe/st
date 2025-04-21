@@ -1,0 +1,61 @@
+---
+title: Wedding Bayesian and Frequentist Designs Created a Mess
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+    url: https://hbiostat.org
+date: 2023-08-22
+categories: [2023, inference, RCT, bayes, design, evidence, multiplicity, posterior, prior, sequential]
+description: "This article describes a real example in which use of a hybrid Bayesian-frequentist RCT design resulted in an analytical mess after overly successful participant recruitment."
+---
+
+# Background
+
+## Medical Setting
+
+Severe asthma that cannot be managed by noninvasive pharmacologic intervention is a serious quality of life issue for patients.  Bronchial thermoplasty is an invasive treatment for such patients.  It involves inserting a bronchoscope equipped with a device employing radio-frequency ablation to destroy some of the smooth muscle in the airway to allow the patient to breathe more freely.  In order to run a rigorous randomized clinical trial (RCT) to unbiasedly determine the clinical effectiveness of thermoplasty it is necessary to randomize some patients to a sham procedure in which a bronchoscope is inserted without performing an intervention, but is manipulated in ways that are almost identical to a true ablation, and stays inserted the same amount of time.
+
+Asthmatx, Inc. created the Alair bronchial thermoplasty system, now owned by Boston Scientific.  Asthmatx bravely funded a rigorous pivotal RCT to evaluate Alair, with 2:1 active:control randomization and a true sham control.  The trial enrolled 297 patients who remained symptomatic after conventional high dose inhaled corticosteroids.  The study protocol is summarized [here](https://www.accessdata.fda.gov/cdrh_docs/pdf8/p080032b.pdf).  The primary study outcome was the Asthma Quality of Life Questionnaire score, assessed at 6w, 3m, 6m, 9m, 12m, with a primary estimand being the between-treatment difference in average scores over the last three follow-ups.
+
+## Frequentist vs. Bayesian Approach in a Nutshell
+
+The Bayesian approach to treatment comparisons quantifies evidence for an effect $E$ being in any given interval, through the use of posterior probabilities.  The probabilities are conditional upon cumulative data collected in the trial to date, and on a prior distribution and data model.  It is important to understand that posterior probabilities such as $\Pr(E > 0 | \text{data, prior})$ (probability of _any_ efficacy) pertain to what **was observed** (the data) and have nothing to do with what **might have happened**.  This is in stark contrast to classical frequentist statistics, in which assertions of efficacy rest on "the degree to which the data are embarrassed by the null hypothesis" ([Maxwell](https://www.fharrell.com/post/nhst-never)), based on the unlikeliness of getting data more extreme than the observed data ($p$-value) under the supposition of no effect.  In the frequentist paradigm one typically asserts efficacy if $p <$ some preset $\alpha$.  The type I assertion probability $\alpha$ is an operating characteristic that is the probability one will assert an effect at any look at the data over the life of the study, if the treatment truly has no effect.  Controlling $\alpha$ means limiting this probability.  In a Bayesian design, $\alpha$ can be simulated based on the schedule for intended data looks.  More data looks mean more opportunities for extreme data, which means higher $\alpha$.
+
+Bayesian probabilities represent the current state of knowledge about effects, based on current data.  When another data look happens, the previously computed posterior probability is merely obsolete and is ignored.  [There are no multiplicities with Bayes](https://fharrell.com/post/bayes-seq) in sequential testing.  One can only cheat with Bayes in the sequential setting by changing the prior after looking at the data or by attempting to reverse the flow of time and information.  For example, if the first look yielded a probability of efficacy of 0.94 and the second look 0.89, it would be cheating (by failing to properly condition on all information) to revert back to the 0.94 and declare the study over.
+
+Adjusting for frequentist multiplicities entails discounting observed results.  Bayes discounts evidence about a specific effect by incorporating a skeptical prior for **that effect**.  It does not discount one effect because you looked at another effect as does frequentist inference. [An exception occurs in hierarchical models when a large number of effects are connected through a common variance.]{.aside}
+
+So in what follows keep in mind that Bayes deals with "what happened" and frequentist hypothesis testing deals also with "what might have happened."  $\alpha$ is a pre-study quantity that involves a thought experiment in which one looks at various values of test statistics that **may** occur over time after the real study starts.  Computation of $\alpha$ nowhere uses any study result.
+
+# Statistical Plan
+
+[Berry Consultants](https://www.berryconsultants.com) wrote the statistical study design and analysis plan.  On Berry's recommendation I was hired as a consultant by Becker & Associates Consulting (later acquired by NSF International).  I was charged with composing difficult questions for Asthmatx to help them prepare for an FDA advisory committee meeting.  [What is reported in this article is publicly available.]{.aside}
+
+The Bayesian RCT design used a flat prior for the treatment effect [In retrospect this does not seem reasonable as it puts the same probabilities on a huge benefit, huge harm, and no effect.]{.aside}.  The pre-specified plan specified one interim efficacy analysis and the final analysis.  It specified a posterior probability cutoff of 0.99 for declaring efficacy at the interim look, and a cutoff of 0.964 for declaring efficacy at the final look.  These cutoffs were chosen so that the overall type I assertion probability $\alpha$ for this plan is 0.05. [My personal opinion is that if one did want to control $\alpha$ (which is irrelevant when computing forward-information-flow probabilities), it should be controlled either by using a skeptical prior or by requiring the amount of efficacy to be non-trivial, not just greater than zero.  One implication of that alternate design is that one would not modify the posterior probability cutoff for the interim look; the interim look would automatically be more conservative because of the prior or a nonzero efficacy cutoff.]{.aside}
+
+
+# Result
+
+Designers of the clinical trial thought that patients would be reluctant to enroll in a study where they had a $\frac{1}{3}$ chance of having an uncomfortable sham bronchoscope inserted with no possibility of benefitting.  To their great surprise, desperate refractory asthma patients quickly enrolled in numbers.  Surprisingly, enrollment was so successful that there simply wasn't time to do the interim analysis.
+
+What does this have to do with the marriage between Bayesian and frequentist design in this study?  A lot.  The final posterior probability of efficacy was 0.96, below the success target of 0.964.  So the study failed to meet its primary endpoint.  This happened because (1) an arbitrary threshold was used in the first place, taking the decision away from regulatory decision makers, (2) the threshold for the posterior probability was changed to preserve $\alpha$, and (3) the threshold was further penalized to allow for one additional look.  And the interim look **never happened**.
+
+Fortunately for Asthmatx, Alair demonstrated a very large reduction in emergency room visits for patients.  The advisory committee overrode the negative primary endpoint by [voting 6-1 in favor of approval on 2009-10-28](https://www.fiercebiotech.com/biotech/asthmatx-receives-fda-advisory-panel-recommendation-for-approvable-conditions-for-bronchial), with conditions.
+
+# Summary
+
+The study described was "negative" solely because of a data look that never happened.  $\alpha$ considers intentions to analyze.  $\alpha$ has nothing to do with the chance of making a decision error, and when Bayesians are forced to incorporate $\alpha$ into their statistical plans, needless complexity arises.  This case of an actual clinical trial using a hybrid approach demonstrates the illogic of considering _what might have happened_ in a Bayesian probability calculation.  The efficacy target was missed because of a planned interim analysis that never occurred.
+
+Posterior probabilities stand perfectly well on their own, with the only logical argument being about the choice of the prior distribution.
+
+Mixing a Bayesian probability that an assertion is true and a frequentist probability of making an assertion if you magically knew the treatment to be ignorable is like mixing apples and coconuts, and the frequentist nut is hard to crack.  It can't translate a probability about data assuming an assertion is correct into a probability that the assertion is correct.
+
+Tying interpretation of a Bayesian procedure to $\alpha$ has another subtle, serious implication: "Preserving $\alpha$" requires selection of a sample size so that $\alpha$ spending can be defined.  This hampers the ability of a sponsor to extend a promising study to obtain definitive results.  For example, if at the planned final sample size the probability of efficacy was 0.93, the sponsor should be able to decide to spend resources to obtain more evidence.  After all, sample size calculations are quite arbitrary and make many assumptions that turn out to be false.  The sponsor would have to withstand the real possibility that the cumulative evidence will actually be _less_ impressive after the study extension. [Frequentist unblinded sample size re-estimation procedures exist.  But because they spend additional $\alpha$, they in effect require the already-collected data to be discounted, the logic of which eludes Bayesian thinking.  It is possible for a frequentist study extension to actually result in a lower effective sample size because of the $\alpha$-spending penalty.]{.aside} Planning studies around $\alpha$ limits flexibility and offers no added value regarding interpretation.
+
+
+# Further Reading
+
+* [FDA Summary of Safety and Effectiveness for Alair](https://www.accessdata.fda.gov/cdrh_docs/pdf8/p080032b.pdf)
+* [Introduction to Bayes for Evaluating Treatments](https://hbiostat.org/bayes/bet)
+* [Blog articles related to Bayesian statistics](https://www.fharrell.com/#category=bayes)
+* [My Journey from Frequentist to Bayesian Statistics](https://www.fharrell.com/post/journey)

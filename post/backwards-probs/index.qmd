@@ -1,0 +1,193 @@
+---
+title: "Clinicians' Misunderstanding of Probabilities Makes Them Like Backwards Probabilities Such As Sensitivity, Specificity, and Type I Error"
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2017-01-25
+modified: 2019-08-02
+categories: [specificity, probability, backward-probability, forward-probability, p-value, bayes, conditioning, diagnosis, decision-making, dichotomization, medicine, bioinformatics, biomarker, sensitivity, posterior, accuracy-score, classification, 2017]
+description: "The error of the transposed conditional is rampant in research.  Conditioning on what is unknowable to predict what is already known leads to a host of complexities and interpretation problems."
+---
+
+::: {.quoteit}
+Optimum decision making in the presence of uncertainty comes from probabilistic thinking.  The relevant probabilities are of a predictive nature: P(the unknown given the known).  Thresholds are not helpful and are completely dependent on the utility/cost/loss function.<br>
+
+Corollary: Since p-values are P(someone else's data are more extreme than mine if H<sub>0</sub> is true) and we don't know whether H<sub>0</sub> is true, it is a non-predictive probability that is not useful for decision making.
+
+:::
+
+Imagine watching a baseball game, seeing the batter get a hit, and hearing the announcer say "The chance that the batter is left handed is now 0.2!"  No one would care.  Baseball fans are interested in the chance that a batter will get a hit conditional on his being right handed (handedness being already known to the fan), the handedness of the pitcher, etc.  Unless one is an archaeologist or medical examiner, the interest is in forward probabilities conditional on current and past states.  We are interested in the probability of the unknown given the known and the probability of a future event given past and present conditions and events.  [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+Clinicians are people trained in the science and practice of medicine,
+and most of them are very good at it.  They are also very good at many
+aspects of research.  But they are generally not taught probability, and
+this can limit their research skills.  Many excellent clinicians even
+let their limitations in understanding probability make them believe
+that their clinical decision making is worse than it actually is.  I
+have taught many clinicians who say "I need a hard and fast rule so I
+know how to diagnose or treat patients.  I need a hard cutoff on blood
+pressure, HbA1c, etc. so that I know what to do, and the fact that I
+either treat or not treat the patient means that I don't want to
+consider a probability of disease but desire a simple classification
+rule."  This makes the clinician try to influence the statistician to
+use inefficient, arbitrary methods such as categorization,
+stratification, and matching.
+
+In reality, clinicians do not act that way when treating patients.  They
+are smart enough to know that if a patient has cholesterol just over
+someone's arbitrary threshold they may not start statin therapy right
+away if the patient has no other risk factors (e.g., smoking) going
+against him.  They know that sometimes you start a patient on a lower
+dose and see how she responds, or start one drug and try it for a while
+and then switch drugs if the efficacy is unacceptable or there is a
+significant side effect.
+
+So I emphasize the need to understand probabilities when I'm teaching
+clinicians.  A probability is a self-contained summary of the current
+information, except for the patient's risk aversion and other utilities.
+ Clinicians need to be comfortable with a probability of 0.5 meaning "we
+don't know much" and not requesting a classification of disease/normal
+that does nothing but cover up the problem.  A classification does not
+account for gray zones or patient and physician utility functions.
+
+Even physicians who understand the meaning of a probability are often
+not understanding conditioning.  Conditioning is all important, and
+conditioning on different things massively changes the meaning of the
+probabilities being computed.  Every physician I've known has been
+taught probabilistic medical diagnosis by first learning about
+sensitivity (sens) and specificity (spec).  These are probabilities that
+are in backwards time- and information flow order.  How did this happen?
+Sensitivity, specificity, and receiver operating characteristic curves
+were developed for radar and radio research in the military.  It was a
+important to receive radio signals from distant aircraft, and to detect
+an incoming aircraft on radar.  The ability to detect something that is
+really there is definitely important.  In the 1950s, virologists
+appropriated these concepts to measure the performance of viral
+cultures.  Virus needs to be detected when it's present, and not
+detected when it's not.  Sensitivity is the probability of detecting a
+condition when it is truly present, and specificity is the probability
+of not detecting it when it is truly absent.  One can see how these
+probabilities would be useful outside of virology and bacteriology when
+the samples are retrospective, as in a case-control studies.  But I
+believe that clinicians and researchers would be better off if backward
+probabilities were not taught or were mentioned only to illustrate how
+**not** to think about a problem.
+
+But the way medical students are educated, they assume that sens and
+spec are what you first consider in a prospective cohort of patients!
+ This gives the professor the opportunity of teaching  Bayes' rule and
+requires the use of a supposedly unconditional probability known as
+*prevalence* which is actually not very well defined.  The students
+plugs everything into Bayes' rule and fails to notice that several
+quantities cancel out.  The result is the following: the proportion of
+patients with a positive test who have disease, and the proportion with
+a negative test who have disease.  These are trivially calculated from
+the cohort data without knowing anything about sens, spec, and Bayes.
+ Instead of computing the obvious, the previous backwards way of thinking harms the student's understanding for years to
+come and influences those who later engage in clinical and
+pharmaceutical research to believe that type I error and p-values are
+directly useful.
+
+The situation in medical diagnosis gets worse when referral bias (also
+called workup bias) is present.  When certain types of patients do not
+get a final diagnosis, sens and spec are biased.  For example, younger
+women with a negative test may not get the painful procedure that yields
+the final diagnosis.  There are formulas that must be used to correct
+sens and spec.  But wait!  When Bayes' rule is used to obtain the
+probability of disease we needed in the first place, these corrections
+completely cancel out when the usual correction methods are used!  Using
+forward probabilities in the first place means that one just conditions
+on age, sex, and result of the initial diagnostic test and no special
+methods other than (sometimes) logistic regression are required.
+
+There is an analogy to statistical testing.  p-values and type I error
+are affected by sequential testing and a host of other factors, but
+forward-time probabilities (Bayesian posterior probabilities) are not.
+ Posterior probabilities condition on what is known and does not have to
+imagine alternate paths to getting to what is known (as do sens and spec
+when workup bias exists).  p-values and type I errors are
+backwards-information-flow measures, and clinical researchers and
+regulators come to believe that type I error is the error of interest.
+ They also very frequently misinterpret p-values.  Type I error is one
+minus spec, and power is sens.  The posterior probability is exactly
+analogous to the probability of disease.
+
+Sens and spec are so pervasive in medicine, bioinformatics, and
+biomarker research that we don't question how silly they would be in
+other contexts.  Do we dichotomize a response variable so that we can
+compute the probability that a patient is on treatment B given a
+"positive" response?  On the contrary we want to know the full
+continuous distribution of the response given the assigned treatment.
+Again this represents forward probabilities.
+
+------------------------
+
+## Some Useful Resources
+
+* [Properties of diagnostic data distributions](https://www.jstor.org/stable/pdf/2529753.pdf) by AP Dawid
+* [The (in)validity of sensitivity and specificity](https://onlinelibrary.wiley.com/doi/abs/10.1002/1097-0258%2820000715%2919%3A13%3C1783%3A%3AAID-SIM497%3E3.0.CO%3B2-B) by Irene Guggenmoos‐Holzmann and Hans C. van Houwelingen
+* [The Flawed Reasoning Behind the Replication Crisis](http://nautil.us/issue/74/networks/the-flawed-reasoning-behind-the-replication-crisis) by Aubrey Clayton
+
+## Discussion Archive (2017)
+
+**Sander Greenland**: "researchers and regulators... also very frequently misinterpret p-values."  So do statisticians:
+"The p-value is one minus spec, and power is sens."  NO, that's just wrong. The Type-I error rate (capped by alpha) is 1-spec, and power = sens (so beta = Type-II error rate = 1-sens). These are properties of the test given the design and P is not the first one.  P is random, not a property of the test or design; it is a property of the data in relation to the model from which it is computed. That means it varies from data set to data set. In contrast, error rates are calculated across a sequence of data sets.
+
+Hardly anyone interprets P-values correctly, it seems...but is that that their fault or the fault of statisticians who confuse them with alpha levels or Type-I error rates (test size)?
+
+**Frank Harrell**: Thanks for the correction Sander, although I could imagine a nicer way to state this. I'll correct the analogy in the post from p-value to type I error.
+
+**Sander Greenland**: Sorry for the jarring tone, I was reacting to the cottage industry of P-bashing. That industry would be fine except the more I examine each case of supposed P-badness, the more it looks like P is just being misinterpreted - sometimes in obviously wrong ways (as the posterior probability of a point hypothesis) and sometimes in not so obvious ways as in your passage. I should have said that I agree with most everything you said and thought the over-all point was great, so that's why this mistake was so jarring...Well that and I've been battling P-bashers for years now on just these grounds. Not all are like you in terms of seeing and admitting a mistake. Consider the howler "P-values overstate evidence" - no they don't; people overinterpret P-values in terms of cutoffs and their meaning. Senn pointed out the confusion here 16 years ago.
+
+**FH**: Thanks very much for that Sander. I agree with you. I have been sloppy in mixing p-values with type I error in a couple of other places so I appreciate the wake-up call.
+
+**FH**: I think you got what I was trying to convey Martin. Diagnostic models require a cohort study or a non-oversampled cross-sectional study. You can also use an oversampled study such as case-control if you can apply a correction to the model's intercept (no other corrections usually needed). Yes you need a nomogram or a prediction calculator to get the baseline risk and then to update it by the (usually continuous) test result. The technology is there now. I agree with your interpretation of the figure, until you know more about action thresholds the clinician/patient use.
+
+**Martin**: Dr. Harrell, I read the chapter of your book and I think I'm getting the idea. Please correct me if I'm wrong:
+
+What you propose is to condition on other clinical variables (which are theoretically a part of the clinical diagnostic process) to "predict" the post-test log odds of the disease. A good diagnostic test would add information to a pre-test model (you picture this as the absolute diagnostic yield).
+
+And that would be the way of knowing which test to choose in a specific clinical setting, instead of sensitivity and specificity (and LRs, I guess).
+
+This model relies on an analytical cohort design. Most of diagnostic studies I've read about are based on a cross-sectional design. I wouldn't know if this can change your proposal, but it doesn't look like it does.
+
+My other concern is the translation into practice. I guess we would need the nomogram or clinical diagnostic rule (mobile app) for it to work. This can be cumbersome in some settings.
+
+PS: How can one interpret figure 19.6? The test is most useful with pretest probs < 80%? I'm having a hard time interpreting this figure.
+
+**FH**: Thanks for continuing this discussion because it will help me better understand the clinical issues. I should say that it's not they they are unimportant but that they are too indirect. [Chapter 19 of BBR](https://hbiostat.org/bbr/dx.html) gives my suggestions. Briefly I want a partial effect plot for each predictor, whether it's a test output or a regular baseline variable. For a test output this is the contribution to the log odds of disease holding all the baseline variables constant. As shown in that chapter once you know the regression fit (odds ratio for a binary test) you can show its impact on absolute risk of disease as a function of baseline risk in general (regardless of what gave the patient a high risk, for example). For the rare case where the test is binary, the odds ratio is the product of the likelihood ratio positive and the likelihood ratio negative.
+
+**Martin**: Thank you for your reply, Dr. Harrell.
+
+Maybe we're talking past each other, and since this is an important topic, I'll try my best to understand your point of view.
+
+To answer your question, in the context of a RCT it would not make any sense.
+
+My question to you is, if sensitivity and specificity are not important, what would be the criteria a physician should have to choose a diagnostic test for a given clinical situation?
+
+**FH**: Nothing you discussed motivates the need for sensitivity and specificity. What I need is the effect of each piece of information, e.g., the effect of age, the effect of having a test result of 17.35 on the log odds of disease. Give me a very specific example where sens and spec were needed and probability of disease or probability of outcome did not do the job.
+
+If you were not diagnosing a patient but were interpreting RCT results would you take time to compute the probability that a patient was on treatment B if she improved her blood pressure?
+
+**Steve Pitts**: I believe I understand your point of view about sn/sp vs probabilities. The main advantage of sensitivity and specificity is the intuitive one: Dr. Yerushalmy was onto something with these adjectives. We all know people or pets that are "sensitive". It enables medical students to understand intuitively what is actually a pretty complicated subject. The main first order of business is to get them past the TV-show level of understanding, where a positive test means you have disease, and negative means you don't. Tests have properties that are more constant than individual posterior probabilities, whether the test is a clinical finding or an expensive machine.
+
+**FH**: Thanks for the comments Steve. I think it is very appropriate to show people how to move past positive=disease, negative=no disease thinking. I just don't see the role an an indirect way to do this that is based on P(positive given disease) etc. I'd rather go for the jugular: P(disease given all test results and background variables). And beware of assuming that sensitivity and specificity are quite that constant.
+
+**Martin**: Dr. Harrell, diagnostic tests have different uses in clinical practice. They can confirm or discard a disease when there's suspicion of disease, discard a disease in an asymptomatic patient (screening), they also have prognostic capabilities, and they can help us decide which therapy is better.
+
+Now, we cannot mix them up, these are different questions, although some tests can be both diagnostic and prognostic.
+
+Sensitivity and specificity help us to choose which test to order according to the clinical context. For example, an EKG could not be used to discard a myocardial infarction and a D-dimer could not be used to confirm pulmonary thromboembolism.
+
+Regarding prevalence. It works as a starting point for prior probabilities, which take into account specific patient characteristics. This and the likelihood of the test result gives us the posterior probabilities. Since rarely are we ever 100% sure of the diagnosis, based on some specified (subjective) thresholds we decide to treat, discard, or take another test.
+
+So, I would have to disagree that sensitivity and specificity are not important in medical training.
+
+**FH**: I disagree. The confusion caused by sens and spec is massive and even more clearly they take valuable class and study time away from the real need: how to specify probability models and design studies that will yield the data need to estimate their parameters. The only place I can thing of for sens and spec is when you don't have data, or at least the needed data. Do we ever teach physicians how to compute the probability that a patient is male given his disease status? Why is a test different from the patient's sex?
+
+**Clyde Schechter**: The only thing I disagree with here is your implication that clinicians should not be taught about sensitivity and specificity. It really is important to know those concepts, along with prevalence and Bayes' theorem. The reason is that some tests are used in different populations and settings. The same test may be used to mass screen asymptomatic populations, and also as a confirmatory diagnostic test in people with symptoms suggestive of the disease in question. In the former setting the prior probability of disease is typically very low, and in the latter it is usually moderate or even high. The sensitivity and specificity are, under reasonably broad circumstances, the same in both populations as they are generally physico-chemical properties of the test itself. The clinician needs to understand that, and why, the same test result has very different implications in these two uses.
+
+In fact, I think that this is not sufficiently emphasized in medical training. Most of the clinicians I deal with, even those relatively recently trained, are shocked to learn how low the positive predictive value of most screening tests are. But once they have mastered that, they also need to understand why the very same test can be very informative when applied to a patient who is likely to have the disease in question.
+
+**therandomtexan**: This merits a series of 4 or 5 lectures that tie all these ideas together and get out students past mere sensitivity, specificity, and the PPV. You've just nailed my foot the floor for a couple of days this summer, writing those lectures.

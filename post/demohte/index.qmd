@@ -1,0 +1,56 @@
+---
+title: The Burden of Demonstrating HTE
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2019-04-08
+modified: 2019-12-25
+categories: [RCT, generalizability, medicine, metrics, personalized-medicine, subgroup, 2019]
+description: "Reasons are given for why heterogeneity of treatment effect must be demonstrated, not assumed.  An example is presented that shows that HTE must exceed a certain level before personalizing treatment results in better decisions than using the average treatment effect for everyone."
+---
+
+
+## Background
+
+Heterogeneity of treatment effect (HTE) is demonstrated by either 
+
+* showing that there is variation in individuals' responses to treatment using a [multi-period crossover study](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5054923), or
+* in a more restricted sense demonstrating an interaction between treatment and patient characteristics on a scale for which it is possible that such interaction may be absent even if the main effect for treatment is nonzero.  [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+There are at least three reasons to assume that HTE is absent by default.
+
+1. Some researchers who claim that HTE exists have vested interests, because it is a new research area for which there is grant money and fame to be made, and papers to be published.  And journal reviewers are not properly equipped to review HTE methodologies used in clinical papers.
+1. There is scant evidence to date that HTE exists, is clinically meaningful, and should influence treatment choices.
+1. When HTE is absent or is weak, personalizing treatments can result in worse decisions than just assuming that the average treatment effect is what applies to every patient.
+
+[This](../varyor) article provided a real clinical trial example where HTE was formally tested and quantified.  The purpose of the present article is to demonstrate point 3. above.
+
+## Example
+
+Suppose that the response variable in a randomized clinical trial is systolic blood pressure (SBP), and suppose that the between-patient standard deviation in SBP is 10mmHg.  When comparing post-randomization SBP for treatment A vs. treatment B, let's first suppose that every patient has the same expected reduction in SBP due to treatment, which for our analyses is irrelevant.  If SBP has a normal distribution with SD of 10mmHg, and a total sample size of n patients is included in the trial, with half randomized to each treatment, the variance of the estimated treatment effect equals the sum of the variances of the two sample means, which is $100 (\frac{1}{n/2} + \frac{1}{n/2})$ or $\frac{400}{n}$ (note: this is the variance of the grand mean whether or not males and females have different treatment effects).  Since in truth all patients have the same expected benefit, the sample estimate has a bias of zero, so its mean squared error (MSE), the variance plus the square of the bias, equals the variance of $\frac{400}{n}$.  The MSE is the average squared discrepancy between an estimate and its true value.  The MSE is an excellent way to summarize the accuracy of an estimate, taking into account both precision and bias.  The lower the MSE, the higher the probability that the estimate will be within a small neighborhood of the true value.
+
+Now suppose that males and females have differing efficacy of treatment B relative to A, that we wish to estimate the efficacy in females, and that the proportion of females in the trial is $p$.  A model that contains the treatment main effect, sex main effect, and treatment $\times$ sex interaction term is equivalent to a model with four non-overlapping cells representing the treatment $\times$ sex groups.  From either the linear model or just considering the four sample means, the female-specific mean difference has zero bias and has variance $100 (\frac{1}{pn/2} + \frac{1}{pn/2})$ or $\frac{400}{pn}$ which is also the MSE of the B-A difference in means for just females. 
+
+What if we use the entire male+female data to estimate the SBP effect for females?  Suppose that the difference in efficacy between males and females is $\delta$.  The variance of the overall estimate (grand mean effect) is $\frac{400}{n}$ as before, but the bias from combining males and females to estimate the effect in females is as follows.  Let $\Delta$ denote the true treatment effect for males and $\delta$ be the additional effect for females.  So the treatment effect for females is $\Delta + \delta$.  The expected value of the overall grand mean effect estimate ignoring sex is a $p$ vs. $1-p$ weighted average of these female and male effects: $p(\Delta + \delta) + (1-p)(\Delta) = \Delta + p\delta$.  The bias of the average treatment effect as an estimator of the effect in females is the difference in this and the true effect for females: $\Delta + p\delta - (\Delta + \delta) = -(1 - p)\delta$.  As a check, when the trial has no males, the overall estimate is unbiased for females since then $p=1$. 
+
+For females, the MSE  of the ignoring-sex pooled treatment estimate is $(1 - p)^{2} \delta^{2} + \frac{400}{n}$.  How large does the interaction effect (female - male efficacy = $\delta$) have to be before the female-specific efficacy has lower MSE than just using the overall average that pools males and females?  For simplicity let's assume that the trial randomized equal numbers of females and males, i.e., $p=\frac{1}{2}$.  Then the two MSEs to compare are $\frac{800}{n}$ and $\frac{\delta^{2}}{4} + \frac{400}{n}$.  The first is less than the second when $\delta > \frac{40}{\sqrt{n}}$.  When $n=1600$ the differential effect must exceed 1mmHg for the female-specific estimate to be better than the overall average efficacy.  When $n=100$, the differential effect must exceed 4mmHg.
+ 
+If there is no treatment heterogeneity  ($\delta=0$) but one elects to use the female-specific efficacy estimate, the MSE of the ignoring-sex efficacy estimate will be smaller than the female-specific estimate, by a factor of 2.  This translates to the overall average efficacy (i.e., borrowing information from males to females) having a higher probability of being close to the true efficacy for females.
+
+## Preferred Analyses for Future Applications
+
+Bayesian models allow for the most clinically sensible as well as practical solutions to modeling HTE when HTE exceeds zero.  With a Bayesian model, interactions are not "in" or "out" of a model but are "half in."  A skeptical prior distribution is used for interaction effects.  This shrinks interaction effects.  In the example given above, this would allow the efficacy estimate for females to borrow some of the efficacy estimate from males.  But as the sample size increases, the efficacy estimates will become more customized, i.e., sex-specific.  This methods was proposed by [Simon and Freedman](https://pubmed.ncbi.nlm.nih.gov/9192445/).  Bayesian shrinkage will result in superior MSE of patient-specific efficacy estimates.
+
+------
+
+## Other Resources
+
+* [Responder despondency: myths of personalized medicine](https://errorstatistics.com/2014/07/26/s-senn-responder-despondency-myths-of-personalized-medicine-guest-post/amp) by Stephen Senn
+* Chapter 9 of [Statistics Issues in Drug Development](https://www.wiley.com/en-us/Statistical+Issues+in+Drug+Development,+2nd+Edition-p-9780470018774) 2nd Edition by Stephen Senn
+
+------
+
+## Discussion
+
+Add your comments, suggestions, and criticisms on [datamethods.org](http://datamethods.org/t/discussion-of-assessing-heterogeneity-of-treatment-effect-estimating-patient-specific-efficacy-and-studying-variation-in-odds-ratios-risk-ratios-and-risk-differences)

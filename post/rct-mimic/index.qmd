@@ -1,0 +1,223 @@
+---
+title: Randomized Clinical Trials Do Not Mimic Clinical Practice, Thank Goodness
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
+date: 2023-02-14
+modified: 2023-09-23
+categories: [generalizability, design, medicine, RCT, drug-evaluation, personalized-medicine, evidence, 2017, 2023]
+description: "Randomized clinical trials are successful because they do not mimic clinical practice.  They remain highly clinically relevant despite this."
+---
+
+::: {.quoteit}
+What clinicians learn from clinical practice, unless they routinely do n-of-one studies, is based on comparisons of unlikes.  Then they criticize like-vs-like comparisons from randomized trials for not being generalizable.  This is made worse by not understanding that clinical trials are designed to estimate relative efficacy, and relative efficacy is surprisingly transportable.
+<br><br>
+Many clinicians do not even track what happens to their patients to be able to inform their future patients.  At the least, randomized trials track everyone.
+<br><br>
+Parallel-group RCTs enroll volunteers whose characteristics do not mimic any population.  They are then assigned treatment, and the result is the ability to estimate between-group shifts in outcomes, not to estimate population outcome tendencies in one treatment group.  Think of a linear regression.  The RCT is used to estimate the slope (relative shift), not the intercept (absolute anchor).
+
+:::
+
+Randomized clinical trials (RCTs) have various goals, including providing evidence that [First published 2017-01-27; major revision 2023-02-13]{.aside}
+
+1. a treatment is superior than another treatment in a way that is likely to benefit patients
+1. a new treatment yields patient outcomes that are similar enough to an established treatment that the two may be considered interchangeable
+1. a diagnostic device or other technology provides information that improves patient management or outcomes
+
+Let's consider only the first goal.  RCTs have long been held as the gold standard for
+generating evidence about the effectiveness of medical and surgical
+treatments, and for good reason.  But I commonly hear clinicians lament
+that the results of RCTs are not generalizable to medical practice,
+primarily for two reasons: [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+1.  Patients in clinical practice are different from those enrolled in
+    RCTs
+2.  Drug adherence in clinical practice is likely to be lower than that
+    achieved in RCTs, resulting in lower efficacy.
+
+Point 2 is hard to debate because RCTs are run under protocol, and
+research personnel are watching and asking about patients' adherence
+(but more about this below).  But point 1 is a misplaced worry in the
+majority of trials.  The explanation requires getting to the heart of
+what RCTs are really intended to do:
+
+1. Provide evidence for **relative** treatment effectiveness over an adequate time horizon for assessing target patient outcomes
+1. Provide evidence for **relative** safety over a somewhat adequate time horizon for assessing non-target safety outcomes
+
+Let's go into the meaning of relative effectiveness, for two types of outcome variables.
+For a continuous response Y such as systolic blood pressure (SBP), which for practical purposes may be considered to have an unrestricted range, the efficacy measure of interest is often the difference in two means, i.e., the mean reduction in SBP.  Letting $E$ denote expected value or long-term average, $T$ denote treatment assignment ($A$ or $B$), and $X$ denote a vector of baseline (pre-randomization) patient characteristics, a key quantity of interest for continuous $Y$ is [The minority of RCTs actually use covariate adjustment for the primary analysis, a sad fact frequently lamented by regulatory authorities.  The highly problematic consequences of this are discussed [here](https://hbiostat.org/bbr/ancova.html), especially the resulting inflation of sample size to make up for failing to account for within-treatment patient outcome heterogeneity.  Besides wasting time and resources, designating unadjusted analysis as the primary analysis leads to ethical concerns about exposing too many patients to experimental therapies.  It also leads to much confusion about whether and how to handle observed baseline imbalance which would have been circumvented by pre-specifying covariate adjustment for important factors.  Here we assume that the primary analysis uses best statistical practices so is covariate-adjusted.]{.aside}
+
+$$E(Y | X, T=B) - E(Y | X, T=A)$$
+
+where $|$ denotes "conditional on" or "holding constant".  Since the long-run mean $E(.)$ is a linear operator and we typically use a linear model to analyze the data, the average is a collapsible quantity, meaning that the covariate-specific treatment effect equals the marginal treatment effect $E(Y | T=B) - E(Y | T=A)$. Covariate adjustment is still needed to estimate this difference to reduce variance and hence achieve optimum power and precision.  The mean difference can be estimated from the patients in the RCT and this also estimates a population-averaged treatment effect.  The patient mix does not matter unless there are interactions between one or more $X$s and $T$ and the distribution of the interacting factors in $X$ differs between RCT and target populations.
+
+::: {.callout-note collapse="true"}
+## More About Conditioning
+
+When we condition on baseline characteristics in $X$ these describe *types* of patients.  So we obtain patient-type-specific tendencies of $Y$.  When $X$ omits an important patient characteristic we obtain patient-type-specific values up to the resolution of how "type" is measured.  Such conditional estimates will be *marginal* over omitted covariates, i.e., they will average over the sample distribution of omitted covariates.  For linear models this is consequential only in not further reducing the residual variance, so some efficiency is lost.  For nonlinear models such as logistic and Cox models, the consequence is that the treatment effect is a kind of weighted average over the sample distribution of omitted covariates that are important.  That doesn't make it wrong or unhelpful.  The effect of this on the average is to underestimate the true treatment effect that compares like with like by conditioning on all important covariates.
+
+Any covariate conditioning is better than none.  Estimating unadjusted treatment effects in nonlinear model situations will result in stronger attenuation of the treatment effect (e.g., move an OR towards 1.0) on the average, will get the model wrong, and will not lend itself to understanding the ARR distribution nor provide any basis for treatment interaction/assessment of differential treatment effect.  Regarding "get the model wrong", a good example is that if the treatment effect is constant over time upon covariate adjustment (i.e., the proportional hazards (PH) assumption holds), the unadjusted treatment effect will violate PH. As an example let there be a large difference in survival time between males and females.  Failure to condition on sex will make the analyst see a complex bimodal survival time distribution with unexplained modes, and this can lead to violating PH for treatment.  Practical experience has found more studies with PH after covariate adjustment than studies with PH without covariate adjustment.
+
+To obtain not only patient-type-specific treatment effects but also patient-specific effects requires conditioning on patient, otherwise estimates are marginalized with respect to patient.  Conditioning on patient requires having random effects for patients, e.g., random intercepts.  To have random effects requires having multiple post-randomization observations per patient---either, for example, a 6-period 2-treatment randomized crossover study or a longitudinal study with lots of longitudinal assessments per patient.
+
+:::
+
+For continuous $Y$, the difference in means quantifies both absolute and relative efficacy.  When the outcome is time-to-event, it is possible to have an absolute efficacy measure such as difference in mean time until event (e.g., gain in left expectancy), but as in the case with absolute risk reduction with binary $Y$ discussed below, this absolute effectiveness measure only makes sense when it is covariate-adjusted.  So let's consider the usual treatment effect parameters for binary and time-to-event outcomes.  Except for a log-Gaussian accelerated failure time model, most models for these two types of outcomes have non-collapsible parameters, i.e., the treatment effect parameter has a different meaning whether conditioning on covariates $X$ or not.  Conditioning on $X$ is required to make the results mesh with how clinical decision making is done---one patient at a time.  It is necessary to allow patient preferences and trade-offs to be taken into account. [Recognition of these issues will hopefully make some readers realize that this simple approach to personalized medicine can have more impact that measuring new biomarkers]{.aside}
+
+::: {.quoteit}
+
+When $Y$ is binary, the only effect measure that can possibly mean the same thing for every patient is the one that conditions on patient characteristics $X$---either a relative effect or individualized $X$-specific risk estimates under alternative therapies.  The use of ideas such as ATE (average treatment effects) is not in alignment with medical decision making.  This fact is most evident for binary outcomes.  When effects of $X$ are more than trivial, generating a wide distribution of risk across subjects, the ATE may not apply to any patient in the trial or encountered in clinical practice.
+
+:::
+
+How are models chosen for such classes of $Y$?  Among other criteria, models are chosen so that (1) it is possible that there be a single number, confidence/compatibility interval, or Bayesian posterior distribution for the treatment effect, and (2) the model form has been found to provide a satisfactory fit in a large number of patient outcome studies.  These considerations lead to the popularity of the logistic regression model for binary or ordinal $Y$ and the Cox proportional hazards model for time-to-event $Y$.  Relative treatment effects in these two models are, respectively, odds ratios and hazard ratios.  These two ratio measures have the distinct advantage that their logarithms (the parameters actually used in the models) do not have mathematical constraints.  It is therefore possible for a relative effect model to have a single parameter for treatment, i.e, it is possible for treatment **not** to interact with any $X$. [Examining variation of absolute risk reduction (ARR) has made many researchers claim that heterogeneity of treatment effect is present, forgetting that treatment benefit is typically smaller for minimally diseased or younger patients who don't have much room to improve.  Variation in ARR in the absence of interactions on the relative scale merely represents **patient heterogeneity** and not heterogeneity of treatment effects.]{.aside}
+
+A binary logistic regression model for treatment and covariate-specific probability of the outcome event $Y=1$ may be stated as 
+$$\Pr(Y=1 | X,T) = \text{expit}(X\beta + T\gamma)$$
+where $\text{expit}(x)=\frac{1}{1 + \exp(-x)}$, $T$ is a 0/1 indicator for treatment (0=$A$, 1=$B$), $\gamma$ is the $B:A$ log OR and its anti-log $\exp(\gamma)$ is the adjusted (for $X$) OR.
+
+::: {.callout-note collapse="true"}
+## Treatment Interactions
+
+The omission of $X \times T$ interaction terms in the above model is a default position related to the times I've analyzed trial data that were large enough to assess interactions and found no evidence for them, and also the huge number of published funnel plots showing remarkable consistency of ORs across patient subgroups (see also [this](https://onlinelibrary.wiley.com/doi/abs/10.1002/1097-0258(20000715)19:13%3C1707::AID-SIM491%3E3.0.CO;2-P)).  Subject matter considerations or secondary RCT efficacy analyses (or sensitivity analysis) would cause us to add interaction terms to the model.  The material that follows is still relevant but would involve covariate-specific ORs.  Were $s$ interaction parameters added to the model, the result would be $s + 1$ primary relative efficacy estimands.  For the (up to) $n$ absolute risk reductions, since each one already conditions on $X$, the form of the computations wouldn't change.  ARRs would be exaggerated for certain levels of interacting factors, and it would be helpful to display the ARR distributions by levels of interacting factors.
+
+The decision to include interactions needs to be sample-size dependent in addition to being driven by subject matter knowledge, and should also recognize the huge variance-bias trade-offs involved.  Reduction in bias by inclusion of treatment interactions can easily be offset by large increases in variances, so that it would have been better to pretend that the relative treatment effect
+is constant.  This is explored [here](/post/demohte).  In the best of situations, where there is a single binary interacting factor having a prevalence of 0.5, the sample size needed to estimate an interaction effect with a specific precision/margin of error is $4\times$ higher than the sample size needed to estimate a main effect to the same precision.  In that ideal case, the precision (e.g., confidence interval width) of the treatment effect estimate for one level of the interacting factor is worse by a factor of $\sqrt{2}$ than the precision for a treatment main effect.
+
+In RCTs, primary analyses should be pre-specified.  Other analyses can be more adaptive.  A useful pragmatic strategy when the number of covariates is manageable (e.g., 10 or fewer) is to ask this question: Will predictions of patient-type-specific treatment effects be better made with inclusion of all treatment interactions, or by ignoring them?  This question can be answered by comparing Akaike's information criterion (AIC) of models with and without the interactions and choosing the model with the smaller AIC.  This is equivalent to basing the decision on whether the likelihood ratio $\chi^2$ test statistic for all interactions combined exceeds twice its degrees of freedom. [See [this](/post/varyor) for related ideas.]
+
+Even better is to use a more linear non-dichotomous process whereby interactions are not "in" or "out" of the model but are always partially "in".  Parameters for interaction terms are present but are discounted using either (1) cross-validation-like considerations to choose a penalty parameter in penalized maximum likelihood estimation, or (2) by setting Bayesian priors that may specify, for example, that interaction effects are unlikely to be larger than main effects or that interaction effects are unlikely to be beyond a certain magnitude (e.g., the ratio of ORs is unlikely to exceed $2$ or be less than $\frac{1}{2}$).  An example of (1) is [here](/post/varyor).
+
+More assumption-free ways to incorporate covariates into the analysis to gain precision in estimating the average treatment effect [hide the problem of interactions](/post/ipp) and do not provide insights about effect modification/differential treatment effect.
+
+There are those who believe that traditional statistical models should not be used in RCTs.  They tend to favor the use of machine learning or nonparametric risk models that allow treatment to interact with every baseline variable, and use such models to estimate the average risk as if every patient were on treatment B, then estimate the average risk as if they were on treatment A.  The differences in these two average risk estimates is a sample average treatment effect (SATE).  Unless effectiveness is summarized with a difference in means, the SATE is a function of the distribution of characteristics of patients who happened to enter the trial, and it cannot be used to estimate the population average treatment effect (PATE) because probability samples are not used to select patients at random to enroll in RCTs.  Here are some other comments about this disdain for traditional ANCOVA.
+
+* I'll take a method that has assumptions that are not testable that represent reasonable approximations, over a method that ignores things that are clearly present.
+* Minimal-assumption almost-nonparametric approaches to estimation fail to account for the large variance-bias tradeoff they entail.  By targeting the estimation of SATEs, the instabilities of such approaches average out to result in precise SATE estimates, but the resulting treatment effectiveness estimates that are average over unlikes may not apply to any patient in or out of the RCT.  And they can't give you the goal PATE.
+* To not average/to estimate effectiveness for individual patients, it's not possible to allow for all possible treatment interactions without exploding the needed sample size.  Approximating a needed patient-type-specific estimand is better than not attempting to estimate it.
+
+This famous quote from John Tukey comes to mind.
+
+::: {.quoteit}
+Far better an approximate answer to the right question, which is often vague, than the exact answer to the wrong question, which can always be made precise.
+
+:::
+
+:::
+
+To select a transportable relative effect measure for binary $Y$, we are then seeking a function $f$ such that, in the absence of $X\times T$ interactions, satisfies
+
+$$f(\Pr(Y=1 | X,T=B)) / f(\Pr(Y=1 | X,T=A)) = r$$
+
+where $r$ is a relative effect ratio measure and is a single number.  For the logistic model $f(p)=\frac{p}{1-p}$ which is the conversion of risk $p$ to odds, and $r$ is the $B:A$ OR.
+
+So that the RCT provides a single measure that is likely to transport outside of the trial, where there will certainly be a different patient mix on $X$, we must choose a measure such that $X$ cancels out in the ratio.  The OR does that.  Thus our key estimand for treatment effectiveness (in the absence of interactions) is $\gamma$ in the logistic model.  [There have been papers arguing that the logistic regression model is not robust enough to trust $\gamma$ as representing the treatment effect, but evidence for such worry is scant.]{.aside}
+
+::: {.quoteit}
+
+The cost of having a transportable treatment effect parameter that is consistent with individual patient decision making is to specify a statistical model for how the measurable part of patient heterogeneity happens, so that easily explainable outcome heterogeneity can be explained.
+
+:::
+
+A RCT with reasonably wide patient inclusion criteria can also provide good estimates of absolute risk of the trial's outcome $Y$, and the statistical model (or even a machine learning algorithm) can be used to estimate risk as if every patient were given B, then the risk as if every patient were given A, then subtract to estimate patient-type-specific absolute risk reduction (ARR) due to treatment.  If there are no ties among covariate combinations present in the data, there will be [as many ARR estimates as there are patients](/post/rdist) (see also [this](/post/ipp)).  Though the entire distribution of ARR doesn't appear in RCT reports, it would be highly informative to make this a standard inclusion. [Fortunately these $n$ estimates are all connected by low dimensional parameters $\beta$.]{.aside}
+
+If there are no $X\times T$ interactions and no ties in $X$ there are $n+1$ estimands of interest for $n$ patients---the $n$ absolute risk reductions along with the $B:A$ OR $\exp(\hat{\gamma})$. [In practice the $n$ estimates would be summarized over a regular grid of $X$ values.]{.aside}  Evidence for *any* effectiveness is the same for all $n+1$ estimates, e.g., the $n+1$ Bayesian posterior probabilities of a treatment effect being in the right direction are all equal.  As for usage of the RCT estimates in medical practice, four numbers could be provided: individualized estimated outcome risk under $A$, risk under $B$, their difference, and the relative treatment effect (OR). [Evidence about OR $< 1$ and ARR $> 0$ are identical because ARR=0 if and only if OR=1.  For assessing evidence of a *clinically worthwhile effect*, e.g., ARR > 0.025, the posterior probabilities of efficacy will vary with $X$.]{.aside}
+
+RCTs of even drastically different patients can provide estimates of
+relative treatment benefit on odds or hazard ratio scales that are
+highly transportable.  This is most readily seen in subgroup analyses
+provided by the trials themselves - so called forest plots that
+demonstrate remarkable constancy of relative treatment benefit.  When an [See also the remarkable constancy of ORs in [this](/post/varyor) large RCT, where every opportunity was given for a covariate to interact with treatment, but the best predicting model forced all interactions to zero.]{.aside}
+effect ratio is applied to a population with a much different risk
+profile, that relative effect can still fully apply.  It is only likely
+that the absolute treatment benefit will change, and it is easy to
+estimate the absolute benefit (e.g., risk difference) for a patient
+given the relative benefit and the absolute baseline risk for the
+subject.   This is covered in detail in [Biostatistics for Biomedical
+Research](https://hbiostat.org/bbr/ancova.html), Section 13.6.  See also Stephen Senn's excellent [presentation](https://www.slideshare.net/StephenSenn1/real-world-modified).
+
+::: {.callout-note collapse="true"}
+
+## More About Transportability
+
+Transportability of relative efficacy estimated from an RCT to patients in the field depends on a number of factors that need to be elucidated.  For example, relative efficacy from an RCT is more likely to be transportable if patients in the RCT differ from those in the field by a matter of degree, e.g., are younger or further out on a disease severity continuum.  Success can also happen when patients differ in an important etiologic or structural way when there are covariates that are well correlated with these characteristics that were captured in the RCT.  But if etiology or structure differ in an undescribed way, the translation of RCT estimates to the field may fail, as is also the case if there is an important covariate $\times$ treatment interaction that was omitted from the RCT model and the interacting factor has a much different distribution in the field than in the RCT patients.  This latter phenomenon is covered in detail [here](/post/ia).
+
+:::
+
+Now that we have dived into relative effects and what RCTs are designed to estimate,  consider how the "real world" does not provide what is needed to learn about treatment effectiveness in the sense of estimating what using a new treatment instead of an old treatment is likely to accomplish.
+Clinical practice provides anecdotal evidence that biases clinicians.
+ What a clinician sees in her practice is patient $i$ on treatment $A$ and
+patient $j$ on treatment $B$.  She may remember how patient $i$ fared in
+comparison to patient $j$, not appreciate confounding by indication, and
+suppose this provides a valid estimate of the difference in
+effectiveness in treatment $A$ vs. $B$.  But the real therapeutic question
+is how does the outcome of a patient were she given treatment $A$ compare
+to her outcome were she given treatment $B$.  The gold standard design is
+thus the randomized crossover design, when the treatment is short
+acting.  Stephen Senn eloquently
+[writes](http://onlinelibrary.wiley.com/doi/10.1002/sim.6739/abstract) about
+how a 6-period 2-treatment crossover study can even do what proponents
+of personalized medicine mistakenly think they can do with a
+parallel-group randomized trial: estimate treatment effectiveness for
+individual patients beyond what is predicted by covariates.
+
+For clinical practice to provide the evidence really needed, the
+clinician would have to see patients and assign treatments using one of
+the top four approaches listed in the hierarchy of evidence below.
+Entries are in the order of strongest evidence requiring the least
+assumptions to the weakest evidence. Note that crossover studies, when
+feasible, even surpass randomized studies of matched identical twins in
+the quality and relevance of information they provide.
+
+Let $P_{i}$ denote patient $i$ and the treatments be denoted by $A$
+and $B$.  Thus $P_{2}^{B}$ represents patient 2 on treatment $B$.
+$\overline{P}_{1}$ represents the average outcome over a sample of
+patients from which patient 1 was selected.
+
+| Design | Patients Compared 
+-------- | ----------------- 
+6-period crossover | $P_{1}^{A}$ vs $P_{1}^{B}$ (directly measure HTE)
+2-period crossover | $P_{1}^{A}$ vs $P_{1}^{B}$
+RCT in identical twins | $P_{1}^{A}$ vs $P_{1}^{B}$
+$\parallel$ group RCT | $\overline{P}_{1}^{A}$ vs $\overline{P}_{2}^{B}$,  $P_{1}=P_{2}$ on avg
+Observational, good artificial control | $\overline{P}_{1}^{A}$ vs  $\overline{P}_{2}^{B}$, $P_{1}=P_{2}$ hopefully on avg
+Observational, poor artificial control | $\overline{P}_{1}^{A}$ vs $\overline{P}_{2}^{B}$, $P_{1}\neq P_{2}$ on avg
+Real-world physician practice | $P_{1}^{A}$ vs $P_{2}^{B}$
+
+The best experimental designs yield the best evidence a clinician needs
+to answer the "what if" therapeutic question for the one patient in
+front of her.  Covariate adjustment allows line four in the above table to be translated to patient-type-specific outcomes and not just group averages.
+
+Regarding adherence, proponents of "real world" evidence advocate for
+estimating treatment effects in the context of making treatment
+adherence low as in clinical practice. This would result in lower
+efficacy and the abandonment of many treatments. It is hard to argue
+that a treatment should not be available for a potentially adherent
+patient because her fellow patients were poor adherers. Note that an RCT
+is by far the best hope for estimating efficacy as a function of adherence,
+through for example an instrumental variable analysis (the randomization
+assignment is a truly valid instrument). [An observational study has great difficulty unbiasedly estimating the average treatment effect.  Using the same data to attempt to estimate efficacy under a specific degree of adherence is near impossible.]{.aside} Much more needs to be said
+about how to handle treatment adherence and what should be the target
+adherence in an RCT, but overall it is a good thing that RCTs do not
+mimic clinical practice.  We are entering a new era of pragmatic
+clinical trials.  Pragmatic trials are worthy of in-depth discussion,
+but it is not a stretch to say that the chief advantage of pragmatic
+trials is not that they provide results that are more relevant to
+clinical practice but that they are cheaper and faster than traditional
+randomized trials.
+
+## Further Reading
+
+* [Why representativeness should be avoided](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3888189) by Rothman, Gallacher, and Hatch
+* [The magic of randomization versus the myth of real-world evidence](https://www.nejm.org/doi/full/10.1056/NEJMsb1901642) by Collins et al
+* [Treatment effects may remain the same even when trial participants differed from the target population](https://www.jclinepi.com/article/S0895-4356(19)30818-2/pdf) by MJ Bradburn et al.
+* [Interpreting randomized controlled trials](https://www.mdpi.com/2072-6694/15/19/4674) by P Msaouel, J Lee, P Thall
+
+## Discussion Archive
+
+This discussion from 2017 and 2018 came from the old blog platform.
+
+![](disqus1.png)<br>
+![](disqus2.png)<br>
+![](disqus3.png)

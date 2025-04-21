@@ -1,0 +1,101 @@
+---
+title: "How Does a Compound Symmetric Correlation Structure Translate to a Markov Model?"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2023-12-03
+categories: [ordinal, prediction, regression, 2023]
+---
+
+```{r setup, include=FALSE}
+require(rms)
+require(data.table)
+require(ggplot2)
+options(prType='html')
+```
+
+Random intercepts in a model induce a compound symmetric correlation structure in which the correlation between two responses on the same subject have the same correlation no matter the time gap between the responses.  How does one capture such an unnatural structure using a Markov semiparametric model?
+
+Let's generate some data with repeatedly measured outcome per subject where the outcome is a coursened continuous response from a linear model, treated as ordinal,  and the random effects have a $N(0, 0.25^2)$ distribution.  Generate 5000 subjects having 10 measurements each.
+
+```{r re, results='asis'}
+n <- 5000   # subjects
+set.seed(2)
+re <- rnorm(n) * 0.25
+X  <- runif(n)   # baseline covariate, will be duplicated over time within subject
+m  <- 10         # measurements per subject
+
+id <- rep(1 : n, each = m)
+x  <- X[id]
+y  <- x + re[id] + rnorm(n * m) * 0.5
+y  <- pmin(2, pmax(-1, y))   # curtail y
+y  <- round(4 * y)           # coursen it
+d  <- data.table(id, x, y)
+d[, t := 1 : .N, by=id]
+# Make short and wide dataset
+w <- dcast(d[, .(id, t, y)],
+           id ~ t, value.var='y')
+r <- cor(as.matrix(w[, -1]), use='pairwise.complete.obs',
+         method='pearson')
+p <- plotCorrM(r)
+p[[1]]
+p[[2]] + ylim(0,1)
+```
+
+The flat correlation pattern vs. time gap is as expected.
+
+Fit a first-order Markov PO model to times 2, 3, ..., 10.  Allow previous y to interact with a flexible function of time.
+
+```{r m1,results='asis'}
+d[, yprev := shift(y), by=id]
+f <- orm(y ~ pol(x, 2) + pol(yprev, 2) * pol(t, 3), data=d)
+anova(f)
+g <- orm(y ~ pol(x,2) + yprev + t, data=d)
+g
+```
+
+There was no evidence for a nonlinear effect of previous y, or an interaction between previous value and time.
+
+# Fifth-Order Markov Model with Linear Effects
+
+```{r m5,results='asis'}
+d[, yprev2 := shift(yprev),  by=id]
+d[, yprev3 := shift(yprev2), by=id]
+d[, yprev4 := shift(yprev3), by=id]
+d[, yprev5 := shift(yprev4), by=id]
+f <- orm(y ~ pol(x, 2) + yprev + yprev2 + yprev3 + yprev4 + yprev5 + t, data=d)
+f
+anova(f, yprev2, yprev3, yprev4, yprev5)
+```
+
+For the compound symmetric correlation structure the effect of all previous values of y is the same, and all lags are important.
+
+See if the mean of all previous values can replace all the individual lagged variables.
+
+```{r ypmean,results='asis'}
+d[, ypmean := (yprev + yprev2 + yprev3 + yprev4 + yprev5) / 5]
+fm <- orm(y ~ pol(x, 2) + ypmean + t, data=d)
+fm
+AIC(fm); AIC(f)
+```
+
+The previous model is better but by an inconsequential amount.  The compound symmetric correlation pattern is reproduced by conditioning on the mean of all previous response values.
+
+# Combined Markov and Random Effects Model
+
+Add random intercepts and see if lags are still important in a Bayesian PO model.
+
+```{r bayesre,results='asis'}
+require(rmsb)
+options(mc.cores=4, rmsb.backend='cmdstan')  # took 7m on 4 cores (4 chains)
+b <- blrm(y ~ pol(x, 2) + yprev + yprev2 + yprev3 + yprev4 + yprev5 + t +
+          cluster(id), data=d, file='corstruct-b.rds')
+b
+```
+
+With the lagged variables in the model the standard deviation $\sigma_\gamma$ of the random effects is very small, and oddly enough the previous values remain important.  I conjecture that if the lagged variables were removed $\sigma_\gamma$ would be much larger and the model would be about as good.   
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
+

@@ -1,0 +1,21 @@
+---
+title: ""
+listing:
+  - id: post
+    contents: "*/index.qmd"
+    type: default
+    fields: [date, title, description, categories, author, reading-time]  
+    sort: "date desc"
+    categories: cloud
+    sort-ui: true
+    filter-ui: true
+    page-size: 10
+page-layout: full
+title-block-banner: false
+---
+
+
+
+::: {#post}
+:::
+

@@ -1,0 +1,116 @@
+---
+title: Information Gain From Using Ordinal Instead of Binary Outcomes
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2018-01-28
+modified: 2018-09-26
+description: "This article gives examples of information gained by using ordinal over binary response variables.  This is done by showing that for the same sample size and power, smaller effects can be detected."
+categories: [RCT, design, ordinal, dichotomization, inference, precision, responder-analysis, sample-size, 2018]
+---
+
+As discussed [here](https://hbiostat.org/bbr/overview.html#sec-overview-ychoice), a binary dependent variable Y has minimum statistical information, giving rise to minimal statistical power and precision.  This can easily be demonstrated by power or sample size calculations.  Consider a pain outcome as an example.  Instead of having as an outcome the presence or absence of pain, one can significantly increase power by having several levels of pain severity with the lowest level representing "none"; the more levels the better. [[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+```{r init,echo=FALSE}
+dor    <- 0.5
+tpower <- 0.9
+```
+
+The point about the increase in power can also be made by, instead of varying the effect size, varying the effect that can be detected with a fixed power of `r tpower` when the degree of granularity in Y is increased.  This is all about breaking ties in Y.  The more ties there are, the less statistical information is present.  Why is this important in study planning?  Here's an all--too--commmon example.  A study is designed to compare the fraction of "clinical responders" between two treatments.  The investigator knows that the power of a binary endpoint is limited, and has a fixed budget.  So she chooses a more impressive effect size for the power calculation---one that is more than clinically relevant.  After the data are in, she finds an apparent clinically relevant improvement due to one of the treatments, but because the study was sized only to detect a super-clinical improvement, the p-value is large and the confidence interval for the effect is wide.  Little new knowledge is gained from the study except for how to spend money.
+
+Consider a two-group comparison, with an equal sample size per group.  Suppose we want to detect an odds ratio of `r dor` (OR=1.0 means no group effect) for binary Y.  Suppose that the probability that Y=1 in the control group is 0.2.  The required sample size is computed below.
+
+```{r nbin}
+require(Hmisc)
+dor    <- 0.5     # OR to detect
+tpower <- 0.9     # target power
+
+# Apply OR to p1=0.2 to get p2
+p2 <- plogis(qlogis(0.2) + log(dor))
+n1 <- round(bsamsize(0.2, p2, power=tpower)['n1'])
+n  <- 2 * n1
+```
+
+The OR of `r dor` corresponds to an event probability of `r round(p2, 3)` in the second group, and the number of subjects required per group is `r n1` to achieve a power of `r tpower` of detecting OR=`r dor`.
+
+Let's now turn to using an ordinal response variable Y for our study.  The proportional odds ordinal logistic model is the most widely used ordinal response model.  It includes both the Wilcoxon-Mann-Whitney two-sample rank test and binary logistic regression as special cases.
+If ties in Y could be broken, the proportional odds assumption satisfied, and the sample size per group were fixed at `r n1`, what odds ratio would be detectable with the same power of `r tpower`?
+
+Before proceeding let's see how close to `r tpower` is the power computed using proportional odds model machinery when Y is binary.  The vector of cell probabilities needed by the R `popower` function is the average of the cell probabilities over the two study groups.  We write a front-end to `popower` that computes this average given the odds ratio and the cell probabilities for group 1.
+
+```{r ordbin}
+popow <- function(p, or, n) {
+    # Compute cell probabilities for group 2 using Hmisc::pomodm
+    p2 <- pomodm(p=p, odds.ratio=or)
+    pavg <- (p + p2) / 2
+    popower(pavg, odds.ratio=or, n=n)
+}
+z <- popow(c(0.8, 0.2), or=dor, n=2 * n1)
+z
+binpopower <- z$power
+```
+The approximation to the binary case isn't perfect since the PO model method's power is a little above `r tpower`.  But it's not bad.
+
+Let's write an R function that given everything else computes the OR needed to achieve a given power and configuration of cell probabilities in the control group.
+
+```{r solvefun}
+g <- function(p, n=2 * n1, power=binpopower) {
+    f <- function(or) popow(p, or=or, n = n)$power - power
+    round(uniroot(f, c(dor - 0.1, 1))$root, 3)
+}
+# Check that we can recover the original detectable OR
+g(c(0.8, 0.2))
+```
+To break ties in Y we'll try a number of configurations of the cell probabilities for the control group, and for each configuration compute the OR that can be detected with the same power as computed for the binary Y case using the PO model.  We will mainly vary the number of levels of Y.  For example, to compute the detectable effect size when the probability that Y=1 of 0.2 is divided into two values of Y with equal probability we use `g(c(0.8, 0.1, 0.1), n)`.  Results are shown in the table below.
+
+```{r needle}
+# Function to draw spike histograms of probabilities as html base64 insert
+h <- function(p) tobase64image(pngNeedle(p, w=length(p))) 
+```
+
+|Distinct Y Values|  |Cell Probabilities|Detectable OR|
+|-----------------|--|------------------|-------------|
+| 2 | `r h(c(.8, .2))`       | .8 .2 | `r g(c(.8, .2))` |
+| 2 | `r h(c(.5, .5))`       | .5 .5 | `r g(c(.5, .5))` |
+| 3 | `r h(c(.8, .1, .1))`   |.8 .2/2 x 2   | `r g(c(.8, .1, .1))` |
+| 3 | `r h(c(.7, .15, .15))` | .7 .3/2 x 2 | `r g(c(.7, .15, .15))` |
+| 3 | `r h(c(.5, .25, .25))` |.5 .5/2 x 2 | `r g(c(.5, .25, .25))` |
+| 3 | `r h(c(rep(1/3, 3)))`  | 1/3 x 3    | `r g(rep(1/3, 3))` |
+| 4 | `r h(c(.8, rep(.2/3, 3)))` |.8 .2/3 x 3| `r g(c(.8, .2/3, .2/3, .2/3))` |
+| 4 | `r h(rep(1/4,4))`      |1/4 x 4    | `r g(rep(1/4, 4))` |
+| 5 | `r h(c(.7, rep(.3/4,4)))` |0.7 .3/4 x 4 | `r g(c(.7, rep(.3/4, 4)))` |
+| 5 | `r h(c(.6, rep(.1, 4)))`  |0.6 .4/4 x 4 | `r g(c(.6, .1, .1, .1, .1))` |
+| 5 | `r h(c(.5, rep(.5/4,4)))` |0.5 .5/4 x 4 | `r g(c(.5, rep(.5/4, 4)))` |
+| 5 | `r h(c(.4, rep(.6/4,4)))` |0.4 .6/4 x 4 | `r g(c(.4, rep(.6/4, 4)))` |
+| 5 | `r h(rep(1/5, 5))`        |1/5 x 5 | `r g(rep(.2, 5))` |
+| 6 | `r h(rep(1/6, 6))`        |1/6 x 6 | `r g(rep(1/6, 6))` |
+| 7 | `r h(rep(1/7, 7))`        |1/7 x 7 | `r g(rep(1/7, 7))` |
+|10 | `r h(rep(1/10,10))`       |1/10 x 10 | `r g(rep(.1, 10))` |
+|`r n` | | 1/`r n` x `r n` | `r g(rep(1/n, n))` |
+
+The last row corresponds to analyzing a continuous variable with the Wilcoxon test with `r n1` observations per each of the two groups.
+
+When high values of Y (e.g., Y=1 in the binary case) denote an event, and when the control group has a low probability of the event, splitting the high Y-level into multiple ordinal levels does not increase power very much.  The real gain in power comes from splitting the more frequent non-event subjects into for example "no event and mild event".   The best power (detectable OR closer to 1.0) comes from having equal probabilities in the cells when averaged over treatment groups, and with at least 5 distinct Y values.
+
+When designing a study, choose a maximum information dependent variable, and attempt to not have more than, say 0.7 of the sample in any one category.  But even if the proportion of non-events is large, it does not hurt to break ties among the events.  In some cases it will even help, e.g., when the treatment has a larger effect on the more severe events.
+
+-----
+
+The first few lines of `Rmarkdown knitr` markup used to produce the above table are given below.
+
+```{r excode,echo=FALSE}
+w <- "
+|Distinct Y Values|                  |Cell Probabilities|Detectable OR     |
+|-----------------|------------------|------------------|------------------|
+| 2               | `r h(c(.8, .2))` | .8 .2            | `r g(c(.8, .2))` |
+| 2               | `r h(c(.5, .5))` | .5 .5            | `r g(c(.5, .5))` |
+"
+cat(w)
+```
+
+-----
+
+## Further Reading
+
+* [The added value of ordinal analysis in clinical trials: an example in traumatic brain injury](https://ccforum.biomedcentral.com/track/pdf/10.1186/cc10240) by B Roozenbeek et al.
