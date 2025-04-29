@@ -1,14 +1,24 @@
 ---
 title: "Datamethods"
 date: 2019-01-20
+<<<<<<< HEAD
 updated: 2025-04-25
 categories: [RCT, bayes, decision-making, dichotomization, measurement, reporting, responder-analysis, sample-size, sensitivity, specificity, 2025]
+=======
+updated: 2022-09-02
+categories: [RCT, bayes, decision-making, dichotomization, measurement, reporting, responder-analysis, sample-size, sensitivity, specificity, 2022]
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
 ---
 
 [datamethods.org](https://discourse.datamethods.org) is a discussion site where
 data methodologists meet each other and subject matter experts
 including clinical trialists and clinical researchers.  Its
+<<<<<<< HEAD
 development is documented [here](/post/disc).  Datamethods is provided by [Frank Harrell Consulting](https://hbiostat.org) on a [discourse](https://discourse.org) server managed by [Literate Computing](https://literatecomputing.com).
+=======
+development is documented [here](/post/disc).  Datamethods is provided
+by the Department of Biostatistics, Vanderbilt University School of Medicine.
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
 
 I have written some short articles on the site, listed below.
 

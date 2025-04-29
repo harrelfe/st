@@ -10,7 +10,10 @@ listing:
     sort-ui: false
     filter-ui: false
     page-size: 3
+<<<<<<< HEAD
     feed: true
+=======
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
   - id: talk
     contents: talk/*/*.qmd
     sort: "date desc"
@@ -20,6 +23,7 @@ listing:
     sort-ui: false
     filter-ui: false
     page-size: 3
+<<<<<<< HEAD
     feed: true
   - id: course
     contents: course/*/*.qmd
@@ -31,6 +35,8 @@ listing:
     filter-ui: false
     page-size: 3
     feed: true
+=======
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
 page-layout: full
 title-block-banner: false
 include-in-header: meta.html
@@ -48,8 +54,11 @@ toc: true
 :::
 
 
+<<<<<<< HEAD
 ## Courses
 
 ::: {#course}
 :::
+=======
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
 

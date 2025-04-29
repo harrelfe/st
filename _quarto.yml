@@ -1,23 +1,40 @@
 project:
   type: website
+<<<<<<< HEAD
   output-dir: /Users/harrelfe/web/blog
 	
 website:
   title: "Statistical Thinking"
   site-url: https://fharrell.com
   google-analytics: "G-QBF481F2T1"
+=======
+
+website:
+  title: "Statistical Thinking"
+  site-url: "https://fharrell.com"
+  google-analytics: "G-P47K0XF3SM"
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
   page-footer:
     left: "Blog made with [Quarto](https://quarto.org/), by Frank Harrell. License: [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/)."
     right:
       - icon: github
         href: https://github.com/harrelfe/
       - icon: twitter
+<<<<<<< HEAD
         href: https://x.com/f2harrell
       - icon: envelope
         href: mailto:fh@fharrell.com
   open-graph: true
   twitter-card:
     creator: "@f2harrell"
+=======
+        href: https://twitter.com/f2harrell
+      - icon: envelope
+        href: mailto:fh@fharrell.com
+  twitter-card:
+    creator: "@f2harrell"
+    card-style: summary_large_image
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
   navbar:
     title: "Statistical Thinking"
     background: "#000000"
@@ -31,12 +48,19 @@ website:
         href: post/
       - text: Talks
         href: talk/
+<<<<<<< HEAD
       - text: Courses
         href: course/
       - text: Datamethods
         href: datamethods.qmd
       - text: News
         href: https://hbiostat.org/news
+=======
+      - text: Datamethods
+        href: datamethods.qmd
+      - text: News
+        href: https://paper.li/stn
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
       - text: Links
         href: https://hbiostat.org
       - text: Bio
@@ -45,12 +69,17 @@ website:
         href: https://www.zotero.org/groups/feh/items/q/Harrell
       - icon: github
         href: https://github.com/harrelfe
+<<<<<<< HEAD
       - text: "{{< iconify simple-icons bluesky >}}"
         href: https://bsky.app/profile/f2harrell.bsky.social
       - icon: twitter
         href: https://twitter.com/f2harrell
       - icon: rss
         href: index.xml
+=======
+      - icon: twitter
+        href: https://twitter.com/f2harrell
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
 
 format:
   html:
@@ -71,8 +100,11 @@ format:
     code-fold: true
     code-block-bg: "#f1f3f5"
     code-block-border-left: "#31BAE9"
+<<<<<<< HEAD
     code-annotations: hover
     highlight-style: tango
+=======
+>>>>>>> 49046566f620041af70c5d12d0a845653261869d
     reference-location: margin
     fig-cap-location: margin
 
