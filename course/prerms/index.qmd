@@ -1,0 +1,10 @@
+---
+date: 2023-05-12
+title: Regression Modeling Strategies Pre-Course
+description: 'Even though the 4-day RMS course will not require you to use R interactively, those participants who wish to learn more about R or attain the regression knowledge prerequisite for the 4-day course may wish to take this optional one-day Pre-RMS workshop to enhance R and RStudio) skills, learn about multiple linear regression (a prerequisite for the 4-day course), and to get an introduction to the R rms package that will be used throughout the 4-day course. The course web site is [here](http://hbiostat.org/doc/rms/1day.html).  The course introduces an R workflow for the entire analysis project cycle.'
+url: http://hbiostat.org/doc/rms/1day.html
+---
+* One-day virtual course 2023-05-12
+
+
+

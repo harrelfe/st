@@ -1,0 +1,47 @@
+---
+title: "About"
+image: profile.jpg
+about:
+  template: trestles
+  links:
+    - icon: homepage
+      text: Home
+      href: https://hbiostat.org
+    - icon: twitter
+      text: Twitter
+      href: https://twitter.com/f2harrell
+    - icon: github
+      text: Github
+      href: https://github.com/harrelfe
+    - icon: google-scholar
+      text: Google Scholar
+      href: https://scholar.google.com/citations?hl=en&user=-Im45ysAAAAJ
+---
+
+This blog is devoted to statistical thinking and its impact on science and everyday life. Emphasis is given to maximizing the use of information, avoiding statistical pitfalls, describing problems caused by the frequentist approach to statistical inference, describing advantages of Bayesian and likelihood methods, and discussing intended and unintended differences between statistics and data science. I'll also cover regression modeling strategies, clinical trials, drug evaluation, medical diagnosis, and decision making.
+
+## Frank Harrell
+
+My research interests include Bayesian statistics, predictive modeling and model validation, statistical computing and graphics, biomedical research, clinical trials, health services research, cardiology, and COVID-19 therapeutics.
+
+### Interests
+
+- Statistical modeling
+- Bayesian statistics and study design
+- Predictive modeling and model validation
+- Semiparametric ordinal models
+- Longitudinal models
+- Biomedical research
+- Medical decision making
+- Medical diagnostic research
+- Statistical computing, graphics, and reproducible research methods
+- Cardiology
+- Clinical trial design, analysis, and reporting
+- COVID-19 therapeutic clinical trials
+- Health services research
+- Drug development
+
+### Education
+
+* PhD in Biostatistics<br>University of North Carolina<br>1979
+* BS in Mathematics<br>University of Alabama in Birmingham<br>1973

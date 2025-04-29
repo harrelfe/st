@@ -1,0 +1,18 @@
+---
+title: Controversies in Predictive Modeling, Machine Learning, and Validation
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2022-09-28
+categories: [prediction, machine-learning, validation, regression]
+description: "This talk covers a variety of controversial and/or current issues related to statistical modeling and prediction research.  Some of the topics covered are why external validation is often not a good idea, why validating researchers is often more efficient than validating models, what distinguishes statistical models from machine learning, how variable selection only gives the illusion of learning from data, and advantages of older measures of model performance."
+---
+
+* STRATOS: STRengthening Analytical Thinking for Observational Studies 2019, Banff, Alberta CA 2019-06-04
+* Why R? 2020, 2020-09-26
+* Padova University Winter School, 2022-01-24
+* International Conference on Recent Advances in Big Data and Precision Health, Taiwan, 2022-10-03
+
+* [Slides](https://hbiostat.org/talks/stratos19.pdf) and [updated slides](https://hbiostat.org/talks/taiwan.pdf) for the Taiwan conference
+* [Video](https://youtu.be/DF1WsYZ94Es)
+* [Code](https://hbiostat.org/talks/stratos19.Rnw)

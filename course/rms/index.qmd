@@ -1,0 +1,10 @@
+---
+date: 2023-05-16
+title: Regression Modeling Strategies Course
+description: 'This course covers a comprehensive strategy for developing accurate predictive models, model specification that preserves information, quantifying predictive accuracy, avoiding overfitting, data reduction (unsupervised learning), making optimum use of incomplete data, validation, the art of data analysis, comprehensive case studies, and more. The course web site is [here](http://hbiostat.org/doc/rms/4day.html).'
+url: http://hbiostat.org/doc/rms/4day.html
+---
+* Four-day virtual course 2023-05-16 - 2023-05-19
+* Two-day in-person course [Joint Statistical Meetings/ASA](https://www.amstat.org/meetings/joint-statistical-meetings) Toronto ONT CA August 5-6 2023
+
+

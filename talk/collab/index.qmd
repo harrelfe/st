@@ -1,0 +1,11 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2024-07-30
+title: "Tips for Biostatisticians Collaborating with Non-Biostatistician Medical Researchers"
+description: "In this talk I contrast consultation with collaboration and discuss various ways to make collaborations most effective. Some key components of effective collaboration are mutual respect, proper division of labor, and basing choices on statistical principles.  Special emphasis is given to the importance of biostatisticians being heavily involved in the choice and construction of outcome variables."
+categories: [collaboration, endpoints, design, measurement, principles, responder-analysis, medicine, reporting, reproducible, 2024]
+---
+
+* [Slides](https://hbiostat.org/talks/collab.html)

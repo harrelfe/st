@@ -1,0 +1,32 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2024-07-11
+title: "Rare Degenerative Diseases & Statistics:<br>Methods for Analyzing Composite Patient Outcomes"
+description: "In this talk I'll explain why statistical power is maximized by analyzing the rawest form of clinical trial outcome data, as opposed to analyzing patients at a single time point or reducing rich longitudinal data to time-to-event outcomes.  Analyzing all the data longitudinally also provides a formal way to handle missing or partially missing data.  A highly flexible longitudinal model will be described in non-mathematical terms.  This model is a longitudinal proportional odds logistic model for binary, ordinal, or continuous outcomes, with within-patient serial correlation handled through a simple Markov process in which the patient's previous visit outcome level becomes a predictor for the outcome in the current time period.  This is a discrete time state transition model, also called a multistate model, but extended to have an unlimited number of outcome states as long as they can be ordered.
+<br><br>
+The model may be fitted with standard software, and special Bayesian modeling software has been written for it.
+<br><br>
+After the model is fitted, a simple multiplication process converts the transition probabilities into current state probabilities (state occupancy probabilities) to form an intent-to-treat effect that reduces to cumulative incidence of an outcome event if the outcome is binary.  The approach accommodates longitudinal outcome scales with clinical event overrides.  The primary clinical readout of this longitudinal ordinal model is the average time in condition y or worse, as a function of time and treatment, for any or all outcome levels y.
+<br><br>
+This approach has the following as special cases:
+<br><br>
+- Wilcoxon test for comparing two groups on a single-time ordinal or continuous outcome<br>
+- Cox proportional hazards model for comparing time-to-event when the event is terminal<br>
+- Parametric longitudinal analysis of continuous outcomes<br>
+- Recurrent event analysis<br>
+- Joint analysis of recurrent nonfatal events and a terminal event<br>
+- Estimation of restricted mean survival time when the event is not necessarily terminal
+<br><br>
+The model also provides the only formal analysis I know for quantifying evidence that a treatment effects different components of the outcome variable differently.  For example, one can test whether a treatment lowers mortality by the same relative amount as it lowers disability.  The model is particularly well suited for rare degenerative diseases because of formal handling of death, and because its maximum use of information lowers the sample size needed to achieve adequate power, particularly when there are several follow-up visits.
+<br><br>
+The method will be briefly compared with time-to-event analysis, DOOR (desirability of outcome ranking), and WIN ratio/odds.
+<br><br>
+A detailed case study of longitudinal ordinal modeling with complete R code may be found at hbiostat.org/rmsc/markov."
+categories: [endpoints, RCT, ordinal, regression, 2024, bayes, design, measurement, posterior, principles, responder-analysis, sample-size, survival-analysis]
+---
+
+* Event: [Consilium Scientific](https://consilium-scientific.org/event/seminars-2024)
+* [Slides](https://hbiostat.org/talks/cons.html)
+* [Video](https://youtu.be/FC3cHMeFq3I?si=jtgizBY-wnRvZ9rF)

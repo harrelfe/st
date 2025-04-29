@@ -1,0 +1,14 @@
+---
+title: Bayesian Thinking
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2025-01-27
+categories: [RCT, drug-development, bayes, decision-making, evidence, forward-probability, hypothesis-testing, inference, multiplicity, p-value, posterior, prior, sequential, "2024"]
+description: "This presentation covers Bayesian thinking and how different it is from frequentist thinking, with a variety of examples.  Unique advantages of Bayesian thinking are emphasized.  Some of the topics covered are how frequentism gives the illusion of objectivity by switching the question, an example of frequentist vs. Bayesian answers to a simple question, why α is not the probability of an error, several other contrasts between the two approaches, and multiplicity."
+---
+
+* [Janice Pogue Lecture in Biostatistics](https://www.phri.ca/lectureships/), Department of Health Research Methods, Evidence, and Impact, McMaster University, Hamilton, Ontario, Canada 2024-12-06
+* Center for Biostatistics, Dept. of Population Health Science and Policy, Icahn School of Medicine at Mount Sinai, New York, 2025-03-18.
+* Department of Biostatistics, Vanderbilt University School of Medicine, 2025-04-23
+* [Slides](https://hbiostat.org/talks/bthink.html)

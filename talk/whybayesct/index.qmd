@@ -1,0 +1,13 @@
+---
+title: Why Bayes for Clinical Trials?
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2019-09-20 
+categories: [bayes, RCT, drug-development]
+description: "This presentation covers the limitations of frequentist inference for answering clinical questions and generating evidence for efficacy. Key to understanding efficacy is understanding conditional probability and its relation to information flow.  What type I error really controls is discussed, and it is argued that it is not regulator's regret.  The frequentist and Bayesian approaches for stating statistical results for efficacy assesment are contrasted, and a high-level view of the Bayesian approach is given.  A key point is the actionability of the statistical results.  Some of the advantages of the Bayesian approach are cataloged, with emphasis on forward-information-flow probabilities that instantly define their own error probabilities.  Multiplicity issues are discussed, and a simple simulation study is used to demonstrate the lack of multiplicity issues in the Bayesian context even with infinitely many data looks.  Some practical guidance for choosing prior distributions is given.  Finally, some examples of joint Bayesian inference for multiple endpoints are given."
+---
+
+Drug Information Association Bayesian Scientific Working Group [KOL Series](http://www.bayesianscientific.org/kol-lecture-series), 2019-09-20
+
+* [Slides](https://hbiostat.org/doc/bayes/why.pdf)

@@ -1,0 +1,13 @@
+---
+title: Bayes for Flexibility in Urgent Times
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2020-07-01
+categories: [bayes, RCT, drug-development, covid-19]
+description: "Continuous learning from data and computation of probabilities that are directly applicable to decision making in the face of uncertainty are hallmarks of the Bayesian approach. Bayesian sequential designs are the simplest of flexible designs, and continuous learning capitalizes on their efficiency, resulting in lower expected sample sizes until sufficient evidence is accrued due to the ability to take unlimited data looks.  Classical null hypothesis testing only provides evidence against the supposition that a treatment has exactly zero effect, and it requires one to deal with complexities if not doing the analysis at a single fixed time. Bayesian posterior probabilities, on the other hand, can be computed at any point in the trial and provide current evidence about all possible questions, such as benefit, clinically relevant benefit, harm, and similarity of treatments."
+---
+
+[PHASTAR Life Sciences Summit](https://phastar.com/phastar-life-science-summit) 2020-06-30 - 2020-07-01
+
+* [Slides](https://hbiostat.org/doc/bayes/phastar.pdf)

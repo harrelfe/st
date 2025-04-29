@@ -1,0 +1,14 @@
+---
+title: Simple Bootstrap and Simulation Approaches to Quantifying Reliability of High-Dimensional Feature Selection
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2018-07-31
+categories: [big-data, bioinformatics, machine-learning, multiplicity, prediction, regression, validation]
+description: "Feature selection in the large p non-large n case is known to be unreliable, but most biomedical researchers are not aware of the magnitude of the problem. They assume for example that setting a false discovery rate makes the results reliable, forgetting about the false negative rate and decades of research showing unreliability of stepwise variable selection even in the low p case. A related problem is the unreliability in the estimate of the effect (e.g., an odds ratio) of a feature found by selecting 'winners'. This talk will demonstrate some simple bootstrap and Monte Carlo simulation procedures for teaching biomedical researchers how to quantify these problems. One of the bootstrap examples exposes the difficulty of the task by computing confidence intervals for importance rankings of features."
+---
+
+[ENAR-Sponsored Session, Joint Statistical Meetings Session 331: Statistical and Practical Issues for Reproducible Molecular Prediction in Biomedical Studies](http://ww2.amstat.org/meetings/jsm/2018/onlineprogram/ActivityDetails.cfm?SessionID=215438), Vancouver, BC
+
+* [Slides](https://hbiostat.org/talks/jsm18.pdf)
+* [Code](https://hbiostat.org/talks/jsm18.Rnw)

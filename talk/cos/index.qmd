@@ -1,0 +1,15 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2024-01-30
+title: "Overview of Composite Outcome Scales & Statistical Approaches for Analyzing Them"
+description: "There are many issues surrounding the choice and construction of clinical outcome scales for randomized clinical trials, and several analytical methods from which to choose.  This talk overviews some of the issues, and briefly discusses several methods for analyzing longitudinal data: WIN, DOOR, time savings, and ordinal longitudinal models.  The discussion is particular relevant to rare and degenerative diseases."
+categories: [2024, design, medicine, RCT, ordinal, drug-development, drug-evaluation, endpoints, measurement, regression, responder-analysis]
+---
+
+* [Slides](https://hbiostat.org/talks/comp)
+* [Elaborations](https://hbiostat.org/doc/comp)
+* [Video](https://youtu.be/BaZP9IqBsjw)
+
+<!-- Source: ~/projects/FDA/clinicalEndpoints/time-savings -->

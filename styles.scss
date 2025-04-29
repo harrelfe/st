@@ -1,0 +1,82 @@
+//** The following is from
+//** https://github.com/ivelasq/pipedream/blob/main/styles.scss
+
+/*-- scss:defaults --*/
+
+// Fonts
+@import url('https://fonts.googleapis.com/css2?family=Inter&family=Merriweather&family=Righteous&display=swap');
+
+$font-family-sans-serif:  -apple-system, BlinkMacSystemFont, "Inter" !default;
+$font-family-serif:       "Merriweather" !default;
+
+$font-size-base:              0.9rem !default;
+
+// Nav bar
+
+.li.a.dropdown-item {
+  color: "#2B2423";
+}
+
+.dropdown-text {
+  color: "#FFFFFF";
+}
+
+// Typography
+
+h1.title {
+  font-family: "Merriweather";
+  font-size: 30px;
+	color: red;
+}
+
+h1.title.display-7 {
+  font-family: "Merriweather";
+}
+
+p.subtitle.lead {
+  text-align: center;
+}
+
+a:href {
+  color: #00ab6b;
+}
+
+a:hover {
+    color: #038252;
+    text-decoration: none;
+}
+
+//** Global textual link color.
+$link-color:            #E2402E !default;
+//** Link hover color set via `darken()` function.
+$link-hover-color:      darken($link-color, 15%) !default;
+//** Link decoration.
+$link-decoration: none;
+$link-hover-decoration: none;
+
+$code-block-bg: #f1f3f5;
+
+.navbar {
+  color: #FFFFFF;
+}
+
+.navbar-title {
+  color: #FFFFFF;
+  font-family: "Righteous";
+}
+
+a.sidebar-item-text.sidebar-link {
+    color: #FFFFFF;
+}
+
+.navbar li.dropdown-header {
+  text-transform: none;
+}
+
+.quarto-listing-category {
+    font-family: "Inter";
+}
+
+.quarto-listing-category-title {
+    font-family: "Merriweather";
+}

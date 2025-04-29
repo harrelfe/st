@@ -1,0 +1,9 @@
+---
+date: 2020-11-13
+title: Controlling α vs. Probability of a Decision Error
+description: 'This presentation clarifies what type I assertion probability α protects against, by making a clear distinction between how often we assert an effect vs. how often we are wrong about an effect.  It is argued that "error" should be struck from the phrase "type I error probability".  Frequentist and Bayesian approaches will be briefly contrasted, with an explanation of why it is confusing to mix the two.  Terms such as p-values, α, and "false positive" will be attempted to be precisely defined, and subtleties in defining "false positive probability" will be discussed.   Then emphasis is placed on multiplicity issues that can occur when analyzing data multiple times, and why such issues do not apply to the Bayesian paradigm.  By way of pattern recognition, medical diagnosis, and sequential clinical trial examples it is explained why α loses relevance once data are available.'
+---
+
+[ASA Web Lecture, Statistical Consulting Section 2020-11-13](https://amstat.org)
+
+* [Slides](https://hbiostat.org/bbr/alpha.html)

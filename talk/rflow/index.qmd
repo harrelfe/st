@@ -1,0 +1,18 @@
+---
+title: R Workflow for Reproducible Biomedical Research Using Quarto
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2022-09-26 
+categories: [r, data-science, reporting, reproducible]
+description: "This work is intended to foster best practices in reproducible data documentation and manipulation, statistical analysis, graphics, and reporting. It will enable the reader to efficiently produce attractive, readable, and reproducible research reports while keeping code concise and clear. Readers are also guided in choosing statistically efficient descriptive analyses that are consonant with the type of data being analyzed."
+---
+
+* Keynote presentation, [R Medicine 2022 Virtual Conference](https://www.r-consortium.org/events/2022/05/03/announcing-r-medicine-2022), 2022-08-26 (1 hour)
+* Department of Biostatistics Statistical Computing Series 2022-09-23 (2 hours)
+* FDA CDER Office of Biostatistics 2022-09-2 (2 hours)
+
+----
+
+* [Slides](https://hbiostat.org/rflow)
+* [Overview](https://fharrell.com/post/rflow)

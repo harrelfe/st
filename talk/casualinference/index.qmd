@@ -1,0 +1,13 @@
+---
+date: 2020-04-23
+title: Casual Inference Podcast
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+description: "This interview by Ellie Murray and Lucy D'Agostino McGowan for their _Casual Inference_ podcast recorded 2020-02-26 is titled _Getting Bayesian_"
+categories: [bayes]
+---
+
+* [Podcast](http://casualinfer.libsyn.com/frank-harrell?tdest_id=1654928)
+
+Recorded in Nashville TN

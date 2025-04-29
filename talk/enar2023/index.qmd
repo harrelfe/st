@@ -1,0 +1,13 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2023-03-20
+title: "My Big Jump: Founding a Department of Biostatistics"
+description: "For many years biostatistics had been successful at Vanderbilt, but the opportunity to create a department home for biostatistics was too good to pass up. The new department and its support from the School of Medicine leadership made it an attractive place for recruiting new faculty and staff. This talk will cover what made the department attractive, as well as principles upon which the Department of Biostatistics was founded in the Vanderbilt School of Medicine in 2003. These principles include reproducible research and prioritizing collaboration over consultation. Challenges and opportunities of running the department in a growing academic medical center will be discussed, with emphasis on generalizable knowledge that may assist others in starting, sustaining, and enhancing biostatistics groups in their own medical centers."
+categories: [2023, collaboration, medicine, reproducible]
+---
+
+* Event: [ENAR 2023](https://www.enar.org/meetings/spring2023/), Nashville TN USA
+* [Slides](https://hbiostat.org/talks/enar23.html)
+

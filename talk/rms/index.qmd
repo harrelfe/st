@@ -1,0 +1,19 @@
+---
+title: Regression Modeling Strategies
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2019-05-03
+categories: [prediction, validation, accuracy-score, machine-learning, regression]
+description: "Short course"
+---
+
+* 2019-04-26: 1-Day Course, [Southern California Chapter of the American Statistical Association](https://community.amstat.org/scasa/asw/new-item2)
+* Annual Applied Statistics Workshop, Long Beach CA 2019-05-03
+* 1-day Course, [Southern Ontario Regional Association of the Statistical Society of Canada, Southern Ontario Chapter of the American Statistical Association, The Toronto Applied Biostatistics Association, and the Dalla Lana School of Public Health, University of Toronto](http://sorataba.org/sora-taba-dlsph-workshop-2019), Toronto ON
+* 2019-05-06 - 2019-05-07: 2-day Course, [ICES uOttawa](https://www.ices.on.ca/About-ICES/ICES-Contacts-and-Locations/Ottawa) at the Ottawa Hospital Research Institute, Ottawa ON
+* 2019-05-14 - 2019-05-17: 4-day Course, [Department of Biostatistics, Vanderbilt University](http://www.cvent.com/events/regression-modeling-strategies-rms-short-course-2019-/event-summary-84d34d55e6294f32893d9fc7c87b9ecd.aspx), Nashville TN
+* 2019-07-28: 1-day Course, [JSM Biometrics Section Continuing Education](http://ww2.amstat.org/meetings/jsm/2019), Denver CO
+
+* [Detailed description](https://hbiostat.org/doc/rms/rmsDescription.pdf)
+* [Course notes](https://hbiostat.org/rmsc)

@@ -1,0 +1,13 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2021-12-18
+title: Longitudinal Ordinal Models as a General Framework for Medical Outcomes
+description: "Univariate ordinal models can be used to model a wide variety of longitudinal outcomes, using only standard software, through the use of Markov processes.  This talk will show how longitudinal ordinal models unify a wide variety of types of analyses including time to event, recurrent events, continuous responses interrupted by events, and multiple events that are capable of being placed in a hierarchy.  Through the use of marginalization over the previous state in an ordinal multi-state transition model, one may obtain virtually any estimand of interest.  Both frequentist and Bayesian methods can be used to fit the model and draw inferences."
+categories: [endpoints, RCT, ordinal, regression]
+---
+
+* Event: [CFE-CMStatistics 2021](http://www.cmstatistics.org/CMStatistics2021), Kings College London/Virtual
+* [Slides](https://hbiostat.org/talks/ordmarkov2.html)
+* [Video](https://hbiostat.org/video/cmstat.mkv)

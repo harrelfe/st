@@ -1,0 +1,20 @@
+---
+title: ""
+listing:
+  - id: talk
+    contents: "*/index.qmd"
+    type: grid
+    fields: [date, title, description]
+    sort: "date desc"
+    categories: cloud
+    sort-ui: false
+    filter-ui: false
+    page-size: 12
+page-layout: full
+title-block-banner: false
+toc: true
+---
+
+::: {#talks}
+:::
+

@@ -1,0 +1,36 @@
+---
+title: Musings on Statistical Models vs. Machine Learning in Health Research
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2021-06-09
+categories: [regression, prediction, machine-learning, validation, classification, accuracy-score, data-science]
+description: "Health researchers and practicing clinicians are with increasing frequency hearing about machine learning (ML) and artificial intelligence applications.  They, along with many statisticians, are unsure of when to use traditional statistical models (SM) as opposed to ML to solve analytical problems related to diagnosis, prognosis, treatment selection, and health outcomes.  And many advocates of ML do not know enough about SM to be able to appropriately compare performance of SM and ML.  ML experts are particularly prone to not grasp the impact of the choice of measures of predictive performance.  In this talk I attempt to define what makes ML distinct from SM, and to define the characteristics of applications for which ML is likely to offer advantages over SM, and vice-versa.  The talk will also touch on the vast difference between prediction and classification and how this leads to many misunderstandings in the ML world.  Other topics to be convered include the minimum sample size needed for ML, and problems ML algorithms have with absolute predictive accuracy (calibration)."
+---
+
+* McGill University Quantitative Life Sciences Seminar, Montreal QC, 2018-09-18
+* Department of Biostatistics, Johns Hopkins University School of Public Health, Baltimore MD, 2018-11-26
+* Center for Drug Evaluation and Research, FDA, White Oak MD, 2018-11-27
+* Department of Biostatistics, Vanderbilt University School of Medicine, 2019-01-09
+* Division of Biostatistics, Dalla Lana School of Public Health, University of Toronto, 2019-05-02
+* Vanderbilt Quantitative Methods Colloquium, 2019-09-09
+* Department of Biomedical Informatics, Vanderbilt University School of Medicine, 2019-10-02
+* Biomedical Informatics Research Colloquium, Stanford University, 2019-10-31
+* Keynote Talk, International Society for Clinical Biostatistics 41, 2020-08-26
+* AstraZenica 2020-12-08
+* Keynote Presentation, 15th Francophone Conference of Clinical Epidemiology (EPICLIN2021) and 28th Conference of the Statisticians of the Centers for Cancer Research, [Session on Artificial Intelligence Methods for Clinical Research and Clinical Epidemiology, Marseille, 2021-06-09](https://epiclin2021.congres-scientifique.com)
+
+* [Slides](https://hbiostat.org/talks/iscb20.html)
+* [Video](https://hbiostat.org/talks/iscb20.mkv)
+* [Video](https://hbiostat.org/video/mlhealth-promo.mkv)
+
+## Topics
+
+* [Classification vs. prediction](../../post/classification)
+* [Sample size requirement for ML](../../post/ml-sample-size)
+* [Differences between ML and SM](../../post/stat-ml)
+* [Is medicine mesmerized by ML?](../../post/medml)
+* [What is radiologic deep learning actually learning?](https://medium.com/@jrzech/what-are-radiological-deep-learning-models-actually-learning-f97a546c5b98)
+* [Test ordering vs. test results](https://www.bmj.com/content/361/bmj.k1479)
+* [What if accuracy of ML is the same if fed random data?](https://blogs.sciencemag.org/pipeline/archives/2018/11/20/machine-learning-be-careful-what-you-ask-for)
+* [Neural networks are essentially polynomial regression](https://matloff.wordpress.com/2018/06/20/neural-networks-are-essentially-polynomial-regression)

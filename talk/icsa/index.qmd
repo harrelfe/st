@@ -1,0 +1,15 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2024-11-18
+title: "Ordinal State Transition Models as a Unifying Risk Prediction Framework"
+description: "In this talk I will present a case for the use of discrete time Markov ordinal longitudinal state transition models as a unifying approach to modeling a variety of outcomes for the purpose of estimating risk and expected time in a given state, and for comparing treatments in clinical trials.  This model structure can be used to analyze time until a single terminating event, longitudinal binary events, recurrent events, continuous longitudinal data, and longitudinal ordinal responses including multiple events.  Partial information can be formally incorporated using standard likelihood approaches without the need for imputation.  The model also provides a formal way to assess evidence for consistency of a treatment effect over different outcomes."
+categories: [endpoints, RCT, ordinal, regression]
+---
+
+* Event:
+   - [International Chinese Statistical Association Applied Statistics Symposium](https://symposium2024.icsa.org), Nashville, Tennessee USA 2024-06-17
+   - [CANSSI Ontario STatistics Seminars (CAST)](https://canssiontario.utoronto.ca/event/cast-frank-harrell), Virtual, 2024-11-18
+
+* [Slides](https://hbiostat.org/talks/ordmarkov3.html)

@@ -1,0 +1,12 @@
+---
+title: Fundamental Advantages of Bayes in Drug Development
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2020-04-27
+categories: [bayes, inference, multiplicity, drug-development, RCT]
+description: "This presentation covers the limitations of frequentist inference for answering clinical questions and generating evidence for efficacy. Key to understanding efficacy is understanding conditional probability and its relation to information flow.  What type I error really controls is discussed, and it is argued that it is not regulator's regret.  The frequentist and Bayesian approaches for stating statistical results for efficacy assesment are contrasted, and a high-level view of the Bayesian approach is given.  A key point is the actionability of the statistical results.  Some of the advantages of the Bayesian approach are cataloged, with emphasis on forward-information-flow probabilities that instantly define their own error probabilities.  Multiplicity non-issues are discussed."
+---
+
+* [NISS-Merck Virtual Meet-up on Bayesian Statistics in Drug Development 2020-04-27](https://www.niss.org/events/niss-merck-virtual-meet-bayesian-statistics-drug-development)
+* [Slides](https://hbiostat.org/doc/bayes/meetup.pdf)

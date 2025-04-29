@@ -292,8 +292,9 @@ Use binary logistic regression and overlapping moving window proportions to inte
 
 ```{r}
 v <- u[, hit := 1 * (value > 0.95), by=.(variable, b)]
+IT <- 0
 m <- movStats(hit ~  b + variable,
-              eps=100, lrm=TRUE, lrm_args=list(maxit=30, tol=1e-13),
+              eps=100, lrm=TRUE, lrm_args=list(maxit=30),
               nignore=0, data=v, melt=TRUE)
 ggplot(m,
        aes(x=b, y=hit, col=variable, linetype=Type)) + geom_line() +
@@ -313,6 +314,98 @@ printL('0.9 Interval for r yielding 0.8 power for mortality assessment' = b8)
 ```
 
 The posterior probability that $|\tau| > 0.2$ hovered around zero, which is good since data were generated assuming PO.  Bayesian power for the overall treatment effect is nearly 1.0.  The minimum value of $b$ required to achieve 0.8 Bayesian power is `r b8[2]`.
+
+## What Constraints Does a Partial PO Model Place on $Y$-specific Treatment Effects?
+
+Consider a 4-level dependent variable $Y=0,1,2,3$, a 2-level baseline covariate $Z=0, 1$, and a 2-level treatment $X=0,1$.  Assume a partial proportional odds (PPO) model
+
+$$P(Y \geq y | X, Z) = \text{expit}(\alpha_{y} + \beta X + \gamma Z + \tau_{1} X[y=2] + \tau_{2} X[y=3])$$
+
+Make $P(Y \geq y | X=0, Z=0) = 0.3, 0.2, 0.1$ when $y=1, 2, 3$, allowing solving for $\alpha$.
+
+```{r}
+require(ggplot2)
+require(data.table)
+alpha <- qlogis(c(0.3, 0.2, 0.1))
+alpha
+```
+
+Let Z, for which PO is assumed, have an odds ratio (OR) of $\frac{0.4/0.6}{0.3/0.7} = \exp(\gamma)$ so that $P(Y \geq 1 | X=0, Z=1) = 0.4 = \text{expit}(\alpha_{1} + \gamma)$.
+
+```{r}
+gamma <- log((0.4/0.6) / (0.3 / 0.7))
+gamma
+```
+
+Let the $X=1:0$ OR for $Y\geq 1$ be 0.7 so that $\beta = \log(0.7)$.  Now the only free parameters are the non-PO parameters $\tau_{1}, \tau_{2}$.
+
+```{r}
+beta <- log(0.7)
+beta
+```
+
+Vary $\tau$ over a regular grid and plot the resulting differences in probabilities corresponding to $y=1, 2, 3$, separately for each $Z$.  These differences are absolute risk reductions (ARR) due to treatment ($X=1$), with ARR=0 corresponding to OR=1.
+
+It is important to note that for all the cell probabilities (differences in consecutive cumulative probabilities) to be legal, i.e., in $[0,1]$, it is necessary that the intercepts in effect be in descending order.  The intercepts in effect are the within-$y$ sums of all terms that change with $y$.  This includes the main $\alpha$ intercepts and applicable $\tau$s.  $\tau$ is applicable only when $X=1$, so consider the $X=1$ case where the model is
+
+$$P(Y \geq y | X, Z) = \text{expit}(\alpha_{y} + \beta + \tau_{1} [y=2] + \tau_{2} [y=3])$$
+
+when the ignorable $Z$ is zero.  The intercepts in effect when $y=1, 2, 3$, respectively, are $\alpha_{1}$, $\alpha_{2} + \tau_{1}$ and $\alpha_{3} + \tau_{2}$.  So the requirement is
+
+$$\alpha_{1} > \alpha_{2} + \tau_{1} > \alpha_{3} + \tau_{2}$$
+
+```{r}
+expit <- plogis
+d <- expand.grid(tau1 = seq(-5, 4, by=0.05),
+                 tau2 = seq(-5, 4, by=0.05),
+                 Z    = 0:1,
+                 y    = 1:3)
+setDT(d)
+d <- d[alpha[1]        > alpha[2] + tau1 &
+       alpha[2] + tau1 > alpha[3] + tau2, ]
+# d <- d[between(alpha[2] + tau1, alpha[3] + tau2, alpha[1], incbounds=FALSE), ]
+d[, p1 := expit(alpha[y] + gamma * Z)]
+d[, p2 := expit(alpha[y] + beta + gamma * Z + 
+                (y == 2) * tau1 + (y == 3) * tau2)]
+d[, ARR := p1 - p2]
+d[, OR  := exp(beta + (y == 2) * tau1 + (y == 3) * tau2)]
+
+g <- function(x) {
+  r <- round(range(x, na.rm=TRUE), 3)
+  c(min=r[1], max=r[2])
+}
+d[, rbind('Overall ARR' = g(ARR),
+          'y=1'         = g(ARR[y == 1]),
+          'y=2'         = g(ARR[y == 2]),
+          'y=3'         = g(ARR[y == 3]),
+          'y=3, tau1=0' = g(ARR[y == 3 & tau1 == 0]))]
+
+ggplot(d, aes(x=tau1, y=tau2, color=ARR)) + geom_point() +
+  geom_vline(xintercept=0, col='red') +
+  facet_grid(y ~ Z) +
+  xlab(expression(tau[1])) + ylab(expression(tau[2]))
+```
+
+Little restriction is placed on the treatment effect on $Y=3$ when a special treatment effect is also allowed for $Y=2$ (ARR ranges over $[-0.16, 0.145]$).  Now restrict attention to the special case of not allowing a special non-PO treatment effect on $Y=2$, i.e., when $\tau_{1}=0$ which is along the vertical lines in the graph.  As makes sense, ARR does not vary with $\tau_{2}$ when considering ARR for $Y\geq 1$ and for $Y \geq 2$.  For $Y \geq 3$ (the bottow row of the graph), there remains a range of ARR from -0.065 to 0.145.  A constrained partial PO model with only a special effect of $X$ when $y=3$ allows the treatment to be completely ineffective on death in this example, and allows for up to a 0.065 increase in mortality risk.
+
+Note that ARR is restricted to be $\leq 0.275$ since the base risks are $< 0.5$.  This restriction is essentially the restriction of having non-negative $P(Y \geq y)$.
+
+Now consider the different ORs allowed in the partial PO models.
+
+```{r}
+d[, rbind('Overall OR'  = g(OR),
+          'y=1'         = g(OR[y == 1]),
+          'y=2'         = g(OR[y == 2]),
+          'y=3'         = g(OR[y == 3]),
+          'y=3, tau1=0' = g(OR[y == 3 & tau1 == 0]))]
+
+ggplot(d, aes(x=tau1, y=tau2, color=OR)) + geom_point() +
+  geom_vline(xintercept=0, col='red') +
+  facet_wrap(~ y) +
+  xlab(expression(tau[1])) + ylab(expression(tau[2]))
+```
+
+The is virtually no limit on how small OR can be when $\tau_{1}=0$.  Concerning treatment worsening the chance of $Y=3$, by only allowing a special treatment effect for $y=3$ the upper limit of allowed OR is 1.56.
 
 ::: {.callout-note collapse="true"}
 ## A Note About Time To Event

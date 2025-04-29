@@ -1,0 +1,2 @@
+cd _site
+ln -s ~/web links

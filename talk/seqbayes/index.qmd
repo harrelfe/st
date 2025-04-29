@@ -1,0 +1,18 @@
+---
+title: Sequential Bayesian Designs for Rapid Learning in COVID-19 Clinical Trials
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2020-11-25 
+categories: [bayes, RCT, covid-19]
+description: "Continuous learning from data and computation of probabilities that are directly applicable to decision making in the face of uncertainty are hallmarks of the Bayesian approach. Bayesian sequential designs are the simplest of flexible designs, and continuous learning capitalizes on their efficiency, resulting in lower expected sample sizes until sufficient evidence is accrued due to the ability to take unlimited data looks.  Classical null hypothesis testing only provides evidence against the supposition that a treatment has exactly zero effect, and it requires one to deal with complexities if not doing the analysis at a single fixed time. Bayesian posterior probabilities, on the other hand, can be computed at any point in the trial and provide current evidence about all possible questions, such as benefit, clinically relevant benefit, harm, and similarity of treatments.<br><br>Besides requiring flexibility in a rapidly changing environment, COVID-19 trials often use ordinal endpoints and standard statistical models such as the proportional odds (PO) model.  Less standard is how to model serial ordinal responses.  Methods and new Baysian software have been developed for COVID-19 trials.  Also implemented is a Bayesian partial PO model (Peterson and Harrell, 1990) that allows one to put a prior on the degree to which a treatment affects mortality differently than how it affects other components of the ordinal scale.  These ordinal models will be briefly discussed."
+---
+
+* Yale Biostatistics Seminar 2020-06-09
+* [DFHCC Connect:Science Virtual Seminar Series](http://dfhcc.harvard.edu/events/dfhcc-connecting-the-scientific-community-seminar-series), Harvard 2020-08-18
+* [PSI Vaccine Special Interest Group](http://psiweb.org/sigs-special-interest-groups/vaccines) 2020-10-15
+* Yale/VA VACS Statistics Workgroup 2020-11-25
+
+* [Slides](https://hbiostat.org/proj/covid19)
+* [Video](https://youtu.be/V-XTT8HPEpw)
+* [Code](https://hbiostat.org/R/rms/blrm.html)

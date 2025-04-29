@@ -1,0 +1,12 @@
+---
+title: Bayesian Thinking Podcast
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2019-08-07
+categories: [bayes, RCT, drug-development]
+description: "This interview by Vinay Prasad for his _Plenary Session_ podcast discusses Bayesian thinking, especially about clinical trials."
+---
+
+[Plenary Session Podcast](https://soundcloud.com/plenarysession/206-heart-failure-choosing-a-specialty-the-bayesian-approach-with-dr-frank-harrell)
+

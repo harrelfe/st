@@ -1,0 +1,15 @@
+---
+title: Current Challenges and Opportunities in Clinical Prediction Modeling
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2018-07-04
+categories: [prediction, accuracy-score, validation]
+description: "This talk covers a variety of topics in clinical prediction modeling, with emphasis on quantifying the added value of new predictors."
+---
+
+* [MEMTAB18: Methods of Evaluation of Medical Prediction Models, Tests and Biomarkers](http://www.memtab2018.eu)
+* Department of Biomedical Data Science, Section of Medical Statistics, Leiden University Medical Center, Utrecht, NL
+
+* [Slides](https://hbiostat.org/talks/memtab18.pdf)
+* [Code](https://hbiostat.org/talks/memtab18.Rnw)
