@@ -5,7 +5,7 @@ author:
     url: https://hbiostat.org
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 date: 2024-11-28
-date-modified: last-modified
+date-modified: 2025-06-20
 categories: [computing, data-science, inference, likelihood, ordinal, prediction, r, regression, "2024"]
 description: "Maximum likelihood estimation (MLE) is central to estimation and development of predictive models.  Outside of linear models and simple estimators, MLE requires trial-and-error iterative algorithms to find the set of parameter values that maximizes the likelihood, i.e., makes the observed data most likely to have been observed under the statistical model.  There are many iterative optimization algorithms and R programming paradigms to choose from.  There are also many pre-processing steps to consider such as how initial parameter estimates are guessed and whether and how the design matrix of covariates is mean-centered or orthogonalized to remove collinearities.  While re-writing the R `rms` package logistic regression function `lrm` I explored several of these issues.  Comparisons of execution time in R vs. Fortran are given.  Different coding styles in both R and Fortran are also explored.  Hopefully some of these explorations will help others who may not have studied MLE optimization and related statistical computing algorithms."
 bibliography:
@@ -191,7 +191,7 @@ mdim <- function(w) {
 smod <- function() {
   max_abs_u <- sapply(Res, function(x) if(length(x$u)) m(x$u) else NA)
   iter      <- sapply(Res, function(x) if(length(x$iter)) tail(x$iter, 1) else NA)
-  deviance  <- sapply(Res, function(x) tail(x$deviance, 1))
+  deviance  <- sapply(Res, function(x) if(length(x$deviance)) tail(x$deviance, 1) else NA)
   print(data.frame(deviance, max_abs_u, iter))
   l <- length(Res)
   n <- names(Res)
@@ -249,6 +249,7 @@ rfort <- function(x, y, alpha, beta, what=2L, debug=0L, penhess=1L,
     stop('y must be coded 0-k for lrmll')
   storage.mode(x) <- storage.mode(offset) <- storage.mode(wt) <- storage.mode(penmat) <-
     storage.mode(alpha) <- storage.mode(beta) <- 'double'
+
   w <- .Fortran('lrmll', n, as.integer(k), p, x, as.integer(y),
                  offset, wt, penmat, alpha, beta,
                  logL=numeric(1), grad=numeric(nv),
@@ -946,7 +947,7 @@ n <- 10000; k <- 1000
 x <- rnorm(n); y <- sample(0:k, n, TRUE)
 length(unique(y))
 
-tim(orm    = orm.fit(x, y, eps=1e-10,           compstats=FALSE),
+tim(orm    = orm.fit(x, y, eps=1e-9,           compstats=FALSE),
     ormlm  = lrm.fit(x, y, opt_method='LM',     compstats=FALSE),
     bfgs   = lrm.fit(x, y, opt_method='BFGS',   compstats=FALSE, maxit=100),
     nlminb = lrm.fit(x, y, opt_method='nlminb', compstats=FALSE),
@@ -1276,10 +1277,11 @@ stime(infoMxop(info, i='x'))   # time to get beta part of v
 Note that in the source code for `lrm` and `orm` you'll see a shortcut for computing the diagonal elements:
 
 ```{r eval=FALSE}
-nx <- ncol(X)
-X  <- cbind(1, X)
-v  <- infoMxop(info, i=c(f$interceptRef, (nrp + 1) : (nrp + nx)), B=t(X))
-se <- drop(sqrt((t(v) * X) %*% rep(1, nx + 1)))
+nx  <- ncol(X)
+X   <- cbind(1, X)
+nrp <- num.intercepts(f)
+v   <- infoMxop(info, i=c(f$interceptRef, (nrp + 1) : (nrp + nx)), B=t(X))
+se  <- drop(sqrt((t(v) * X) %*% rep(1, nx + 1)))
 ```     
 
 # What is Fast and What is Slow When $k$ is Large
@@ -1336,6 +1338,7 @@ stime(infoMxop(info, B=matrix(runif(np), ncol=1)))
 
 * [Video by Richad McElreath](https://youtu.be/mt9WKbQJrI4?si=QxpMoj7xfi7flt5x) explaining numerical accuracy issues in log likelihood calculations.
 * [R CRAN Task Views](https://cran.r-project.org/web/views/Optimization.html) on optimizers
+* [Calculating OLS regression coefficients](https://thomvolker.github.io/blog/2506_regression) by TB Volker, which contains excellent background information about matrix algebra and timing and memory usage of various algorithms in R
 * [Vignettes](https://cran.r-project.org/web/packages/optimx) by John Nash _et al_.
 * [R `ucminf` package](https://cran.r-project.org/web/packages/ucminf)
 * [R `nloptr` package](https://cran.r-project.org/web/packages/nloptr)

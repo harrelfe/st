@@ -1,5 +1,7 @@
 .Rhistory
+_site
 _freeze
+_extensions
 .quarto
 harrelfe.bib
 apa*.csl
@@ -7,4 +9,7 @@ q.Rproj
 saturnRings.jpg
 
 /.quarto/
+.netlify
+*/.netlify/
 .Rproj.user
+twitter

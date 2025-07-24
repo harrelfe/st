@@ -6,7 +6,7 @@ author:
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2022-10-06
 date-modified: last-modified
-categories: [2022,big-data,bioinformatics,biomarker,bootstrap,data-science,decision-making,dichotomization,forward-probability,generalizability,medical-literature,multiplicity,personalized-medicine,prediction,principles,reporting,reproducible,responder-analysis,sample-size,sensitivity]
+categories: ["2022",big-data,bioinformatics,biomarker,bootstrap,data-science,decision-making,dichotomization,forward-probability,generalizability,medical-literature,multiplicity,personalized-medicine,prediction,principles,reporting,reproducible,responder-analysis,sample-size,sensitivity]
 description: "This article covers some of the bad statistical practices that have crept into biomarker research, including setting the bar too low for demonstrating that biomarker information is new, believing that winning biomarkers are really \"winners\", and improper use of continuous variables.  Step-by-step guidance is given for ensuring that a biomarker analysis is not reproducible and does not provide clinically useful information."
 bibliography: /Users/harrelfe/web/bib/harrelfe.bib
 ---
@@ -67,6 +67,8 @@ A key result of @mcg13neu is given in their Table 1, reproduced below.
 ![](mcg13towTable1.png){width=85%}
 
 An interesting finding in the next-to-last row of this table.  There was evidence for an interaction between treatment and the baseline HAMA total score, which is an anxiety score.  The direction of the interaction is such that patients with higher anxiety levels at baseline did worse with behavioral therapy. This involves a low-tech metric but has some face validity and is undoubtedly stronger and more clinically relevant than any of the authors' findings from brain imaging, if validated.  The authors' emphasis of imaging results over anxiety levels is puzzling, especially in view of fact that the the clinical variable analyses involved less multiplicity problems than the analysis of imaging parameters.
+
+**Note**: The authors attempted to replicate their 2013 findings in 2021 and were [unable to do so](https://www.biologicalpsychiatryjournal.com/article/S0006-3223(21)01095-7/abstract).
 
 ## Analysis That Should Have Been Done
 
