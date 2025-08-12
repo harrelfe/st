@@ -34,7 +34,7 @@ Noma _et al._'s approximate bootstrap confidence intervals take the bootstrap di
 To derive a fast approximate method that I expect to have better confidence coverage for non-large $n$, consider $B$ individual bootstrap sample estimates $\theta_{b}$ and  $\theta_{w}$ and compute variances of several combinations of them, including $\text{var}(\theta_{b})$, $\text{var}(\theta_{w})$, $\text{var}(\gamma)$, variance of weighted sums of $\theta_{b}$ and  $\theta_{w}$, and other variants.
 Variances of vectors involving both $\theta_{b}$ and  $\theta_{w}$ takes into account uncertainties in two quantities instead of one.  One can think of the variance of a difference as a summative measure for two uncertainties, because the variance of a difference is the sum of the variances minus twice the covariance of the two.  It is tempting to use the bootstrap nonparametric percentile interval, but we need to respect the width of the bootstrap distribution for the combination of $\theta_{b}$ and  $\theta_{w}$ and pay no attention to its center.  This pushes us to use normal-approximation bootstrap confidence intervals, which take an original point estimate (here a bootstrap bias-corrected index) $\pm 1.96\times$ the bootstrap standard deviation, for example.
 
-An additional complexity is that the bootstrap distribution may not be symmetric, and assuming that it is (as the standard deviation does) leads to symmetric confidence intervals instead of the needed asymmetric ones.  The result is inaccurate confidence coverage in at least one of the tails.  To fix that problem, we compute two standard deviations: the SD for upper values and the SD for lower ones.  There is a question of where to make the high/low split.  Traditionally the sample mean is chosen, but the mean is affected by asymmetry.  So we could use the sample median, but this has lower precision.  A nice remedy is to use the pseudo-median, i.e., the median of all possible pairwise averages.  Each of the two confidence limits is computed using the square root of the average squared distance from the pseudo-median for observations in that limit's side of the bootstrap distribution.
+An additional complexity is that the bootstrap distribution may not be symmetric, and assuming that it is (as the standard deviation does) leads to symmetric confidence intervals instead of the needed asymmetric ones.  The result is inaccurate confidence coverage in at least one of the tails.  To fix that problem, we compute two standard deviations: the SD for upper values and the SD for lower ones.  There is a question of where to make the high/low split.  Traditionally the sample mean is chosen.  Each of the two confidence limits is computed using the square root of the average squared distance from the overall mean of the bootstrap distribution.
 
 Next we attempt to find the best combination of variation of training and test indexes from bootstrap repetitions so that confidence interval coverage for overfitted-corrected indexes is good in both tails for three performance measures. 
 The resulting bootstrap method will be called ABCLOC for **a**symmetric **b**ootstrap **c**onfidence **l**imits for **o**verfitting-**c**orrected model performance metrics.
@@ -160,8 +160,8 @@ h <- function(w, what=c('error', 'cltrue')) {
       v2 <- var(train - test)
       s  <- sqrt(v1 + v2 - 0.5 * sqrt(v1 * v2))
       r <- c(theta - mopt - s * z, theta - mopt + s * z)
-    }  else {
-    s <- rms:::halfsd(x, nmin=if(type == 'sd1') 100000 else 10)
+    }  else {   # dualSD is in Hmisc 5.2-4
+    s <- dualSD(x, nmin=if(type == 'sd1') 100000 else 10)
     a <- if(type == 'sd2') 1:2 else 2:1
     r <- c(theta - mopt - s[a[1]] * z, theta - mopt + s[a[2]] * z)
     }

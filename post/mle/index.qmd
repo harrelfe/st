@@ -1336,7 +1336,7 @@ stime(infoMxop(info, B=matrix(runif(np), ncol=1)))
 
 # Other Resources
 
-* [Video by Richad McElreath](https://youtu.be/mt9WKbQJrI4?si=QxpMoj7xfi7flt5x) explaining numerical accuracy issues in log likelihood calculations.
+* [Video by Richard McElreath](https://youtu.be/mt9WKbQJrI4?si=QxpMoj7xfi7flt5x) explaining numerical accuracy issues in log likelihood calculations.
 * [R CRAN Task Views](https://cran.r-project.org/web/views/Optimization.html) on optimizers
 * [Calculating OLS regression coefficients](https://thomvolker.github.io/blog/2506_regression) by TB Volker, which contains excellent background information about matrix algebra and timing and memory usage of various algorithms in R
 * [Vignettes](https://cran.r-project.org/web/packages/optimx) by John Nash _et al_.
@@ -1344,6 +1344,7 @@ stime(infoMxop(info, B=matrix(runif(np), ncol=1)))
 * [R `nloptr` package](https://cran.r-project.org/web/packages/nloptr)
 * R code: [`lrm`](https://github.com/harrelfe/rms/blob/master/R/lrm.s) and [`lrm.fit`](https://github.com/harrelfe/rms/blob/master/R/lrm.fit.r)
 * Fortran code: [`lrmll`](https://github.com/harrelfe/rms/blob/master/src/lrmll.f90)
+* [A cornucopia of maximum likelihood algorithms](https://doi.org/10.1080/00031305.2025.2526535) by K Lange, XJ Li, Hua Zhou, 2025.
 
 
 # Computing Environment
