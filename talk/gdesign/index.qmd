@@ -1,0 +1,13 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2025-08-02
+title: "Goal-Driven Flexible Bayesian Design"
+description: "The majority of clinicals trials that are successfully launched end with equivocal results, with confidence intervals that are too wide to allow drawing a conclusion other than \"the money was spent\".  This is due to constraints of fixed budgeting models, gaming MCIDs in sample size calculations, using low-information outcome variables, pretending that the computed sample size is estimated without error, avoiding sequential designs, and other reasons.  There are also major opportunities lost for stopping studies earlier for futility.  These problems may be avoided by instilling discipline in the choice of MCID and the choice of outcome, and using flexible Bayesian fully sequential designs without limiting the number of data looks.  To understand why this works it is important to first understand that **the** Bayesian operating characteristic is the probability that a decision made is correct, which has nothing in common with α.  In this talk I'll present a prototypical flexible Bayesian design for a two-arm treatment comparison.  This design meets multiple goals and constraints.  The trial is then simulated, and its Bayesian operating characteristics are derived.  Even when there is a mismatch between the simulation prior and the analysis prior, the operating characteristics are exceptional."
+categories: [2025, bayes, design, drug-development, drug-evaluation, endpoints, inference, measurement, multiplicity, p-value, posterior, RCT, sample-size, sequential]
+---
+
+* Event: [ACTStats 2025 Annual Meeting Keynote Talk](https://www.actstat.org/actstats-events), Nashville TN USA
+* [Slides](https://hbiostat.org/bayes/design)
+* [Details](https://hbiostat.org/bayes/bet/design)
