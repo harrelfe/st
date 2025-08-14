@@ -10,7 +10,7 @@ description: "This presentation covers several ways to make clinical trials more
 
 * UCLA Cardiology Grand Rounds 2020-10-23 | [Video](https://youtu.be/1liOEyeDRbU) (better video below)
 * Vanderbilt University Department of Biostatistics 2020-11-18
-* [Vanderbilt Translational Research Forum 2021-11-04](https://my.vanderbilt.edu/translationalresearchforum) | [Video](https://youtu.be/GPcaum9rlKw)
+* [Vanderbilt Translational Research Forum 2021-11-04](https://my.vanderbilt.edu/translationalresearchforum) | [Video](https://youtu.be/ANNRSgpFPvM)
 * [Consilium Scientific](https://consilium-scientific.org) 2024-03-14 | [Video](https://youtu.be/FI2ncRU9PPQ?si=zquTF6Qi8TGW8Qjb) and [here](https://www.linkedin.com/video/live/urn:li:ugcPost:7174090132512260096)
 * [Seventh Annual Janice Pogue Lectureship in Biostatistics](https://www.phri.ca/lectureships/), Population Health Research Institute, Hamilton, Ontario, Canada 2024-12-05
 * [Slides](https://hbiostat.org/talks/rcteff.html)

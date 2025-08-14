@@ -1,0 +1,416 @@
+---
+title: "Measures of Central Tendency for an Asymmetric Distribution, and Confidence Intervals"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2025-08-14
+date-modified: last-modified
+categories: [bootstrap, computing, inference, r, "2025"]
+description: "There are three widely applicable measures of central tendency for general continuous distributions: the mean, median, and pseudomedian (the mode is useful for describing smooth theoretical distributions but not so useful when attempting to estimate the mode empirically).  Each measure has its own advantages and disadvantages, and the usual confidence intervals for the mean may be very inaccurate when the distribution is very asymmetric.  The central limit theorem may be of no help.  In this article I discuss tradeoffs of the three location measures and describe why the pseudomedian is perhaps the overall winner due to its combination of robustness, efficiency, and having an accurate confidence interval.  I study CI coverage of 17 procedures for the mean, one exact and one approximate procedure for the median, and two procedures for the pseudomedian, for samples of size $n=200$ drawn from a lognormal distribution. Various bootstrap procedures are included in the study. The goal of the confidence interval procedures is to achieve non-coverage probabilities that are close to the nominal 0.025 level in both tails.  The BCa bootstrap method was the most accurate for computing confidence limits for the mean, but the upper limit was too small with $n=200$, having non-coverage probability of 0.092 for the right tail instead of the nominal 0.025.  Intervals for the more robust pseudomedian were extremely accurate, giving more reasons to use the pseudomedian as a primary location measure."
+bibliography:
+  - grateful-refs.bib
+code-fold: false
+draft: false
+---
+
+# Measures of Central Tendency
+
+For symmetric normal-like distributions there is a clear winner for measuring central tendency: the sample mean.  The mean has the highest precision/efficiency and is also representative of a typical observation from the population distribution.  The mean is not robust, e.g., is too affected by extreme values, when the distribution is heavy-tailed or asymmetric.  [The sample mean has a breakdown point of 0, i.e., can be too affected by a single contaminated observation.  The sample median has a breakdown point of 0.5, meaning it can withstand up to half of the observations being contaminated.]{.aside} For general continuous distributions with arbitrarily heavy tails or skewness, the sample median is robust and representative of a typical observation.  But with a normal distribution the median is imprecise (higher variance, wider confidence limits) and has efficiency of only $\frac{2}{\pi} = 0.64$ compared to the mean.  A sample of size 100 properly analyzed using a mean will revert to an effective sample size of 64 when using the median if normality holds.
+
+For small samples the [Harrell-Davis smooth quantile estimator](https://academic.oup.com/biomet/article-abstract/69/3/635/221346) improves precision in estimating population quantiles.  For the median, the HD estimate is the average sample median over infinitely many bootstrap resamples, although the algorithm is quite fast.  It is implemented in the `Hmisc` package `hdquantile` function, which estimates the standard error of the estimate using the leave-out-one jackknife.
+
+The [pseudomedian](https://en.wikipedia.org/wiki/Pseudomedian) (see also [here](https://en.wikipedia.org/wiki/Hodges–Lehmann_estimator)), also called the Hodges-Lehmann estimator, is less well known.  It is affiliated with the Wilcoxon signed-rank test and can be computed by inverting that test, i.e., by finding the value that minimizes the signed rank statistic.[The pseudomedian has a breakdown point of 0.29]{.aside}.  It is computed by taking all possible pairs of observations (including pairing an observation with itself), computing the midpoint of each pair, and computing the median of the midpoints.  The R `Hmisc` package's `pMedian` function can compute the pseudomedian on 250,000 observations in 0.09 seconds.
+
+When the distribution is normal, the efficiency of the pseudomedian compared to the mean is $\frac{3}{\pi} = 0.955$.  When the distribution is symmetric, the pseudomedian is often much better than the sample mean or median in estimating the population mean and median. [Symmetry implies that the mean, median, and pseudomedian all estimate the same quantity, which is both the mean and the median since they are identical.]{.aside}
+
+Let's see how often the pseudomedian is between the mean and median when sampling from a normal distribution of size $n=50$.  Repeat for a lognormal distribution.
+
+```{r}
+require(Hmisc)
+require(data.table)
+require(boot)
+require(bayesboot)
+require(ggplot2)
+options(datatable.print.class = FALSE)
+g <- function(lognorm=FALSE) {
+  x <- rnorm(50)
+  if(lognorm) x <- exp(x)
+  m <- mean(x)
+  med <- median(x)
+  pmed <- pMedian(x)
+  (m < pmed & pmed < med) | (m > pmed & pmed > med)
+}
+set.seed(1)
+r <- replicate(5000, g())
+mean(r)
+r <- replicate(5000, g(lognorm=TRUE))
+mean(r)
+```
+
+# Confidence Intervals
+
+As discussed [here](https://stats.stackexchange.com/questions/186957), there is no nonparametric confidence interval for the mean of a general distribution.  The mean is inherently a "parametric" quantity, unlike the sample median.  Most data analysts mistakenly rely by default on the central limit theorem (CLT) to compute confidence limits for a population mean.  A key problem arises: the population variance is seldom known.  So analysts substitute the sample variance and proceed as if the variance is known, not aware they may be violating a key requirement of the CLT: the sample mean and sample variance must be independent in order for the standardized mean to converge with any rapidity to the normal distribution.  For symmetric distributions this is OK, but not for asymmetric ones.  Underlying this issue is that in practice one does not know how to transform the data to achieve normality, and we desire to estimate the population mean on the original scale.  If the distribution were known to be lognormal, the analyst would analyze the data after taking logs.  But there is no oracle to lead the analyst to this action, and if you should have taken logs but didn't, problems arise.  Even if you knew to take logs, it is still a difficult problem to get confidence intervals for the population mean on the original scale (which is why the [smearing estimator](https://hbiostat.org/rmsc/areg#obtaining-estimates-on-the-original-scale) exists), although the formula for the population mean itself is a simple function of $\mu, \sigma$ on the log scale.
+
+Proceeding without an oracle nearby, let $c$ be the 0.975 quantile of the normal distribution (1.96), and $s$ denote the sample standard deviation of the $n$ data values.  Standard use of the CLT yields the following 0.95 confidence limits: $\bar{X} \pm c \times s / \sqrt{n}$.  This formula is quite accurate even for $n$ as low as 20 when the data come from a normal distribution.
+
+In all that follows we consider samples from the lognormal distribution with $\mu=0, \sigma=1.65$ on the log scale.  As shown in [Biostatistics for Biomedical Research](https://hbiostat.org/bbr/htest#central-limit-theorem), the above CLT-based formula leads to very inaccurate confidence intervals.  Even for $n=50,000$ the non-coverage in the two tails is 0.0182 on the left and 0.0406 on the right when both were supposed to be 0.025 for an overall 0.95 CI. Coverage is much worse for small $n$.  Replacing $c$ with the critical value from a $t$ distribution will not help, as the problem is with asymmetry and not just heavy tails.
+
+There are a number of ad hoc corrections to the CLT formula we will try.  First, in recognition of asymmetry let's use dual SDs instead of a single sample SD.  That is, compute $s_{1}$ by taking the observations that are below the sample mean and computing their root mean squared average distance from the overall mean $\bar{X}$ (we actually divide the sum of squares by one less than the number of low observations).  Do likewise to compute $s_{2}$, the upper SD.  Take the confidence limits to be $\bar{X} - c \times s_{1} / \sqrt{n}$ and $\bar{X} + c \times s_{2} / \sqrt{n}$, where $n$ is the overall sample size.  Variations of this will also be tried, where instead of splitting on the mean we split on the median and on the pseudomedian.
+
+Other ad hoc CI substitutes are tried below:
+
+* Substitute Gini's mean difference for a single SD, scaling it by a factor that makes it estimate the SD unbiasedly if the distribution were normal
+* Shift a confidence interval for the pseudomedian by the difference between the mean and pseudomedian
+* Determine which quantiles of a standard normal distribution correspond to $c / \sqrt{n}$ and use those empirical quantiles from the raw data as the CI
+* The same but use the Harrell-Davis quantile estimator
+
+But we expect that bootstrap confidence intervals will be more accurate, not to mention having better theory supporting them.  [Charles Geyer has excellent presentations about the bootstrap and limitations of some of the bootstrap variants.  See [this](http://users.stat.umn.edu/~geyer/boot.pdf) and [this](https://www.stat.umn.edu/geyer/3701/notes/bootstrap.html)]{.aside}.  The problem is that there are many bootstrap variants.  Based on theory and experience, the bias-corrected accelerated method called BCa is expected to perform best, because it explicitly handles asymmetry in sampling distributions.  We can also add our own variations to the common bootstrap variants:
+
+* When using normal approximation bootstraps based on bootstrap SDs of the estimates, substitute dual SDs as above
+* Substitute the Harrell-Davis quantile estimator for nonparametric percentile bootstrap intervals
+
+When using the sample median as the central tendency measure, there is for once an exact nonparametric confidence interval.  The R function below computes it.  This was taken from the [`DescTools` package](https://cran.r-project.org/web/packages/DescTools) `SignTest.default` function.  See also [this](http://www.stat.umn.edu/geyer/old03/5102/notes/rank.pdf) and [this](http://de.scribd.com/doc/75941305/Confidence-Interval-for-Median-Based-on-Sign-Test).
+
+
+```{r}
+cimed <- function(x, alpha=0.05, na.rm=FALSE) {
+  if(na.rm) x <- x[! is.na(x)]
+  n <- length(x)
+  k <- qbinom(p=alpha / 2, size=n, prob=0.5, lower.tail=TRUE)
+  # Actual CL coverage: 1 - 2 * pbinom(k - 1, size=n, prob=0.5) >= 1 - alpha
+  sort(x)[c(k, n - k + 1)]
+  }
+```
+
+For the Harrell-Davis median estimator we assume normality and use the jackknife standard error to compute confidence limits.
+
+Not studied here is _empirical likelihood_, which was a promising approach when it was developed by [Owen in 1990](https://en.wikipedia.org/wiki/Empirical_likelihood).  But I tried it for the situation studied here and confidence coverage for the mean was terrible.  Advocates of empirical likelihood suggested putting a bootstrap loop around the already computationally intensive combinatorial empirical likelihood algorithm, in order to get accurate CIs.  But why go to that trouble instead of just using the bootstrap, or why not use the double bootstrap to get highly accurate intervals with much less computation than empirical likelihood?[The double bootstrap is used to correct a single bootstrap.  The most efficient double bootstrap algorithm available increases computation time by $23\times$ over a single bootstrap.]{.aside}
+
+# Distribution and True Location Values
+
+As mentioned above, the distribution from which we'll simulate samples is the lognormal distribution with $\mu=0, \sigma=1.65$.  
+
+```{r}
+mu         <- 0
+sigma      <- 1.65
+truemean   <- exp(sigma ^ 2 / 2)
+truemedian <- exp(mu)
+```
+
+
+This is a highly skewed distribution with median $\exp(\mu) = 2.71828$ and mean $\exp(\mu + \frac{1}{2}\sigma^{2}) =$ `r round(truemean, 4)`.  There is no analytic expression available for the pseudomedian, so we compute it by simulating a sample of size $n=250,000$.
+
+```{r}
+set.seed(1)
+truepmedian <- pMedian(rlnorm(250000, mu, sigma))
+truepmedian
+truevals <- c(mean = truemean, median = truemedian, pseudomedian = truepmedian)
+```
+
+The probability density function is shown below, with vertical lines depicting the three location measures (blue:mean, red:median, gray:pseudomedian).
+
+```{r}
+#| fig-width: 4
+#| fig-height: 3
+par(mar=c(3, 3, 1, 1), mgp=c(2, .43, 0))
+curve(dlnorm(x, mu, sigma), 0, 8, ylab='Probability Density')
+abline(v=truemean,    col='blue')
+abline(v=truemedian,  col='red')
+abline(v=truepmedian, col='gray')
+```
+
+# Distributions of Sample Location Estimates
+
+Let's see how much asymmetry exists in the distribution of sample estimates of central tendency by computing sample estimates from each of 5000 samples from our chosen log-normal distribution.  Population values are shown with red vertical lines.  Symmetry is quantified by the ratio of the SD of those values above the grand mean to the SD of those below.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 5
+set.seed(1)
+N <- 200
+g <- function() {
+  x <- rlnorm(N, mu, sigma)
+  c(mean=mean(x), median=median(x), hdmedian=unname(hdquantile(x, 0.5)), pmedian=pMedian(x))
+}
+r <- t(replicate(5000, g()))
+sym <- function(x) {
+  s <- dualSD(x)
+  ratio <- s['top'] / s['bottom']
+  title(sub=paste('Symmetry:', round(ratio, 2)), line=-8, adj=1)
+}
+
+mmap <- .q(mean=mean, median=median, hdmedian=median, pmedian=pseudomedian)
+
+par(mfrow=c(2,2))
+for(p in colnames(r)) {
+  u <- r[, p]
+  hist(u, nclass=100, xlab=p, main=NULL); sym(u)
+  abline(v=truevals[mmap[p]], col='red')
+}
+```
+
+There is strong asymmetry in the sample means, which needs to be taken into account when constructing confidence limits which by necessity must also be asymmetric.  Medians and pseudomedians have much more symmetric distributions.
+
+Out of curiosity, compare sample medians with Harrell-Davis estimates.
+
+```{r}
+ggplot(r, aes(x=abs(median - hdmedian))) + geom_histogram(bins=50)
+```
+
+Also compute the root mean squared error for the ordinary sample median vs. the HD median.
+
+```{r}
+rmse <- function(x) sqrt(mean((x - truemedian) ^ 2))
+rmse(r[, 'median'  ])
+rmse(r[, 'hdmedian'])
+```
+
+We see that for $n=`r N`$ the HD median was not worth the trouble.  HD may have offered more precision for outer quantiles.
+
+# CIs Computed for One Sample
+
+Generate a sample of $n=`r N`$ from the chosen log-normal distribution and compute all the confidence limits we will study.
+
+```{r}
+w <- 'mean,CLT,usual
+mean,CLT,dual SD pm
+mean,CLT,dual SD med
+mean,CLT,dual SD mean
+mean,CLT,Gini
+mean,boot,normal
+mean,boot,basic
+mean,boot,student
+mean,boot,percentile
+mean,boot,BCa
+mean,boot,normal dual SD pm
+mean,boot,normal dual SD med
+mean,boot,normal dual SD mean
+mean,boot,percentile HD
+mean,boot,Bayesian
+mean,shifted pm,
+mean,CLT,percentile HD
+median,exact,
+hdmedian,CLT,usual
+pseudomedian,exact
+pseudomedian,boot,BCa'
+what <- fread(text=w, col.names=c('measure', 'method', 'variant'), header=FALSE, fill=TRUE)
+what[, type := 1 : nrow(what)]
+
+cis <- function(x, exact=FALSE) {
+  z     <- qnorm(0.975)
+  m     <- mean(x)
+  med   <- median(x)
+  hdmed <- unname(hdquantile(x, 0.5, se=TRUE))
+  pmed  <- pMedian(x)
+  n     <- length(x)
+  est   <- c(mean=m, median=med, hdmedian=hdmed, pseudomedian=pmed)
+  estimate <- unname(what[, est[measure]])
+  
+  u <- z / sqrt(n)
+  
+  # nmin=10000 means use pooled SD if n < 100000
+  dsd <- function(x, j) {
+    dualSD(x, nmin=if(j == 1) 100000 else 2,
+           center=switch(j, NA, pMedian(x), median(x), m ))
+  }
+  
+  # Do all bootstrap resamples
+  stat <- function(x, i) {
+    x <- x[i]
+    m <- mean(x)
+    s <- sd(x)
+    se <- s / sqrt(length(x))
+    c(m, se)
+  }
+  b   <- boot(x, statistic=stat, R=1000)
+  bmeans <- b$t[, 1]
+  bci    <- boot.ci(b)[c('normal', 'basic', 'student', 'percent', 'bca')]
+  lcl    <- function(z) z[length(z) - 1]
+  ucl    <- function(z) z[length(z)]
+  
+  pmedb <- function(x, i) pMedian(x[i])
+
+  # Create a list() of list()'s of computed lower and upper confidence limits so
+  # that we can easily process all of them with sapply()
+  res <- list(
+    {
+      # CLT
+      lo <- hi <- numeric(4)
+      for(j in 1:4) {
+        s <- dsd(x, j)
+        lo[j] <- m - u * s['bottom']
+        hi[j] <- m + u * s['top']
+      }
+      list(lo=lo, hi=hi)
+    },
+    {
+      # CLT using Gini's mean difference instead of SD
+      s <- GiniMd(x) * sqrt(pi / 4)
+      list(lo = m - u * s, hi = m + u * s)
+    },
+    list(lo = sapply(bci, lcl), hi = sapply(bci, ucl)),
+    {
+      # Bootstrap normal approximation CIs using dual SDs
+      lo <- hi <- numeric(3)
+      for(j in 2 : 4) {
+        s <- dsd(bmeans, j)
+        lo[j - 1] <- m - z * s['bottom']
+        hi[j - 1] <- m + z * s['top']
+      }
+      list(lo=lo, hi=hi)
+    },
+    {
+      # Bootstrap percentile CI using Harrell-Davis quantile estimator
+      p <- hdquantile(bmeans, c(0.025, 0.975), names=FALSE)
+      list(lo = p[1], hi=p[2])
+    },
+    {
+      # Bayesian bootstrap
+      wmean <- function(x, wts) sum(wts * x) / sum(wts)
+      bb <- bayesboot(x, statistic=wmean, use.weights=TRUE, R=1000)
+      s  <- summary(bb)
+      list(lo=s$value[3], hi=s$value[4])
+    },
+    {
+      # Compute shifted Hodges-Lehmann CI (shifted pseudomedian)
+      w <- wilcox.test(x, conf.int=TRUE, exact=exact)
+      shift <- m - w$estimate
+      list(lo=w$conf.int[1] + shift, hi=w$conf.int[2] + shift)
+    },
+    {
+      # CLT HD percentile
+      p  <- pnorm(u)
+      qu <- hdquantile(x, c(1 - p, 0.5, p))
+      list(lo=m - qu[2] + qu[1], hi=m - qu[2] + qu[3])
+    },
+    {
+      # Exact nonparametric CI for median
+      qu <- cimed(x)
+      list(lo=qu[1], hi=qu[2])
+    },
+    {
+      # HD approximate CI for HD median
+      se <- attr(hdmed, 'se')
+      list(lo=hdmed - z * se, hi=hdmed + z * se)
+    },
+    {
+      # Exact nonparametric CI for pseudomedian under symmetry assumption
+      w <- wilcox.test(x, conf.int=TRUE, exact=TRUE)
+      list(lo=w$conf.int[1], hi=w$conf.int[2])
+    },
+    {
+      # Bootstrap BCa confidence interval for the pseudomedian
+      bp <- boot(x, statistic=pmedb, R=1000)
+      bpc <- boot.ci(bp, type='bca')
+      list(lo=bpc$bca[4], hi=bpc$bca[5])
+    } )
+  
+  lower <- unlist(sapply(res, function(x) x$lo))
+  upper <- unlist(sapply(res, function(x) x$hi))
+  
+  data.table(type = 1:length(lower), estimate=estimate, Lower=lower, Upper=upper)
+}
+
+set.seed(2)
+x <- rlnorm(N, 0, 1.65)
+cis(x)
+```
+
+
+# Simulation of CI Coverage
+
+As an aside, many statisticians make the mistake of simulating only the overall confidence coverage to check against nominal levels such as 0.95.  This can hide significant coverage errors in both tails, just because the two non-coverage probabilities may luckily sum to around 0.05.  We will separately estimate non-coverage in each tail.
+
+Run 5000 experiments using our chosen lognormal distribution.
+
+```{r}
+set.seed(3)
+g <- function() {
+  x <- rlnorm(N, mu, sigma)
+  cis(x)
+}
+if(file.exists('sim.rds')) R <- readRDS('sim.rds')  else {
+  d <- data.table(sim = 1 : 5000)
+  R <- d[, g(), by=.(sim)]   # 40 min.
+  saveRDS(R, 'sim.rds')
+}
+```
+
+Show distribution of confidence limits by method, separating means from other location measures.  The spike histograms are interactive.  Hover over elements to see more information.
+
+```{r}
+r <- copy(R)
+r <- r[what, on=.(type)]
+r[, z := paste(method, variant)]
+curtail <- function(x, a, b) pmin(pmax(x, a), b)
+s <- r[measure == 'mean',]
+s[, Lower := curtail(Lower, -1, 9)]
+s[, Upper := curtail(Upper, 2.5, 15)]
+s[, histboxp(x=Lower, group=z, bins=200)]
+s[, histboxp(x=Upper, group=z, bins=200)]
+s <- r[measure != 'mean',]
+s[, histboxp(x=Lower, group=paste(measure, z), bins=200)]
+s[, histboxp(x=Upper, group=paste(measure, z), bins=200)]
+# For a different look try:
+# ggplot(R, aes(Lower, Upper)) + geom_bin2d(bins=150) +
+#   viridis::scale_fill_viridis(trans='log10', option='inferno') + facet_wrap(~ type)
+```
+
+Check true values against means over simulations.
+
+```{r}
+mmap <- function(a) ifelse(a == 'hdmedian', 'median', a)
+r[, trueval := truevals[mmap(measure)]]
+r[, .(true = mean(trueval), mean_estimate = mean(estimate)), by=measure]
+```
+
+Compute non-coverage proportion for each tail for each method.
+
+```{r}
+error <- r[, .(low  = mean(Lower > trueval),
+               high = mean(Upper < trueval)), by=.(measure, method, variant)]
+```
+
+Compute the total absolute error in the two tails.
+
+```{r}
+error[, total_error := abs(low - 0.025) + abs(high - 0.025)]
+error
+```
+
+Compute the mean CI widths for the methods when estimating the mean.  Print them in order of total coverage error.
+
+```{r}
+w <- r[measure == 'mean', .(length = mean(Upper - Lower)), by=.(measure, method, variant)]
+u <- error[w, on=.(measure, method, variant)]
+i <- u[, order(total_error)]
+u[i, ]
+# To display the table graphically use
+# ggplot(u, aes(total_error, length, color=type)) + geom_point()
+```
+
+The overall winner is the BCa bootstrap, which has tail non-coverage probabilities of 0.026 and 0.094 for overall coverage of 0.88 against the target of 0.95.  This is not completely satisfactory, and a better confidence interval method may exist.  If one wanted to trade off some coverage accuracy to get tighter CIs, the bootstrap percentile method might be considered. [As shown [here](https://stats.stackexchange.com/questions/186957), BCa yields poor coverage when $n=25$. 
+For $n=40$ and BCa again performed the best, but with 0.014 non-coverage on the left and 0.154 on the right.  For $n=400$, no bootstrap variant got extremely close to 0.025 non-coverage in both tails, but BCa was still the best.]{.aside}
+
+Ad hoc methods of computing confidence intervals for the mean had embarrassing performance.  The usual CLT formula was unsatisfactory in both tails, and attempted fixes made things even worse.
+
+For estimating the median, the exact nonparametric method works extremely well as advertised.  The method based on the HD estimate and its standard error are satisfactory.
+
+The real surprise comes from the performance of confidence intervals for the population pseudomedian.  Both the classic exact Hodges-Lehmann confidence interval (which assumes symmetry of the population distribution) and the BCa bootstrap method were nearly flawless.  The exact method probably works so well because the sampling distribution of the pseudomedian for $N = `r N`$ was shown above to be very symmetric.  The R `wilcox.test` will compute exact confidence limits for the pseudomedian quickly if $n < 1000$, and approximate confidence limits quickly if $n < 10,000$.  Because BCa worked so well, and because the `pMedian` function is so fast for large $n$ (unlike the `wilcox.test` function), BCa would be a good default method.  Tail errors were also better for BCa than for the exact symmetry-assuming Hodges-Lehmann method.
+
+# Summary
+
+The mean may be thought of as a "parametric quantity" and at present there is no general-purpose method for computing completely accurate (in both tails) confidence limits for means drawn from very asymmetric distributions.  More methods for computing confidence limits for means are needed if you are likely to encounter very skewed distributions.  The best available method at present is the BCa bootstrap, although its intervals are longer than some other methods. 
+
+The robustness and efficiency of the pseudomedian and the high accuracy of confidence limits for it should make it more of a go-to measure of central tendency.
+
+# Computing Environment
+
+```{r}
+grateful::cite_packages(pkgs='Session', output='paragraph', out.dir='.',
+    cite.tidyverse=FALSE, omit=c('grateful', 'ggplot2'))
+```
+
+The code was run on `r sessionInfo()$running` on a Macbook Pro M2 Max.
+
