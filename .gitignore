@@ -13,3 +13,4 @@ saturnRings.jpg
 */.netlify/
 .Rproj.user
 twitter
+**/*.quarto_ipynb

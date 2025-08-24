@@ -52,6 +52,15 @@ r <- replicate(5000, g(lognorm=TRUE))
 table(r, useNA='ifany')
 ```
 
+::: {.callout-note collapse="true"}
+## Extension of the Pseudomedian to Difference Between Groups
+
+When summarizing the difference between two independent groups of observations, we do not take the difference in pseudomedians, but instead use a more direct two-sample Hodges-Lehmann estimator: the median of all pairwise differences between an observation in group B and an observation in group A.  This is the estimator that is zero when the Wilcoxon-Mann-Whitney two-sample test statistic is at its most null value.
+
+It is always more difficult to estimate a difference than it is to estimate a one-sample quantity.  Recall that in the normal case the variance of a difference in means equals the sum of the two variances.  When there are $\frac{n}{2}$ observations in each of the two groups, the variance a mean of $n$ observations is $\frac{\sigma^{2}}{n}$ and the variance of the mean difference is $2 \times \frac{\sigma^{2}}{\frac{n}{2}}  = \frac{4}{n}\sigma^{2}$.  For the pseudomedian on $n$ observations we compute the median of $\frac{n (n + 1)}{2}$ midpoints. For differences in the balanced case we compute the median of $\frac{n ^{2}}{4}$ differences.  The ratio of the number of one-sample pairs to the number of two-sample pairs is $\frac{2 (n + 1)}{n} \approxeq 2$ instead of the 4 in the parametric case.  This takes into account that for the pseudomedian every pair shares an observation with other pairs.
+
+:::
+
 # Confidence Intervals
 
 As discussed [here](https://stats.stackexchange.com/questions/186957), there is no nonparametric confidence interval for the mean of a general distribution.  The mean is inherently a "parametric" quantity, unlike the sample median.  Most data analysts mistakenly rely by default on the central limit theorem (CLT) to compute confidence limits for a population mean.  A key problem arises: the population variance is seldom known.  So analysts substitute the sample variance and proceed as if the variance is known, not aware they may be violating a key requirement of the CLT: the sample mean and sample variance must be independent in order for the standardized mean to converge with any rapidity to the normal distribution.  For symmetric distributions this is OK, but not for asymmetric ones.  Underlying this issue is that in practice one does not know how to transform the data to achieve normality, and we desire to estimate the population mean on the original scale.  If the distribution were known to be lognormal, the analyst would analyze the data after taking logs.  But there is no oracle to lead the analyst to this action, and if you should have taken logs but didn't, problems arise.  Even if you knew to take logs, it is still a difficult problem to get confidence intervals for the population mean on the original scale (which is why the [smearing estimator](https://hbiostat.org/rmsc/areg#obtaining-estimates-on-the-original-scale) exists), although the formula for the population mean itself is a simple function of $\mu, \sigma$ on the log scale.
@@ -104,7 +113,7 @@ truemedian <- exp(mu)
 ```
 
 
-This is a highly skewed distribution with median $\exp(\mu) = 2.71828$ and mean $\exp(\mu + \frac{1}{2}\sigma^{2}) =$ `r round(truemean, 4)`.  There is no analytic expression available for the pseudomedian, so we compute it by simulating a sample of size $n=250,000$.
+This is a highly skewed distribution with median $\exp(\mu) = 1.0$ and mean $\exp(\mu + \frac{1}{2}\sigma^{2}) =$ `r round(truemean, 4)`.  There is no analytic expression available for the pseudomedian, so we compute it by simulating a sample of size $n=250,000$.
 
 ```{r}
 set.seed(1)
@@ -435,7 +444,7 @@ Ad hoc methods of computing confidence intervals for the mean had embarrassing p
 
 For the median, the exact nonparametric method works extremely well as advertised.  The method based on the HD estimate and its standard error are satisfactory.
 
-The real surprise comes from the performance of confidence intervals for the population pseudomedian.  Both the classic exact Hodges-Lehmann confidence interval (which assumes symmetry of the population distribution) and the BCa bootstrap method were excellent, with BCa being almost perfect.  The exact method probably works as well as it does because the sampling distribution of the pseudomedian for $N = `r N`$ was shown above to be very symmetric.  The R `wilcox.test` will compute exact confidence limits for the pseudomedian quickly if $n < 1000$, and approximate confidence limits quickly if $n < 10,000$.  Because BCa worked so well, and because the `pMedian` function is so fast for $n$ up to 250,000 (unlike the `wilcox.test` function), BCa would be a good default method.  However BCa is slow for $n > 1000$, and a good replacement for it is the bootstrap nonparametric percentile CI in such cases.  Beginning with `Hmisc` version 5.2-4, the `pMedian` function optionally efficiently computes bootstrap percentile (the default) or BCa confidence intervals.
+The real surprise comes from the performance of confidence intervals for the population pseudomedian.  Both the classic exact Hodges-Lehmann confidence interval (which assumes symmetry of the population distribution) and the BCa bootstrap method were excellent, with BCa being almost perfect.  The exact method probably works as well as it does because the sampling distribution of the pseudomedian for $N = `r N`$ was shown above to be very symmetric.  The R `wilcox.test` will compute exact confidence limits for the pseudomedian quickly if $n < 1000$, and approximate confidence limits quickly if $n < 10,000$.  Because BCa worked so well, and because the `pMedian` function is so fast for $n$ up to 250,000 (unlike the `wilcox.test` function), BCa would be a good default method.  However BCa is slow for $n > 1000$, and a good replacement for it is the bootstrap nonparametric percentile CI in such cases.  Beginning with `Hmisc` version 5.2-4, the `pMedian` function optionally efficiently computes bootstrap percentile (the default for $n \geq 150$) or BCa (the default for $n < 150$) confidence intervals.
 
 ::: {.callout-note collapse="true"}
 
@@ -472,7 +481,55 @@ ggplot(u, aes(x=n, y=upper, color=type)) + geom_smooth(se=FALSE) +
   geom_point(size=0.2, alpha=0.5) + lim(hi)
 ```
 
-Lower confidence limits for BCa and the percentile bootstrap are almost indistinguishable, especially for $n > 200$.  Upper limits converge around $n=150$.  This informs the default for the `Hmisc` `pMedian` function: BCa for $n < 150$ and percentile otherwise.
+Lower confidence limits for BCa and the percentile bootstrap are almost indistinguishable on average, especially for $n > 200$.  Upper limits converge around $n=150$.  This informs the default for the `Hmisc` `pMedian` function: BCa for $n < 150$ and percentile otherwise.
+
+Instead of summarizing averages as was done above, look at individual sample differences between the two CI methods.
+
+```{r}
+w <- dcast(u, n ~ type, value.var=c('lower', 'upper'))
+ggplot(w, aes(x=n, y=abs(lower_percentile - lower_bca))) + geom_smooth(se=FALSE) +
+  geom_point(size=0.2, alpha=0.5) + ylim(0, 0.1)
+ggplot(w, aes(x=n, y=abs(upper_percentile - upper_bca))) + geom_smooth(se=FALSE) +
+  geom_point(size=0.2, alpha=0.5) + ylim(0, 0.3)
+```
+
+:::
+
+::: {.callout-note collapse="true"}
+## Width of "Exact" Confidence Intervals and Planning Studies for Precision
+
+Compute the width of "exact" (under an assumption) CIs.  Let the population pseudomedian be $\theta$ and assume that sample pseudomedians are from a location family such that they have a distribution that does not depend on $\theta$ (the population pseudomedian) but is then shifted by $\theta$.  Let the zero-shift (underlying / standardized) sampling distribution be $g$.  Then the exact 0.025 and 0.975 confidence limits of the pseudomedian are $[c - b, c - a]$ where $c$ is the sample pseudomedian, $a$ is the 0.025 quantile of $g$, and $b$ is the 0.975 quantile of $g$.[Note the similarity with the basic bootstrap.]{.aside}  The width of the exact CI in this case is simply the difference in these outer quantiles, although the CI center moves with sample pseudomedians.  Compute the quantiles and hence the width as a function of n by simulation.
+
+```{r}
+set.seed(1)
+g <- function(n) pMedian(rlnorm(n, mu, sigma)) - truepmedian
+tlim <- function(n) {
+  pm <- t(replicate(3000, g(n)))
+  qu <- quantile(pm, c(0.025, 0.975))
+  list(q.025 = qu[1], q.975 = qu[2])
+}
+if(file.exists('real-lim.rds')) w <- readRDS('real-lim.rds') else {
+  w <- data.table(n=10:500)
+  w <- w[, tlim(n), by=.(n)]
+  saveRDS(w, 'real-lim.rds')
+}
+w[, width := q.975 - q.025]
+```
+
+See if confidence limit widths following the $\sqrt{n}$ law.
+
+```{r}
+require(rms)
+options(prType='html')
+f <- ols(log(width) ~ log(n), data=w)
+f
+p <- exp(predict(f))
+w[, pwidth := p]
+ggplot(w, aes(x=n, y=width)) + geom_smooth(se=FALSE) +
+  geom_smooth(mapping=aes(x=n, y=pwidth), se=FALSE, color=I('red'))
+```
+
+Exact widths are in blue, and true CI widths predicted by a log-log model are in red.  There is excellent agreement.  The fitted model to estimate the 0.95 CI width is approximately $14.32\times n^{-0.529}$, the last term being very close to $\sqrt{n} = n^{-0.5}$.  This formula can be used for planning studies when the goal is to achieve a specified precision (half-width of the CI) in estimating the true pseudomedian when the population distribution is our lognormal distribution.  For other distributions just replace the `g` function above with one specifying the distribution of interest, and use the simulated widths as a function of $n$ to solve for the minimum $n$ yielding adequate precision (margin of error).
 
 :::
 
@@ -482,7 +539,7 @@ The mean may be thought of as a "parametric quantity" and at present there is no
 
 The robustness and efficiency of the pseudomedian and the high accuracy of confidence limits for it (especially the bootstrap BCa and percentile limits) should make it more of a go-to measure of central tendency, for both symmetric and asymmetric distributions.
 
-I hope that others will adapt the code provided here to study more sample sizes and distributions.
+I hope that others will adapt the code provided here to study more sample sizes and distributions.  
 
 # Computing Environment
 
