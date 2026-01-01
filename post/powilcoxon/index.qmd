@@ -471,6 +471,7 @@ The unadjusted proportional odds model's odds ratio estimate almost perfectly re
 
 * <https://hbiostat.org/bib/po>
 * <https://hbiostat.org/blog/#category=ordinal>
+* [Role of the Proportional Odds Assumption for the Analysis of Ordinal Outcomes in Neurologic Trials](https://www.neurology.org/doi/10.1212/WNL.0000000000214146) by Y Long et al
 
 # Computing Environment
 `r markupSpecs$html$session()`
