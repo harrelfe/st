@@ -16,6 +16,8 @@ Clustering of patients to find new "phenotypes" is now a fad.  For example, repe
 
 Maarten van Smeden showed that [clustering algorithms easily get the wrong number of clusters](https://x.com/MaartenvSmeden/status/970237614413570048) when the true number of clusters is known, and Darren Dahly showed in [a simple example](https://darrendahly.github.io/post/cluster) that clustering is essentially telling us, for example, that people who are older than 65 are older than people who are under 65.  van Smeden, Harrell, and Dahly wrote a [letter to the editor](https://www.thelancet.com/journals/landia/article/PIIS2213-8587(18)30124-4/fulltext) concerning the Ahlqvist paper, casting extreme doubt on the original authors' assertions that "new forms of diabetes" have been identified or that this is a useful "step towards precision medicine in diabetes".  van Smeden _et al_ pointed out that direct modeling of outcomes is likely to have much greater payoff, and that the clusters found by Ahlqvist _et al_ are very unlikely to be what they seem.  Ahlqvist _et al_ did not even assess within-cluster homogeneity of the component variables nor did they assess within-cluster outcome homogeneity.
 
+See [Dennis et al](https://www.sciencedirect.com/science/article/pii/S2213858719300877?ssrnid=3314442&dgcid=SSRN_redirect_SD) for a direct comparison of Ahlqvist et al's approach with direct predictive modeling, showing superiority of the latter.
+
 ## What is the Question and Why Cluster Patients?
 
 Most medical applications of statistical clustering techniques fail to address the most basic questions such as
