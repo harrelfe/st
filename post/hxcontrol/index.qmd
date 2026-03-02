@@ -37,9 +37,8 @@ Let's see how this plays out with several choices of `sigma`.  First let's get a
 
 ```{r}
 require(cmdstanr)
-# set_cmdstan_path('/usr/local/bin/cmdstan-2.33.1')
+cstanSet()
 require(ggplot2)
-options(mc.cores=4)  # each chain run on a separate CPU
 stancode <- '
 data {
   int<lower=0> Na;  // # obs in RCT treatment A (control)
@@ -283,6 +282,7 @@ Bayesian joint modeling is a simple and natural way to model and penalize for po
  * [Applying Quantitative Bias Analysis to Epidemiologic Data](https://link.springer.com/book/10.1007/978-3-030-82673-4) by MP Fox, RF MacLehose, TL Lash
  * [Multiple-bias modelling for analysis of observational data](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-985X.2004.00349.x) by S Greenland
  * [Using Bayesian statistics in observational studies](https://discourse.datamethods.org/t/using-bayesian-statistics-in-observational-studies) which includes a discussion and references from Sander Greenland about probabilistic bias analysis
+ * [Stress-Testing Assumptions: A Guide to Bayesian Sensitivity Analyses in Causal Inference](https://arxiv.org/abs/2602.23640) by Arman Oganisian
 
 **Acknowledgements**
 
