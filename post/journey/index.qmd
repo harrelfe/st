@@ -45,6 +45,8 @@ description: "This is the story of what influenced me to become a Bayesian stati
 |  |  |
 |  | <small>The frequentist type I error is the probability of asserting an effect when there is <b>no effect</b>, and is independent of data.  One minus the Bayesian conditional probability of an effect given the data is the probability the treatment doesn't work <b>whether or not</b> you assert that it does.</small> |
 |  |  |
+|  | <small>You cannot call something an error by assuming the very fact that would make it one.</small> |
+|  |  |
 |  | <small>Judging a Bayesian procedure by its type I probability α is equivalent to judging a gambler by the fraction of <em>potential</em> losses in which he <emph>would have</emph> placed a bet, instead of judging him by the fraction of bets that he won.</small> | 
 |  |  |
 |  | <small>Someone demanding that a Bayesian procedure preserve type I error, e.g. that P(posterior probability of positive effect > 0.95 given no effect) ≤ α, should be demanded to show their frequentist procedure yields decisons as good as those driven by the Bayesian P(effect > 0 given data, prior).</small> |

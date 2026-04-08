@@ -1,0 +1,63 @@
+---
+title: "Causal by Design"
+author:
+  - name: Frank Harrell 
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: 2026-04-08
+date-modified: last-modified
+categories: [design, drug-development, drug-evaluation, evidence, inference, observational, RCT, reporting, "2026"]
+description: "Well-controlled randomized experiments when analyzed in a randomization-respecting way are causal by design and need no causal calculus to infer causation.  If an observational study has any hope of providing reliable causal inference regarding therapeutic comparisons, it must be prospectively designed.  Incorporating target trial emulation in a non-designed retrospective observational study does not enable causal inference."
+code-fold: false
+draft: false
+---
+
+# Background
+
+::: {.quoteit}
+
+**Cause**: something without which something else would not happen --- [Cambridge American Dictionary](https://dictionary.cambridge.org/dictionary/english/cause)
+
+:::
+
+
+Two research methods are being used with increasing frequency: [causal inference](https://en.wikipedia.org/wiki/Causal_inference) and [target trial emulation](https://jamanetwork.com/journals/jama/article-abstract/2799678).  There are many complex situations where a formal causal calculus such as that developed by [Judea Pearl](https://ftp.cs.ucla.edu/pub/stat_ser/r350.pdf) is needed to allow one to infer than an effect is caused by a specific variable such as the use of a treatment or exposure to a specific agent.  Practitioners of causal calculus propose that it to be a necessary ingredient of virtually every causal inference including that from tightly controlled randomized studies.
+
+Practitioners of target trial emulation claim TTE to be a valuable component of observational treatment comparisons, even though TTE per se does not address the all-important issue of confounding, especially confounding by indication, where one treatment is selected over another due to prognostic characteristics such as disease severity, drug tolerability, or family income.  TTE instills good thinking about the inception cohort, time zero, and time-dependent covariates, but does not emulate randomization, blinding of measurements to treatments, or provide any additional help with confounding.  The _emulation_ in TTE is a misnomer.  I wish that TTE was called BPOC (Best Practices in Observational Comparisons).
+
+TTE is already being used in a haphazard fashion in articles in medical journals, with authors not bothering even to address the potential for confounding and some authors being so naive as to merely state "we assume that all confounders were part of data collection".  Observational treatment comparisons would certainly be simple were that the case!
+
+# Study Design
+
+Before delving more into issues introduced above, let's consider, for our purposes, four types of studies.
+
+1. Randomized controlled experiments in which there is no interruption of the flow in the data generation process and there are no auxiliary time-dependent variables being considered.
+2. Randomized experiments in which there is an interruption in the flow, or one is interested in answering a "what if" question related to a time-dependent (post-randomization) covariate.
+3. Prospective observational studies with very intentional protocolized collection of high quality data.
+4. Non-prospective, non-protocolized observational studies, i.e., _undesigned_ studies.
+
+In design 1, the response variable is measured on every subject and there are no "what if" questions such as "what would the difference in response between the drug groups have been had all of the animals in the experiment fully metabolized the new drug?".  An example of design 2 is a randomized trial of an anti-hypertension drug taking drug adherence into account.  The usual as-randomized intent-to-treat (ITT) analysis contrasts subjects assigned to take drug A with those assigned to take drug B, so the inference pertains to what happens when non-adherence to the assigned treatment is ignored and averaged out.  A non-ITT design 2 analysis may ask "but what is the efficacy if everyone adhered to the drug?".  To infer that faithfully taking the drug causes a larger reduction in blood pressure requires complex thinking.
+
+Design 3 is the only observational study design for which one can hope to make a causal inference about an exposure effect.  In this design, one addresses confounding well in advance of starting data collection.  This is done by assembling a good many experts in the decision process used to select therapies in the field.  The list of possible selection factors is elicited from the experts, and data collection is designed to ensure accurate collection of these variables, with minimal missingness.  The need for observational studies to be actually **designed** is not even mentioned in some review articles about TTE.  Investigators should never be given _carte blanche_ just because they desire to save money and time by using routinely collected data.
+
+Design 4 is hopeless except in very simple situations that are amazingly well understood and where one can have confidence in the quality and unbiasedness of the data.
+
+# Implications of Study Design on Causal Inference
+
+In design 1 above, there is no explanation for the result other than the experimental manipulation and random variation.  Statistical analysis takes care of quantifying uncertainty in estimated treatment effects taking random variation into account.  One can even use a randomization test to almost nonparametrically test for treatment effect.[I don't recommend randomization tests because they don't provide all the estimates and uncertainty intervals we need, and don't extend to more complex situations such as handling random effects and longitudinal data.  They also don't admit Bayesian analysis which handles many other facets of the research, including incorporation of high-quality outside information and provision of an elegant sequential inferential framework.]{.aside}  Causal calculus is elegant and some researchers may prefer to include a DAG in the paper, but this is not strictly necessary for the primary analysis.  The process of elimination excludes all other mechanisms other than irreducible noise in the system.  One can create a DAG for each experimental design and use the same DAG for all implementations of that design, across many design 1 studies.
+
+Design 2 is the perfect spot for causal inference.  Asking "what if" questions such as "what if everyone adhered to their assigned drug" are perfect problems for application of causal calculus.  The simplest causal inference, which applies to a subset of the problems where patients either always adhere or never adhere to the assigned drug, uses instrumental variables.  An instrumental variable must affect the dependent variable only through the treatment, have no direct effect on the outcome itself, and be independent of unmeasured confounders. The randomized treatment assignment is the perfect instrument.
+
+Observational designs 3 and 4 are in great need of formal causal inference.  Design 4 usually remains hopeless no matter how elegant the causal calculus that is used.  Even a higher-cost design 3 can fail [when the consulted experts fail to list an important confounder](https://www.fharrell.com/post/ehrs-rcts) that was not included in data collection.
+
+The only hope for design 4 requires all of the following steps to be faithfully executed when conducting an observational treatment comparison:
+
+* Involve 10 or more true experts in medical care and medical decision making, eliciting from them the list of potential factors used in medical care decisions.  Make certain that the experts have no knowledge of which variables are collected, so that they do not engage in data availability bias.
+* Pool all the experts' variables and make sure they are present in the dataset to be used, have minimal missingness, and are reliably collected.
+* Audit 200 or more patients and verify the accuracy of all the variables being analyzed.
+* Use TTE principles.
+
+
+# Summary
+
+Causal calculus such as the system developed by Pearl is elegant and can provide a great deal of insight for complex research questions.  But straight-up randomized experiments are causal by design.  Observational studies should be prospectively designed so that causal inference has a chance.  Target trial emulation runs the risk of serving as window dressing for inadequately designed observational studies.

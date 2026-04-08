@@ -33,7 +33,7 @@ website:
       - text: Talks
         href: talk/
       - text: Courses
-        href: course/
+        href: https://hbiostat.org/course
       - text: Datamethods
         href: datamethods.qmd
       - text: News

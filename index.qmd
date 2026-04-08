@@ -21,16 +21,6 @@ listing:
     filter-ui: false
     page-size: 3
     feed: true
-  - id: course
-    contents: course/*/*.qmd
-    sort: "date desc"
-    type: default
-    fields: [date, title, description, categories, author]
-    categories: cloud
-    sort-ui: false
-    filter-ui: false
-    page-size: 3
-    feed: true
 navbar: true
 title-block-banner: true
 include-in-header: meta.html
