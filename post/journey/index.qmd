@@ -22,6 +22,8 @@ description: "This is the story of what influenced me to become a Bayesian stati
 |  |  |
 |  |  <small>Any frequentist criticizing the Bayesian paradigm for requiring one to choose a prior distribution must recognize that she has a possibly more daunting task: to completely specify the experimental design, sampling scheme, and data generating process that were **actually used** and would be infinitely replicated to allow p-values and confidence limits to be computed.</small> |
 |  |  |
+|  |  <small>Any disagreements between two observers on the posterior probabilities coming from their use of different priors pales in comparison to disagreements about what to do after computing a data probability computed conditional on an unobservable.</small> |
+|  |  |
 |  |  <small>Those who criticize Bayes for having to choose a prior must remember that the frequentist approach leads to different p-values on the <b>same data</b> depending on how intentions are handled (e.g., observing 6 heads out of 10 tosses vs. having to toss 10 times to observe 6 heads; accounting for earlier inconsequential data looks in sequential testing).</small> |
 |  |  |
 |  |  <small>When was the last time you observed a sampling distribution, empirically and objectively? When was the last time you saw someone justify their choice of a sampling distribution, or tested it? -- [Stephen Martin](https://twitter.com/smartin2018/status/1057500260782800898)</small> |
@@ -47,10 +49,10 @@ description: "This is the story of what influenced me to become a Bayesian stati
 |  |  |
 |  | <small>You cannot call something an error by assuming the very fact that would make it one.</small> |
 |  |  |
-|  | <small>Judging a Bayesian procedure by its type I probability α is equivalent to judging a gambler by the fraction of <em>potential</em> losses in which he <emph>would have</emph> placed a bet, instead of judging him by the fraction of bets that he won.</small> | 
+|  | <small>Judging a Bayesian procedure by its type I probability α is equivalent to judging a gambler by the fraction of <em>potential</em> losses in which he <emph>would have</emph> placed a bet, instead of judging him by the fraction of bets that he won.</small> |
 |  |  |
 |  | <small>Someone demanding that a Bayesian procedure preserve type I error, e.g. that P(posterior probability of positive effect > 0.95 given no effect) ≤ α, should be demanded to show their frequentist procedure yields decisons as good as those driven by the Bayesian P(effect > 0 given data, prior).</small> |
-|  |  | 
+|  |  |
 |  |  <small>A paradigm that cannot <b>compute</b> the probability that a treatment works cannot <b>control</b> the probability of making a decision error, e.g., the probability that a treatment actually doesn't work when you act as though it does.</small> |
 |  |  |
 |  |  <small>The only agents that use frequentist statistics are frequentists statisticians when they practice frequentist statistics. In the real world, evolution rooted out those agents who willfully ignore prior knowledge to address irrelevant questions in an incoherent fashion. -- [EJ Wagenmakers](https://twitter.com/EJWagenmakers/status/1344922099765407744)</small> |
@@ -178,7 +180,7 @@ give assertions to be true.
 digraph {
   rankdir = TD;
   node [style=filled, shape=box, fontsize=20, fontcolor=blue, fillcolor=azure, penwidth=.1];
-R[label="Posterior Probabilities vs. p-values"] 
+R[label="Posterior Probabilities vs. p-values"]
 R -> {A, B}
 A[label="PPs define their own error probs"]
 A -> A1
@@ -219,7 +221,7 @@ A2[label="Bayes: Interaction half-in, half out
 Prior for interaction effect
 Borrows information across
 levels of interacting factor"]
-B[label=<Assume normality?>] 
+B[label=<Assume normality?>]
 B -> {B1, B2}
 B1[label="Freq: Subjective choice based on
 graphics and variance ratio
@@ -365,11 +367,11 @@ level of statistical training make frequent interpretation errors could
 frequentist statistics be fundamentally flawed?  Yes!  In McShane and
 Gal's paper they described two surveys sent to authors of JASA, as well
 as to authors of articles not appearing in the statistical literature
-(luckily for statisticians the non-statisticians fared a bit worse). 
+(luckily for statisticians the non-statisticians fared a bit worse).
  Some of their key findings are as follows.
 
 1.  When a p-value is present, (primarily frequentist) statisticians
-    confuse population vs. sample, especially if the p-value is large. 
+    confuse population vs. sample, especially if the p-value is large.
     Even when directly asked whether patients *in this sample* fared
     batter on one treatment than the other, the respondents often
     answered according to whether or not p<0.05.  Dichotomous
@@ -452,7 +454,7 @@ digraph {
     A [label=<Under data model M and skeptical prior<br></br>P the treatment probably (0.98) works>]
     B [label="The chance that the treatment\nimproves SBP by > 5mmHg is 0.93"]
     C [label="If I act as if the treatment works\nthe chance I'm wrong is 0.07 under prior P"]
-    
+
     R -> {A, B, C}
 }
 ```

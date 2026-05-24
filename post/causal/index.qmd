@@ -14,13 +14,6 @@ draft: false
 
 # Background
 
-::: {.quoteit}
-
-**Cause**: something without which something else would not happen --- [Cambridge American Dictionary](https://dictionary.cambridge.org/dictionary/english/cause)
-
-:::
-
-
 Two research methods are being used with increasing frequency: [causal inference](https://en.wikipedia.org/wiki/Causal_inference) and [target trial emulation](https://jamanetwork.com/journals/jama/article-abstract/2799678).  There are many complex situations where a formal causal calculus such as that developed by [Judea Pearl](https://ftp.cs.ucla.edu/pub/stat_ser/r350.pdf) is needed to allow one to infer than an effect is caused by a specific variable such as the use of a treatment or exposure to a specific agent.  Practitioners of causal calculus propose that it to be a necessary ingredient of virtually every causal inference including that from tightly controlled randomized studies.
 
 Practitioners of target trial emulation claim TTE to be a valuable component of observational treatment comparisons, even though TTE per se does not address the all-important issue of confounding, especially confounding by indication, where one treatment is selected over another due to prognostic characteristics such as disease severity, drug tolerability, or family income.  TTE instills good thinking about the inception cohort, time zero, and time-dependent covariates, but does not emulate randomization, blinding of measurements to treatments, or provide any additional help with confounding.  The _emulation_ in TTE is a misnomer.  I wish that TTE was called BPOC (Best Practices in Observational Comparisons).
@@ -43,6 +36,12 @@ Design 3 is the only observational study design for which one can hope to make a
 Design 4 is hopeless except in very simple situations that are amazingly well understood and where one can have confidence in the quality and unbiasedness of the data.
 
 # Implications of Study Design on Causal Inference
+
+::: {.quoteit}
+
+**cause**: something without which something else would not happen --- [Cambridge American Dictionary](https://dictionary.cambridge.org/dictionary/english/cause)
+
+:::
 
 In design 1 above, there is no explanation for the result other than the experimental manipulation and random variation.  Statistical analysis takes care of quantifying uncertainty in estimated treatment effects taking random variation into account.  One can even use a randomization test to almost nonparametrically test for treatment effect.[I don't recommend randomization tests because they don't provide all the estimates and uncertainty intervals we need, and don't extend to more complex situations such as handling random effects and longitudinal data.  They also don't admit Bayesian analysis which handles many other facets of the research, including incorporation of high-quality outside information and provision of an elegant sequential inferential framework.]{.aside}  Causal calculus is elegant and some researchers may prefer to include a DAG in the paper, but this is not strictly necessary for the primary analysis.  The process of elimination excludes all other mechanisms other than irreducible noise in the system.  One can create a DAG for each experimental design and use the same DAG for all implementations of that design, across many design 1 studies.
 

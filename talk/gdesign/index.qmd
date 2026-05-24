@@ -11,6 +11,6 @@ categories: [2025, bayes, design, drug-development, drug-evaluation, endpoints, 
 * Events
   - Vanderbilt Department of Biostatistics Seminar, Nashville TN USA 2025-09-17
   - [ACTStats 2025 Annual Meeting Keynote Talk](https://www.actstat.org/actstats-events), Nashville TN USA
-* [Video](https://youtu.be/_lDdueMlUlo)
+* [Video](https://youtu.be/_lDdueMlUlo); see also [this](https://youtu.be/FthlytWOjpI?si=LhJzr4iYAWv78BOt)
 * [Slides](https://hbiostat.org/bayes/design)
 * [Details](https://hbiostat.org/bayes/bet/design)

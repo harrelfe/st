@@ -3,8 +3,8 @@ title: Modernizing Clinical Trial Design and Analysis to Improve Efficiency & Fl
 author:
   - name: Frank Harrell
     url: https://hbiostat.org
-date: 2024-12-05
-categories: [RCT, drug-development, bayes, regression, endpoints]
+date: 2026-04-30
+categories: [RCT, drug-development, bayes, regression, endpoints, "2020", "2021", "2024", "2026"]
 description: "This presentation covers several ways to make clinical trials more efficient and to reduce the chance of ending with an equivocal result.  Some of the approaches covered are Bayesian sequential designs allowing for study extension if results are promising, not being tied by type I assertion probabilities/α spending, using high-information longitudinal ordinal outcomes, and covariate adjustment."
 ---
 
@@ -17,3 +17,7 @@ description: "This presentation covers several ways to make clinical trials more
 * [Pictures](https://www.linkedin.com/feed/update/urn%3Ali%3Aactivity%3A7271161538067992576/?midToken=AQHdxkrKc00ieg&midSig=2-vwKVisN9TXw1)
 * [Video](https://lnkd.in/gnaSDUGw)
 
+#### Important Considerations in Trial Design for Flexibility & Efficiency
+* RRE 2026: Research RoundTable in Epilepsy, Washington DC 2026-04-30
+* Shortened version with outcome examples for epilepsy trials
+* [Slides](https://hbiostat.org/talks/rcteff2.html)
