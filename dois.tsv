@@ -1,0 +1,78 @@
+slug	doi	created_utc	title
+aci	10.59350/edncp-qgj02	2026-10-13T13:51:06Z	Measures of Central Tendency for an Asymmetric Distribution, and Confidence Intervals
+addmarkerdca	10.59350/zwgaw-5qs79	2026-10-13T13:51:07Z	Decision curve analysis for quantifying the additional benefit of a new marker
+addvalue	10.59350/vm7p8-3j268	2026-10-13T13:51:07Z	Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements
+assume	10.59350/bvht4-atd79	2026-10-13T13:51:07Z	What Does a Statistical Method Assume?
+backwards-probs	10.59350/td3jn-6cf74	2026-10-13T13:51:07Z	Clinicians' Misunderstanding of Probabilities Makes Them Like Backwards Probabilities Such As Sensitivity, Specificity, and Type I Error
+badb	10.59350/8s1wq-pjq60	2026-10-13T13:51:07Z	How to Do Bad Biomarker Research
+bayes-covid	10.59350/5bbm9-85j58	2026-10-13T13:51:08Z	Bayesian Methods to Address Clinical Development Challenges for COVID-19 Drugs and Biologics
+bayes-freq-stmts	10.59350/kzw8z-a8943	2026-10-13T13:51:08Z	Bayesian vs. Frequentist Statements About Treatment Efficacy
+bayes-seq	10.59350/73kka-3dx75	2026-10-13T13:51:08Z	Continuous Learning from Data: No Multiplicities from Computing and Using Bayesian Posterior Probabilities as Often as Desired
+bootcal	10.59350/2386a-rje24	2026-10-13T13:51:08Z	Bootstrap Confidence Limits for Bootstrap Overfitting-Corrected Model Performance
+causal	10.59350/hm05j-h9v33	2026-10-13T13:51:08Z	Causal by Design
+class-damage	10.59350/q2gpy-k8b40	2026-10-13T13:51:08Z	Damage Caused by Classification Accuracy and Other Discontinuous Improper Accuracy Scoring Rules
+classification	10.59350/17jxr-hf782	2026-10-13T13:51:09Z	Classification vs. Prediction
+cluster	10.59350/qxbj1-ns613	2026-10-13T13:51:09Z	The Burden of Demonstrating Statistical Validity of Clusters
+corstruct	10.59350/v56y8-jbb06	2026-10-13T13:51:09Z	How Does a Compound Symmetric Correlation Structure Translate to a Markov Model?
+course-media	10.59350/rjjap-8ax15	2026-10-13T13:51:09Z	Integrating Audio, Video, and Discussion Boards with Course Notes
+covadj	10.59350/vcbpp-tz746	2026-10-13T13:51:09Z	RCT Analyses With Covariate Adjustment
+cpm	10.59350/dxr33-2h608	2026-10-13T13:51:09Z	The Unifying Capabilities of Cumulative Probability Semiparametric Models
+criticism-easy	10.59350/960cz-0pq48	2026-10-13T13:51:09Z	Statistical Criticism is Easy; I Need to Remember That Real People are Involved
+dca	10.59350/pacct-fyn86	2026-10-13T13:51:09Z	A Comparison of Decision Curve Analysis with Traditional Decision Analysis
+demohte	10.59350/c0mw1-jy188	2026-10-13T13:51:10Z	The Burden of Demonstrating HTE
+disc	10.59350/g9kgn-4mb34	2026-10-13T13:51:10Z	Data Methods Discussion Site
+ecdf	10.59350/h9xgj-kj476	2026-10-13T13:51:10Z	Parametric Models vs. Empirical Distributions and Ordinal Regression
+edca	10.59350/hceat-v6m37	2026-10-13T13:51:10Z	Seven Common Errors in Decision Curve Analysis
+ehrs-rcts	10.59350/hf5sq-zta14	2026-10-13T13:51:10Z	EHRs and RCTs:  Outcome Prediction vs. Optimal Treatment Selection
+errmed	10.59350/npzr2-e2b56	2026-10-13T13:51:10Z	Statistical Errors in the Medical Literature
+hteview	10.59350/ydz3w-0e295	2026-10-13T13:51:11Z	Viewpoints on Heterogeneity of Treatment Effect and Precision Medicine
+hxcontrol	10.59350/s4b9f-66x91	2026-10-13T13:51:11Z	Incorporating Historical Control Data Into an RCT
+hybrid	10.59350/rm4a3-rb568	2026-10-13T13:51:11Z	Wedding Bayesian and Frequentist Designs Created a Mess
+ia	10.59350/mp3v9-x7g67	2026-10-13T13:51:11Z	Implications of Interactions in Treatment Comparisons
+ideas-articles	10.59350/bk0rc-5jv57	2026-10-13T13:51:11Z	Ideas for Future Articles
+impactpo	10.59350/ywfhj-rnb22	2026-10-13T13:51:11Z	Assessing the Proportional Odds Assumption and Its Impact
+improve-research	10.59350/mjgtc-hwz22	2026-10-13T13:51:11Z	Improving Research Through Safer Learning from Data
+interactive-graphics-less	10.59350/1j8mx-crw24	2026-10-13T13:51:12Z	Interactive Statistical Graphics: Showing More By Showing Less
+introduction	10.59350/hepkr-mgd06	2026-10-13T13:51:12Z	Introduction
+ipp	10.59350/4re3z-zpz91	2026-10-13T13:51:12Z	Commentary on Improving Precision and Power in Randomized Trials for COVID-19 Treatments Using Covariate Adjustment, for Binary, Ordinal, and Time-to-Event Outcomes
+journey	10.59350/g5mn6-bj276	2026-10-13T13:51:12Z	My Journey from Frequentist to Bayesian Statistics
+kmove	10.59350/92rgp-wkx32	2026-10-13T13:51:12Z	Minimal-Assumption Estimation of Survival Probability vs. a Continuous Variable
+logrank	10.59350/25e7y-dqp68	2026-10-13T13:51:12Z	The log-rank Test Assumes More Than the Cox Model
+marg	10.59350/hchvt-3se85	2026-10-13T13:51:12Z	Unadjusted Odds Ratios are Conditional
+medml	10.59350/pymt6-1zt46	2026-10-13T13:51:13Z	Is Medicine Mesmerized by Machine Learning?
+ml-sample-size	10.59350/hwdee-pa541	2026-10-13T13:51:13Z	How Can Machine Learning be Reliable When the Sample is Adequate for Only One Feature?
+mlconfusion	10.59350/2xj46-75598	2026-10-13T13:51:13Z	In Machine Learning Predictions for Health Care the Confusion Matrix is a Matrix of Confusion
+mle	10.59350/akxc4-kmx38	2026-10-13T13:51:13Z	Statistical Computing Approaches to Maximum Likelihood Estimation
+modplan	10.59350/12tsq-s7h85	2026-10-13T13:51:13Z	Biostatistical Modeling Plan
+new-year-goals	10.59350/6526x-vyk71	2026-10-13T13:51:13Z	New Year Goals
+nfl	10.59350/ccezf-mtx27	2026-10-13T13:51:13Z	Football Multiplicities
+nhst-never	10.59350/rxzw7-6q428	2026-10-13T13:51:14Z	Null Hypothesis Significance Testing Never Worked
+ordinal-info	10.59350/sq5ca-yck12	2026-10-13T13:51:14Z	Information Gain From Using Ordinal Instead of Binary Outcomes
+pair	10.59350/btnm6-rhb87	2026-10-13T13:51:14Z	Ordinal Models for Paired Data
+path	10.59350/9st0f-38251	2026-10-13T13:51:14Z	Implementation of the PATH Statement
+pdx	10.59350/h4np8-8tq56	2026-10-13T13:51:14Z	Adjudication and Statistical Efficiency
+percent	10.59350/67hb9-4ja12	2026-10-13T13:51:15Z	Why I Don't Like Percents
+po	10.59350/b04xk-5sd68	2026-10-13T13:51:15Z	Violation of Proportional Odds is Not Fatal
+pop	10.59350/187j8-40f57	2026-10-13T13:51:15Z	Proportional Odds Model Power Calculations for Ordinal and Mixed Ordinal/Continuous Outcomes
+powilcoxon	10.59350/gj4wf-56z23	2026-10-13T13:51:15Z	Equivalence of Wilcoxon Statistic and Proportional Odds Model
+principles	10.59350/njpzb-qcd80	2026-10-13T13:51:15Z	Fundamental Principles of Statistics
+pval-litany	10.59350/ryxjp-s4y60	2026-10-13T13:51:15Z	A Litany of Problems With p-values
+pvalprobs	10.59350/f27qd-grr25	2026-10-13T13:51:15Z	p-values and Type I Errors are Not the Probabilities We Need
+rankqual	10.59350/n46tj-jn077	2026-10-13T13:51:15Z	Subjective Ranking of Quality of Research by Subject Matter Area
+rct-mimic	10.59350/5w689-nqc80	2026-10-13T13:51:16Z	Randomized Clinical Trials Do Not Mimic Clinical Practice, Thank Goodness
+rctmod	10.59350/rhwfd-tgp07	2026-10-13T13:51:16Z	Statistical Models Answer the Fundamental Clinical Question and Provide Clinical Trial Estimands
+rdist	10.59350/cy7eh-xpr80	2026-10-13T13:51:16Z	Avoiding One-Number Summaries of Treatment Effects for RCTs with Binary Outcomes
+re	10.59350/8h0mt-y4g57	2026-10-13T13:51:16Z	Longitudinal Data: Think Serial Correlation First, Random Effects Second
+rflow	10.59350/rs63f-qg541	2026-10-13T13:51:16Z	R Workflow
+robcov	10.59350/a03tx-8c842	2026-10-13T13:51:16Z	Incorrect Covariate Adjustment May Be More Correct than Adjusted Marginal Estimates
+rpo	10.59350/r2npd-zxj54	2026-10-13T13:51:16Z	Resources for Ordinal Regression Models
+score-data-reduction	10.59350/69q78-9ct71	2026-10-13T13:51:17Z	Scoring Multiple Variables, Too Many Variables and Too Few Observations: Data Reduction
+split-val	10.59350/hqg7h-8p324	2026-10-13T13:51:17Z	Split-Sample Model Validation
+stat-ml	10.59350/k58qm-jzv15	2026-10-13T13:51:17Z	Road Map for Choosing Between Statistical Modeling and Machine Learning
+stat-ml2	10.59350/e9c26-ay476	2026-10-13T13:51:17Z	Navigating Statistical Modeling and Machine Learning
+uprior	10.59350/afaax-12d93	2026-10-13T13:51:18Z	Traditional Frequentist Inference Uses Unrealistic Priors
+varyor	10.59350/4r66y-byt94	2026-10-13T13:51:18Z	Assessing Heterogeneity of Treatment Effect, Estimating Patient-Specific Efficacy, and Studying Variation in Odds ratios, Risk Ratios, and Risk Differences
+web	10.59350/8mfwj-kpb22	2026-10-13T13:51:18Z	Hosting Web Content
+wpo	10.59350/zppb0-dnd51	2026-10-13T13:51:18Z	If You Like the Wilcoxon Test You Must Like the Proportional Odds Model
+yborrow	10.59350/efxfk-at448	2026-10-13T13:51:18Z	Borrowing Information Across Outcomes
+ymult	10.59350/37nz2-vax64	2026-10-13T13:51:18Z	Musings on Multiple Endpoints in RCTs
