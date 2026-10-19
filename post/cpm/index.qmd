@@ -1,0 +1,167 @@
+---
+title: "The Unifying Capabilities of Cumulative Probability Semiparametric Models"
+author:
+- name: Frank Harrell
+  url: https://hbiostat.org
+  affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: "2026-07-26"
+date-modified: "last-modified"
+categories: [data-science, hypothesis-testing, inference, ordinal, prediction, regression, survival-analysis, teaching, "2026"]
+description: "Ordinal semiparametric regression models in the cumulative probability
+  model (CPM) family, of which proportional odds, proportional hazards, and probit
+  regression are examples, contain virtually all routinely used statistical models
+  and tests as special cases.  CPMs apply to binary, discrete ordinal, count data,
+  continuous dependent variables, and mixed continuous/discrete cases such as having clumping
+  at zero or when overriding a continuous measurement with a bad event, e.g., adding
+  ordinal levels for death or the need for emergency kidney dialysis to a continuous
+  kidney function measure.  CPMs readily analyze left-, right-, and interval-censored
+  data and cover virtually all of single-event survival analysis, with the Cox proportional
+  hazards model and accelerated failure time models as special cases.  CPMs use full
+  likelihood, so to fit the Cox model, partial likelihood and separate estimators
+  for survival curves are no longer needed.  Ordinal models are virtually as efficient
+  as parametric ones even when parametric model assumptions are met, but are robust
+  to outliers and invariant to transformations of the dependent variable.  CPMs can
+  be used to obtain estimates on the original scale, such as conditional quantiles
+  and means. For Bayesian modeling, exact uncertainty intervals for such derived quantities
+  are byproducts of the usual posterior sampling.  There are numerous didactic implications of teaching
+  a general model in place of a myriad of statistical methods."
+---
+
+::: {.quoteit}
+Disclaimer: No data were harmed during the making of this article.  Any use of binning was strictly prohibited.
+:::
+
+# Background
+
+Consider the oldest statistical regression model, the linear model, named from the fact that it is linear in the _parameters_.  Suppose that the outcome variable $Y$ is continuous, and conditional on a vector $X$ of baseline descriptors has a normal distribution. Let $X$ denote a vector of independent variables, $\beta$ a vector of regression coefficients corresponding to them, and $X\beta$ denote their inner product, i.e., $\beta_{1}X_{1} + \beta_{2}X_{2} + ... + \beta_{p}X_{p}$, also called the _linear predictor_. The linear model may be stated as
+$$Y = X\beta + \epsilon$$
+where $\epsilon$ is a _residual_ or _error term_ having a normal distribution with mean zero.  All regression models are flexible in allowing $X$ to [be expanded to contain nonlinear and non-additive terms](https://hbiostat.org/rmsc/genreg) (interactions).  The parametric linear model is inflexible with regard to the normality and constant variance assumptions for $\epsilon$ and the need for $Y$ to already be properly transformed so that effects of the baseline variables are largely additive and the error term is also additive.  Parametric methods are extremely sensitive to $Y$-transformations.
+
+Now consider a very general statistical model that is part of the [cumulative probability model](https://hbiostat.org/ordinal) (CPM) family of ordinal semiparametric models.  The ordinal dependent variable $Y$ may be continuous, discrete ordinal, count, a discrete/continuous mixture, or binary.[Discrete/continuous mixtures include continuous responses with clumping at zero and continuous variables with clinical event overrides at the extremes.  Some $Y$ values may be censored.]{.aside}  Arbitrarily many ties in $Y$ are handled automatically, as are floor and ceiling effects, lower and upper detection limits, and bi-modal distributions.
+
+::: {.callout-note collapse="true"}
+## Continuous vs. Discrete Data Models
+All continuous variables are also ordinal, although the reverse is not true.  Much of statistical theory was developed for the setting where $Y$ is truly continuous.  Over a certain continuous domain it was assumed that all values could be measured.  Continuous methods are frequently used as approximations for discrete $Y$ where this is not the case.  Some statististics decry such approximations, but the opposite situation is the most common: Most measurements have limited resolution and are discrete at the core.  Some even have spikes in the distribution.  Very few measurements made in research are truly continuous.  Ordinal models better reflect reality and do not have to be considered as approximations.  Ordinal models work just fine for continuous variables, as exemplified by the empirical distribution function, the nonparametric maximum likelihood estimator of the unknown cumulative distribution function.  If the variable is discrete, the steps of the ECDF remain large as $n \rightarrow \infty$.  Otherwise, the steps get progressively smaller.  The ECDF works for all $n$ and all degrees of discreteness.
+
+:::
+
+Let $F(x)$ denote an increasing function that varies from 0 to 1 as $x$ varies from $-\infty$ to $\infty$.  Standard cumulative distribution functions do this so are convenient choices for $F$.  A CPM may be stated as
+$$P(Y \geq y | X\beta) = F(\alpha_{y} + X\beta)$$ [Most articles state CPMs in terms of $P(Y \leq y)$ but I use $Y \geq y$ to make it consistent with how binary logistic models and Cox models are stated.]{.aside}
+where $y$ is any of the observed distinct values of the outcome $Y$, $|$ means "given" or "conditional on", and $\alpha_{y}$ denotes a series of intercepts.
+
+Note that no assumption is made that $Y$ follows a distribution $F$.  $F$ is chosen because it is monotonically increasing and sometimes because it leads to interpretable effects on the linear predictor scale.  Semiparametric models do not make absolute distributional assumptions, only relative ones.  $F$ is the specific scale on which the distribution of $Y$ is shifted by a shift in $X$.  More clearly, the model assumes that for two different values of $X$, $X_1$ and $X_2$, $g(P(Y\geq y | X_{1}))$ and $g(P(Y\geq y | X_{2}))$ are parallel to each other as a function of $y$, where   $g = F^{-1}$ is the inverse function of $F$, i.e., if $F(x) = \frac{1}{1 + \exp(-x)}$ (the expit function), $g(u) = F^{-1}(u) = \log(\frac{u}{1-u})$, the logit function or logit _link_.  This is called the proportionality or parallelism assumption.  For the proportional hazards model, one assumes the $\log(-\log(S(t)))$ are parallel for different covariate settings (here time $t$ takes the place of $y$).  Proportionality/parallelism assumptions are _relative_ distributional assumptions.
+
+Parametric models have identical parallelism assumptions.  In a linear model, parallelism comes from having the same variance of $Y$ for different $X$ settings in addition to normality of $Y$ holding for all $X$.  In addition, parametric models assume that the inverse (link) function of the cumulative probabilities is _linear_ when plotted against $y$.  Think of examining linearity of a $q-q$ plot to check for normality of residuals in a parametric linear model.  Linearity is a stronger assumption than parallelism.
+
+See [this](https://hbiostat.org/ordinal) for a gentle introduction to ordinal models.
+
+In a CPM there are as many intercepts as there are distinct $Y$-values, less one.  When the baseline variables $X$ have no effect, $\beta=0$ and the CPM is just a restatement of the empirical cumulative distribution function (ECDF), which is the nonparametric maximum likelihood estimator of the cumulative distribution of $Y$. Let's work through that.  The model in this case is $P(Y \geq y) = F(\alpha_{y})$ and the nonparametric maximum likelihood estimates of the $\alpha$s is $g(1 - F_{n}(y))$ where $g$ is the link/inverse function of $F$ and $F_{n}(y)$ is the empirical cumulative distribution function $\frac{1}{n}\sum_{i=1}^{n} [Y_{i} \leq y]$ where $[u]$ is the indicator function: 1 if $u$ is true, 0 otherwise.  [Technical detail: We need to shift by one distinct $Y$ value to get $\alpha_{y}$ from the ECDF since it pertains to $Y\leq y$ and we are modeling $Y\geq y$ not $Y > y$.]{.aside}  $F(\alpha_{y})$ is just $1 - F_{n}(y)$.
+
+The intercepts $\alpha_{y}$ encode the empirical distribution of $Y$ when $X=0$ or there is no $X$.  They will move around as needed to model any distribution of $Y$---bi-modal, discontinuous, etc.  A spike in the distribution leads to a large jump in the intercept for that point.  For the Cox proportional hazards model the intercepts represent the $\log(-\log(S_{0}(t)))$ where $S_{0}(t)$ is the underlying survival curve (a step function).
+
+When $\beta\neq 0$, a CPM can be thought of as a shifted ECDF.  CPMs are semiparametric because they are parametric with respect to $X\beta$ and non-parametric with regard to the underlying unknown $Y$ distribution.  When $Y$ has only two distinct levels and $F(u)$ is the expit function, the CPM is the binary logistic model.
+
+Let's write the linear model in CPM form.  This encapsulates all assumptions of the linear model in one formula.  Let $\Phi$ denote the cumulative distribution function of a standard normal distribution.  $\beta_0$ is the ordinary $Y$-scaled intercept.
+
+\begin{array}{c}
+P(Y \geq y | X) = P(\frac{Y - \beta_{0} - X\beta}{\sigma} \geq \frac{y - \beta_{0} - X\beta}{\sigma}]\\
+= 1-\Phi(\frac{y - \beta_{0} - X\beta}{\sigma}) = \Phi(\frac{\beta_{0} - y}{\sigma}+\frac{X\beta}{\sigma})
+\end{array}
+
+So $\alpha_{y} = \frac{\beta_{0} - y}{\sigma}$ and $\sigma$ is absorbed in $\beta$.  The intercepts $\alpha$ are
+linear in $y$ whereas they are arbitrarily descending in general semiparametric CPMs.  Linear predictors in CPMs are unitless.  This has an advantage of making CPMs for different $Y$ comparable.  For example
+
+* One can compare deviances for two fitted models using different link functions since the deviance under $H_{0}:\beta=0$ is link-independent.  Deviances can be used to choose the best fitting link function.
+* One can compare standard errors of $\beta$ when $Y$ is tragically dichotomized to the SE when $Y$ is decimated into 10 bins to the SE when $Y$ is kept continuous and not binned.  Efficiency losses from using partial information can be computed empirically.
+
+CPMs work perfectly well for [continuous $Y$](https://hbiostat.org/rmsc/cony).  The R `orm` function in the `rms` package has no limit on the number of intercepts.  A sample of size $n=300,000$ with 10 covariates and no ties on $Y$ (i.e., the model has 299,999 intercepts) can be fitted in 2.5 seconds. [This is possible because the part of the Hessian matrix corresponding to intercepts is tri-band diagonal, even if right-censoring is present.  This is very sparse and leads to virtually instant matrix inversion.]{.aside}
+
+# Link Functions
+
+The choice of $F$, or equivalently its inverse, the link function $g$, specifies the _relative distributional assumption_, i.e., the transformed scale for which CDFs are parallel.  Commonly used distribution families/link functions are below with $\Phi$ again denoting the standard normal CDF.  The last column displays what connection the model assumes for the distributions of $Y$ for different $X$.
+
+| Distribution | $F$ | Link Function | Link Name | Connection |
+|-----|-----|-----|-----|-----|
+| Logistic | $[1 + \exp(-y)]^{-1}$ | $\log(\frac{y}{1-y})$ | logit | $\frac{P_{2}}{1-P_{2}} = \frac{P_{1}}{1-P_{1}} \exp(\Delta)$ |
+| Gaussian | $\Phi(y)$            | $\Phi^{-1}(y)$ | probit | $P_{2}=\Phi(\Phi^{-1}(P_{1})+\Delta)$ |
+| Gumbel maximum value| $\exp(-\exp(-y))$ | $\log(-\log(y))$ | $\log-\log$ | $P_{2}=P_{1}^{\exp(\Delta)}$ |
+| Gumbel minimum value| $1 - \exp(-\exp(y))$ | $\log(-\log(1 - y))$ | complementary $\log-\log$ | $1-P_{2}=(1-P_{1})^{\exp(\Delta)}$ |
+| Cauchy | $\frac{1}{\pi}\tan^{-1}(y) + \frac{1}{2}$ | $\tan[\pi(y - \frac{1}{2})]$ | cauchit |
+
+: Distribution families used in ordinal cumulative probability models. $\Phi$ denotes the Gaussian cumulative distribution function.  For the Connection column, $P_{1}=P(Y \geq y | X_{1}), P_{2}=P(Y \geq y | X_{2}), \Delta=(X_{2}-X_{1})\beta$.  The connection specifies the only distributional assumption if the model is fitted semiparametrically, i.e, contains an intercept for every unique $Y$ value less one.  For parametric models, $P_{1}$ must be specified absolutely instead of just requiring a relationship between $P_{1}$ and $P_{2}$.  For example, the traditional Gaussian parametric model specifies that $\Pr[Y \geq y | X] = 1 - \Phi(\frac{y - \beta_{0} - X\beta}{\sigma}) = \Phi(\frac{\beta_{0} - y + X\beta}{\sigma})$. {#tbl-links}
+
+The Gumbel maximum value distribution is also called the extreme value type I distribution.  This distribution
+($\log-\log$ link) also represents a continuous time proportional hazards model.
+
+# General Advantages of CPMs
+
+* CPMs have the potential to revolutionize how applied statistics is taught.  Instead of a hodge-podge of seemingly disconnected methods and the typical cookbook approach of teaching how to select from among them, a unified model with unified model diagnostics can be taught.
+* CPMs handle a huge variety of types of dependent variables and all types of censoring.
+* CPMs are robust, e.g., are unaffected by $Y$-outliers and $\alpha$ and $\beta$ don't change if $Y$ is transformed by a monotonically increasing function.
+* They are efficient.  For example the proportional odds model that compares two groups without covariate adjustment (i.e., the Wilcoxon test), is $\frac{3}{\pi} = 0.955$ as efficient as the two-sample $t$-test when normality and equal variances hold.  When these do not hold, the semiparametric approach can be arbitrarily more efficient than the parametric approach.
+* They don't assume anything about the distribution of $Y$ for a given $X$.
+* They encompass a huge number of standard methods under one model family.
+* CPMs provide a wide number of readouts including cumulative probabilities, survival curves, restricted mean survival time, probability of an outcome at a specific level $y$, effect ratios, and covariate-specific differences in means and quantiles, along with uncertainty intervals.  When doing a Wilcoxon test using the proportional odds model, the model can be used to estimate any measure of central tendency; nonparametric tests are thus no longer isolated from general estimation.
+* Being based on a standard likelihood function, penalized estimation can be straightforward.
+* Also because of being likelihood-based, CPMs are readily used in Bayesian modeling.  For example, it is easy to obtain a Bayesian Wilcoxon test.
+
+# Special Cases {#cpmcases}
+
+The CPM family of models encompasses an amazing list of statistical tests and models as special cases as summarized in the following table.  CPM implementations that lead to the special cases are given, along with some links to further discussions.  Note that the Wilcoxon signed-rank test, which is not transformation-invariant for $Y$, is now considered obsolete.  It is replaced by the [rank difference test](https://hbiostat.org/bbr/nonpar#sec-nonpar-rd) of Kornbrot (1990) which is [easily implemented in a proportional odds model](https://hbiostat.org/bbr/nonpar#sec-nonpar-pairmodel) by including subject random effects or using a robust cluster sandwich estimator to deal with having a pair of observations from each subject.
+
+For some of the cases, a link to more information is given.  $g$ is the link function, with "$g$ = any" meaning the choice of link is irrelevant.  The probit link is the normal CDF inverse function, the logit link is the inverse of the logistic CDF, and the $\log-\log(y)$ link goes along with the Gumbel maximum value distribution used to generate the Cox proportional hazards model.  $\beta=0$ below means that covariates $X$ are not included in the model.  For a parametric model or test, there is a CPM containing it as a special case in the sense that the intercepts may fortuitously be linear in $Y$ as dictated by the parametric method.
+
+For the `Code` column, the R `rms` package `orm` function code needed to perform the analysis is given.  In the code, `id` refers to a unique subject ID variable, `X` refers to one or more general covariates, `Tr` refers to a possibly right censored event-time variable, and `Ti` to a possible interval-censored variable.  `Tr` would be created with the `rms` `Ocens` function, e.g. `Ocens(t1, t2)` where a `t1` value may be a right censoring time and `t2` $=\infty$.  For `Ti`, a row may contain `t1` = lower interval endpoint, `t2` = upper interval endpoint, with `t2`>`t1`.  When there is no `X`, `orm.fit` (which is called by `orm`) is used instead of `orm`.
+
+| Test or Estimator | CPM Implementation | Code | More Information |
+|-----|-----|-----|-----|
+| ECDF         | $g$=any, $\beta=0$                        | `orm.fit(y=y)` | |
+| Kaplan-Meier | $g$=any, right-censored $Y$, $\beta=0$    | `orm.fit(y=Tr)` | [ℹ️](https://hbiostat.org/rmsc/ordsurv) |
+| Turnbull     | $g$=any, interval-censored $Y$, $\beta=0$ | `orm.fit(y=Ti)` | [ℹ️](https://hbiostat.org/rmsc/ordsurv) |
+| Proportions, sample mean, quantiles, pseudomedian | $g$=any, $\beta=0$ | `orm.fit(y=y)` | |
+| $k\times 2$ Pearson $\chi^2$ | $Y$ binary, $g$=any, $X=k - 1$ indicator variables | `orm(y ~ X)` | |
+| Binary logistic | $g$=logit, $Y$ has 2 levels | `orm(y ~ X)` | |
+| Proportional odds model | $g$=logit | `orm(y ~ X)` | |
+| Probit model | $g$=probit | `orm(y ~ X, family='probit')` | |
+| 2-sample $t$-test | $g$=probit, $X$ binary, $\alpha_{y} = \frac{\beta_{0} - y}{\sigma}$ | `orm(y ~ X, family='probit')` | [ℹ️](https://hbiostat.org/rmsc/cony) |
+| paired $t$-test | $g$=probit, $X$ binary, random intercepts or sandwich estimator | `orm(y ~ X + cluster(id), family='probit')` | [ℹ️](https://hbiostat.org/bbr/nonpar#sec-nonpar-pairmodel) |
+| $k$-group ANOVA | $g$=probit, $X$ generates $k - 1$ indicator variables | `orm(y ~ X, family='probit')` | |
+| linear model | $g$=probit, $\alpha_{y} = \frac{\beta_{0} - y}{\sigma}$ | `orm(y ~ X, family='probit')` | [ℹ️](https://hbiostat.org/rmsc/cony) |
+| 2-sample Wilcoxon | $g$=logit, $X$ binary | `orm(y ~ X)` | [ℹ️](https://www.fharrell.com/post/powilcoxon/index.html) |
+| paired Wilcoxon | $g$=logit, $X$ binary, random intercepts or sandwich estimator | `orm(y ~ X + cluster(id))` | [ℹ️](https://hbiostat.org/bbr/nonpar#sec-nonpar-pairmodel) |
+| $k$-group Kruskal-Wallis | $g$=logit, $X$ generates $k - 1$ indicator variables | `orm(y ~ X)` | |
+| Normal scores test | $g$=probit, $X$ binary | `orm(y ~ X, family='probit')` | |
+| logrank test | $g$=log-log, right-censored $Y$, $X$ binary | `orm(Tr ~ X, family='loglog')` | [ℹ️](https://www.fharrell.com/post/logrank) |
+| Cox PH model | $g$=log-log, censored $Y$ | `orm(Tr ~ X, family='loglog')` | [ℹ️](https://hbiostat.org/rmsc/ordsurv) |
+| Accelerated failure time model | $g$=probit or logit, censored $Y$ | `orm(Tr ~ X, family='probit')` | [ℹ️](https://hbiostat.org/rmsc/ordsurv) |
+
+: Special cases of CPMs {#tbl-cases}
+
+Note that accelerated failure time models often incorporate [log-normal or log-logistic distributions](https://hbiostat.org/rmsc/parsurv) which assume that the log transformation of time is a perfect transformation.  The CPM approach provides the same estimates whether or not time is logged, so do not depend on the correctness of the log transformation.
+
+# Extensions for Longitudinal Data
+
+CPM models readily extend to repeated measures/longitudinal binary, ordinal, and continuous data as discussed [here](https://hbiostat.org/rmsc/markov) and in [Ordinal state transition models as a unifying risk prediction framework](https://www.fharrell.com/talk/icsa) and [here](https://www.fharrell.com/talk/rcteff).  Discrete time Markov Ordinal State Transition (MOST) models are the most general.  One can instead use standard random intercepts if the within-subject correlation structure is compound symmetric (e.g., correlations do not decrease with increasing time gaps).  A blend of the two is usually better: include a first-order Markov process and random intercepts.  This allows for a longitudinal correlation structure that can range from a serial correlation AR(1) form to a compound symmetric exchangeable form.
+
+The MOST approach unifies many other approaches, including the following as special cases:
+
+* Single follow-up time ordinal models
+* Cox proportional hazards model (transition probabilities are discrete hazards and odds ratios are almost identical to hazard ratios)
+* multi-state time-to-event models
+* recurrent events
+* recurrent events in the presence of an absorbing state
+
+When subjects have similar numbers of longitudinal measurements and there are almost no missing measurements or dropouts, a GEE approach can be considered.  A working independence correlation structure is often used to estimate the regression coefficients, then the standard errors are adjusted for intra-subject correlation using a cluster sandwich robust covariance estimator.  This was done [here](https://hbiostat.org/bbr/nonpar#sec-nonpar-pairmodel) so that a proportional odds model could provide a Wilcoxon-type rank difference test for paired data.
+
+
+# Summary
+
+The CPM family of models handle huge varieties of types of dependent variables and of standard statistical tests and estimators.  CPMs do this while maintaining excellent power and being more robust than distribution- or transformation-dependent parametric approaches.  They provide a completely unified approach for the majority of common statistical analysis needs.  Teaching of applied statistics should focus on CPMs.
+
+# Resources
+
+* [General resources for ordinal models](https://hbiostat.org/ordinal)
+* [Ordinal models for continuous $Y$](https://hbiostat.org/rmsc/cony)
+* [Ordinal regression for survival analysis](https://hbiostat.org/rmsc/ordsurv)
+* [R `rms` package `orm` function](https://www.rdocumentation.org/packages/rms/versions/8.1-1/topics/orm)
+* [R `rmsb` package for Bayesian proportional odds models](https://hbiostat.org/R/rmsb)

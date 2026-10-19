@@ -1,0 +1,16 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2026-05-21
+title: "Implications of the Draft FDA Bayesian Guidance"
+description: "I was fortunate while on detail from Vanderbilt University to FDA CDER to be able to participate in numerous Bayesian committees and to provide input into the drafting of the new Bayesian guidance for drugs and biologics.  This talk will reflect on why I think the guidance is important and will lead to better decision making and efficiency in drug and biologics development.  The talk expands on some of the thoughts in Lee, Harrell, LaVange, Spiegelhalter, JAMA 2026.
+<br><br>
+The draft guidance was a long time coming but its arrival is celebrated.  It offers opportunities for providing evidence measures that are more actionable and states that Bayesian methods are applicable in any context, not just specialized ones such as adaptive clinical trials or when borrowing information in rare diseases.  It also puts forward pure Bayesian operating characteristics for the first time at FDA, and sets the stage for recasting multiplicity as a problem caused by assertions that are too easy to be true in any paradigm, rather than a problem to be addressed on the back-end through the use of arbitrary adjustments on the randomness scale."
+categories: [2026, bayes, design, drug-development, drug-evaluation, inference, multiplicity, p-value, posterior, RCT, sample-size, sequential]
+---
+
+* Events
+  - AstraZenica Global Statistical Forum and Washington Statistical Society 2026-05-21
+* [Slides](https://hbiostat.org/talks/bguide.html)
+* [Video](https://youtu.be/ITYzGyFctsY)

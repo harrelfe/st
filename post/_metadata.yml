@@ -1,8 +1,16 @@
 # options specified here will apply to all posts in this folder
 
+author:
+  - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
+    affiliation: Vanderbilt University School of Medicine
+
 # freeze computational output
 # (see https://quarto.org/docs/projects/code-execution.html#freeze)
-freeze: auto
+# true: don't even run R if .qmd file changes, when rendering whole project
+# quarto render my.qmd to re-render an individual article that changed
+# and you want o trigger an update to the master article associated with DOI
+freeze: true
 
 # Enable banner style title blocks
 title-block-banner: false
@@ -11,4 +19,10 @@ title-block-banner: false
 license: "CC BY"
 
 bibliography: /Users/harrelfe/web/bib/harrelfe.bib
+
+citation:
+  type: webpage
+  container-title: "Statistical Thinking"
+google-scholar: false
+
 

@@ -1,0 +1,13 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2026-04-16
+title: "Questions We Forget To Ask When Designing an RCT"
+description: "Randomized clinical trial designs tend to be traditional, and there is a lot of inertia working against the use of modern designs.  There are also a lot of futile RCTs, many resulting from the use of fixed sample sizes powered to detect a level of therapeutic effectiveness that is greater than the minimum clinically important difference.  When there are multiple outcome components, it is not uncommon for a trial to result in confusion about which treatment provides the most benefit to patients.  This talk asks a series of questions that statisticians and clinical trialists should answer before accepting the status quo."
+categories: [2026, bayes, design, drug-development, drug-evaluation, endpoints, inference, measurement, multiplicity, p-value, posterior, RCT, sample-size, sequential]
+---
+
+* Events
+  - [JHU Trial Innovation Center DIDACT Symposium](https://ictr.johnshopkins.edu/event/2026-jhu-trial-innovation-center-didact-symposium) 2026-04-16
+* [Slides](https://hbiostat.org/talks/rct-questions.html)

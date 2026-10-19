@@ -1,0 +1,485 @@
+---
+title: "When Equal Survival Proves Nothing"
+author:
+- name: Frank Harrell
+  url: https://hbiostat.org
+  affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+date: "2026-10-03"
+date-modified: "last-modified"
+draft: true
+categories: ["2026", causal, conditioning, endpoints, evidence, generalizability, inference, ordinal, principles, RCT, survival-analysis]
+description: "When some patients die before an outcome such as weight can be measured, comparing treatment groups among survivors can be badly misleading even in a randomized trial. A popular repair assumes that treatment changes no patient's survival, and offers equal survival in the two treatment groups as a check on that assumption. Using a simulated trial in which the truth is known exactly, this article shows that the check can pass perfectly while the survivor comparison reports a convincing treatment effect that does not exist; that no assumption about the unobservable can rescue the approach; and that what the comparison actually requires is a different and more checkable condition. A longitudinal ordinal model that treats death as the worst outcome asks a clinically meaningful question the data can answer, recovers the true effects, and shows how the assumption should have been checked. The broader lesson is that formal machinery gives false comfort when it rests on assumptions that cannot be verified, or when it quietly changes the question being asked."
+bibliography:
+  - /Users/harrelfe/web/bib/harrelfe.bib
+  - grateful-refs.bib
+code-fold: true
+---
+
+```{r}
+#| label: setup
+require(rms)
+require(data.table)
+require(tinyplot)
+tinytheme('dynamic')
+options(prType = 'html')
+
+rnd  <- function(x) round(x, 3)
+pct  <- function(x) round(100 * x, 1)                    # proportion -> percent
+pexp <- function(p) paste0('$', latexSN(signif(p, 2)), '$')
+r2   <- function(fit) {                                   # last-listed R^2
+  s <- fit$stats
+  unname(s[max(grep('^R2', names(s)))])
+}
+res  <- list()                                            # quantities quoted in the text
+```
+
+# The Question
+
+Consider a randomized trial comparing two antidepressants. Weight gain is a well-known side effect of many such drugs, so a natural secondary question is how much the newer drug changes weight compared with the older one. Each patient's weight is measured every week for the duration of the trial, and some patients die during follow-up.
+
+For a patient who dies, weight after death is not missing in the usual sense. It does not exist. So what does "the effect of treatment on weight" mean when not everyone is alive to be weighed? [Regulatory guidance calls death an *intercurrent event*: something that happens after treatment starts and affects whether or how the outcome can be measured. See the [ICH E9(R1) addendum](https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf).]{.aside}
+
+The simplest analysis compares average weight at the end of the trial between the treatment groups, among the patients still alive. This is tempting and often wrong. Randomization makes the two treatment groups comparable at the start of the trial. It does not make comparable a subset of patients selected by something that happened *after* randomization, and survival is exactly such a thing. If treatment affects who survives, the survivors in one group can be a different kind of patient from the survivors in the other, and a difference in their weights may say nothing at all about what treatment does to weight. [Outcomes like this are said to be *truncated by death*.]{.aside}
+
+# A Proposed Repair
+
+One way out is to change what is being estimated. Instead of the effect of treatment on everyone randomized, estimate the effect among patients who would have survived whichever treatment they were given. If treatment changes no patient's survival—if every patient who survives on one treatment would also survive on the other, and every patient who dies on one would also die on the other—then the survivors in the two groups are the same kind of patient, randomization still protects the comparison, and the simple survivor comparison estimates that effect.
+
+[In the causal inference literature, $S(a)$ denotes whether a patient would survive if given treatment $a$. The assumption is $S(1) = S(0)$ for every patient. The target is the treatment effect within the *principal stratum* of "always survivors" [@fra02pri], often called the survivor average causal effect.]{.aside}
+
+The assumption is strong, and its defenders offer a check. In a recent [discussion on datamethods.org](https://discourse.datamethods.org/t/causal-formalism-and-rcts/), Iván Díaz stated it as "treatment changes no individual's survival" and pointed out that it "implies P(S=1|A=1)=P(S=1|A=0), so the assumption is falsifiable." In words: if treatment changes no one's survival, the proportion surviving must be the same in both treatment groups. That is correct. Published guidance on handling death in trials goes a step further, describing the assumption as "testable, since it implies comparable survival across arms" [@pha25est].
+
+The difference between those two statements matters. *Falsifiable* means that a failed check refutes the assumption. *Testable* suggests something more—that a passed check supports it. Unequal survival would indeed refute the assumption, but equal survival need not support it, because treatment could save some patients and kill an equal number of others. [If A implies B, observing B does not establish A. Reasoning otherwise is the logical error known as *affirming the consequent*.]{.aside}
+
+So how much comfort should a passed check give? The way to find out is to study a trial in which the truth is known.
+
+# A Simulated Trial Where the Truth Is Known
+
+```{r}
+#| label: parameters
+m      <- 26        # weeks of scheduled follow-up
+npg    <- 6000      # patients per treatment group
+pfrail <- 0.5       # probability that a patient is frail
+wlev   <- c(frail = 60, robust = 80)   # centers of true weight levels (kg)
+sdlev  <- 5         # between-patient SD of true weight level (kg)
+sdmeas <- 3         # SD of a single weight measurement (kg)
+wtdead <- 1000      # weight value used to record death; exceeds every real
+                    # weight, so death is automatically the worst outcome
+
+##  Probability of surviving to week m, by kind of patient and treatment.
+##  Defined once here so that the data generator, the tables, and the
+##  reference lines in the figures can never disagree.
+psurv <- matrix(c(0.80, 0.90,          # frail:  treatment helps
+                  0.95, 0.85),         # robust: treatment harms
+                nrow = 2, byrow = TRUE,
+                dimnames = list(c('frail', 'robust'), c('control', 'active')))
+overall <- as.vector(c(pfrail, 1 - pfrail) %*% psurv)
+```
+
+The simulated trial randomizes `r npg` patients to each of two treatments and weighs every patient once a week for `r m` weeks. The data are generated so that two things are true by construction: treatment has *no effect on any patient's weight*, and the overall proportion of patients surviving is *identical* in the two treatment groups.
+
+There are two kinds of patients, and the investigator cannot tell them apart. *Frail* patients tend to be lighter, with true weight levels centered at `r wlev['frail']` kg. *Robust* patients tend to be heavier, centered at `r wlev['robust']` kg. A patient is frail with probability `r pfrail`. Treatment helps frail patients survive and harms robust ones. The chance of surviving to week `r m` is:
+
+```{r}
+#| label: tbl-survival
+#| tbl-cap: "Probability of surviving to the end of follow-up, by kind of patient and treatment. Frailty is never observed by the investigator."
+tab <- rbind(psurv, overall)
+dimnames(tab) <- list(c('Frail (lighter)', 'Robust (heavier)', 'All patients'),
+                      c('Control', 'Active'))
+knitr::kable(tab, digits = 3)
+```
+
+The gains among frail patients exactly offset the losses among robust ones, so the overall chance of survival is `r rnd(overall[1])` under control and `r rnd(overall[2])` under the active treatment.
+
+Each patient's true weight level varies around the center for their kind, with a standard deviation of `r sdlev` kg, and each weekly measurement adds independent measurement error with a standard deviation of `r sdmeas` kg. Weight is recorded at baseline (week 0) and every week while the patient is alive. The record simply ends at death. Treatment appears nowhere in the weight process. @fig-schematic summarizes the structure.
+
+```{dot}
+//| label: fig-schematic
+//| fig-cap: "How the simulated data are generated, and why a comparison of survivors fails. Frailty (dashed border) is never observed; it determines both how heavy a patient is and how likely they are to die. Treatment affects only the chance of dying, helping frail patients and harming robust ones, and has no effect on anyone's weight. Death ends a patient's weight record. Restricting attention to survivors opens the path treatment → death ← frailty → weight: because survival depends on both treatment and frailty, treated and control survivors differ in frailty, and therefore in weight. In DAG language, survival is a collider."
+digraph sim {
+  rankdir = LR;
+  graph [fontname = "Helvetica", nodesep = 0.6, ranksep = 1.1];
+  node  [fontname = "Helvetica", fontsize = 12, shape = box,
+         style = "rounded,filled", fillcolor = "#f4f4f4", color = "#555555"];
+  edge  [fontname = "Helvetica", fontsize = 10, color = "#555555"];
+
+  U [label = "Frailty\n(never observed)", style = "rounded,dashed"];
+  T [label = "Randomized\ntreatment"];
+  D [label = "Death during\nfollow-up"];
+  W [label = "Weekly\nweight"];
+
+  { rank = same; U; T; }
+
+  U -> W [label = "frail patients\nare lighter"];
+  U -> D [label = "sets the\nrisk of dying"];
+  T -> D [label = "helps the frail survive,\nharms the robust"];
+  D -> W [label = "ends the\nweight record", arrowhead = tee];
+  T -> W [label = "no effect on\nany patient", style = dashed, color = "#bbbbbb",
+          fontcolor = "#999999", arrowhead = none];
+}
+```
+
+Survival is governed by a constant weekly risk of death, set by the patient's kind and treatment so as to reproduce the probabilities above. One more device makes the simulation useful for our purpose. Each patient carries a single random number that determines when they would die under *either* treatment, and the treatment they were actually randomized to decides which of the two outcomes we get to see. No real trial can see both, but a simulation can, and that lets us count exactly how many patients treatment saved or killed instead of arguing about it. [Sharing one random number between the two treatments links the patient's two potential survival outcomes so that they agree as often as possible (a *comonotonic coupling*). It is therefore the arrangement *most favorable* to the assumption that treatment changes no one's survival.]{.aside}
+
+Here is the function that generates the complete record of one patient.
+
+```{r}
+#| label: generator
+##  Generate the record of ONE patient.
+##    tx : 0 = control, 1 = active treatment
+##    m  : weeks of scheduled follow-up
+##
+##  Frailty U (1 = frail, 0 = robust) is never seen by the investigator.
+##  It sets the true weight level and the risk of dying, and is the only
+##  link between weight and death.  Treatment enters ONLY the survival
+##  probability, never the weight process.
+##
+##  Records returned, one per scheduled visit:
+##    weeks 0, 1, ..., tlast   real weights; tlast is the last scheduled
+##                             week strictly before death (capped at m)
+##    one further record       only if death occurs during follow-up: week
+##                             tlast + 1 with wt = wtdead
+##  A patient alive at week m has exactly m + 1 records.  Nothing is missing.
+##
+##  U, S0 and S1 are the unobservable truth, returned only so the article
+##  can report what the design did.  No analysis below ever uses them.
+
+gen1 <- function(tx, m) {
+  U      <- rbinom(1, 1, pfrail)                    # 1 = frail, 0 = robust
+  level  <- wlev[2L - U] + rnorm(1, 0, sdlev)       # true weight level, kg
+  p      <- psurv[2L - U, ]                         # c(control, active)
+  ##  One random number per patient, shared by both treatments.  Surviving
+  ##  to week m under treatment a is exactly V < p[a].
+  V      <- runif(1)
+  tdeath <- -log(V) / (-log(p[tx + 1L]) / m)        # constant weekly hazard
+  S0     <- V < p['control']                        # survives under control?
+  S1     <- V < p['active' ]                        # survives under active?
+  ##  as.integer() matters: data.table needs the same column type for every
+  ##  patient, and ceiling() returns a double
+  tlast  <- as.integer(min(m, ceiling(tdeath) - 1))
+  week   <- 0L : tlast
+  wt     <- level + rnorm(length(week), 0, sdmeas)  # no treatment term
+  if(tdeath <= m) {                                 # death during follow-up
+    week <- c(week, tlast + 1L)
+    wt   <- c(wt,   wtdead)
+  }
+  data.table(week = week, wt = wt, U = U, S0 = S0, S1 = S1)
+}
+```
+
+The generator is run once for every patient. The grid crosses a patient number with treatment, giving `r npg` patients in each group.
+
+```{r}
+#| label: simulate
+set.seed(23)
+grid <- setDT(expand.grid(i = 1 : npg, m = m, tx = 0 : 1))
+grid[, id := .I]
+dall <- grid[, gen1(tx, m), by = .(id, tx)]
+dall[, dead := wt == wtdead]
+dall[, wt0  := wt[week == 0], by = id]                 # baseline weight
+```
+
+## What the Design Guarantees
+
+```{r}
+#| label: guarantees
+b0   <- dall[week == 0, .(mean = mean(wt), sd = sd(wt)), by = tx][order(tx)]
+surv <- dall[, .(alive = ! any(dead)), by = .(id, tx)]
+sm   <- surv[, .(n = .N, alive = sum(alive)), by = tx][order(tx)]
+tru  <- dall[week == 0, .(tx, U, S0, S1)]
+
+res$b0mean <- b0$mean
+res$b0sd   <- b0$sd
+res$b0p    <- t.test(wt ~ tx, data = dall[week == 0])$p.value
+res$b0ks   <- suppressWarnings(ks.test(dall[week == 0 & tx == 0, wt],
+                                       dall[week == 0 & tx == 1, wt])$p.value)
+res$surv   <- sm$alive / sm$n
+res$survp  <- prop.test(sm$alive, sm$n)$p.value
+res$disc   <- tru[, mean(S0 != S1)]
+res$saved  <- tru[, mean(! S0 &   S1)]
+res$killed <- tru[, mean(  S0 & ! S1)]
+```
+
+The simulated trial behaves exactly as designed. Mean baseline weight is `r rnd(res$b0mean[1])` kg (SD `r rnd(res$b0sd[1])`) in the control group and `r rnd(res$b0mean[2])` kg (SD `r rnd(res$b0sd[2])`) in the active group. Because both groups are drawn from the same distribution, any difference is due to chance alone (P = `r pexp(res$b0p)` for the means, `r pexp(res$b0ks)` for the whole distributions). Overall survival to week `r m` is `r rnd(res$surv[1])` under control and `r rnd(res$surv[2])` under the active treatment, and a test of equal survival gives P = `r pexp(res$survp)`. [The distributions are compared with the Kolmogorov–Smirnov test, survival proportions with the $\chi^2$ test.]{.aside}
+
+*The check passes.* Yet treatment changed whether `r pct(res$disc)`% of patients survived: it saved `r pct(res$saved)`% of patients who would have died on control, and killed `r pct(res$killed)`% who would have lived.
+
+# The Survivor Comparison Gets the Wrong Answer
+
+```{r}
+#| label: survivors
+wm <- dall[week == m & ! dead]
+tt <- t.test(wt ~ tx, data = wm)        # estimates control - active
+res$survcon    <- wm[tx == 1, mean(wt)] - wm[tx == 0, mean(wt)]
+res$survcon_ci <- sort(- tt$conf.int)
+res$survcon_p  <- tt$p.value
+res$frail0     <- tru[, mean(U), by = tx][order(tx), V1]   # at randomization
+res$frailm     <- dall[week == m & ! dead, mean(U), by = tx][order(tx), V1]
+```
+
+Now do what an analyst might do: compare week-`r m` weights among patients still alive. Survivors on the active treatment weigh `r rnd(res$survcon)` kg relative to survivors on control (0.95 confidence interval `r rnd(res$survcon_ci[1])` to `r rnd(res$survcon_ci[2])`, P = `r pexp(res$survcon_p)`). The report would say the new drug lowers weight, with overwhelming statistical evidence. In truth it changes no patient's weight at all.
+
+The reason is the one @fig-schematic predicts. At randomization the proportion of frail patients is `r rnd(res$frail0[1])` in the control group and `r rnd(res$frail0[2])` in the active group. Among patients still alive at week `r m` it is `r rnd(res$frailm[1])` and `r rnd(res$frailm[2])`. Treatment kept more of the light patients alive and fewer of the heavy ones, so its survivors are lighter. Randomization balanced the groups; mortality unbalanced the survivors.
+
+A signature of this kind of artifact is that it is created by deaths. Before anyone has died there is nothing to unbalance, so the apparent effect must start at zero and grow as deaths accumulate. A real effect of treatment on weight is under no such constraint. A second clue comes from looking at each patient's change from their own baseline weight instead of their weight level. Selection by death acts on how heavy a patient is, and subtracting each patient's baseline weight removes that. [Change from baseline is used here as a diagnostic, not as a recommended analysis. Its usual drawbacks are discussed [here](https://hbiostat.org/bbr/change).]{.aside}
+
+```{r}
+#| label: artifact-data
+npat <- uniqueN(dall$id)
+
+##  A patient alive at week t has exactly one record at week t; a patient
+##  who died earlier has none.  So counting records gives both the number
+##  at risk and cumulative mortality.
+tc <- dall[dead == FALSE & week >= 1, {
+  y1 <- wt[tx == 1]
+  y0 <- wt[tx == 0]
+  c1 <- (wt - wt0)[tx == 1]
+  c0 <- (wt - wt0)[tx == 0]
+  .(nalive    = .N,
+    level     = mean(y1) - mean(y0),
+    level_se  = sqrt(var(y1) / length(y1) + var(y0) / length(y0)),
+    change    = mean(c1) - mean(c0),
+    change_se = sqrt(var(c1) / length(c1) + var(c0) / length(c0)))
+}, by = week][order(week)]
+tc[, pct_dead := 100 * (1 - nalive / npat)]
+
+L <- melt(tc,
+          id.vars       = .q(week, pct_dead),
+          measure.vars  = list(.q(level, change), .q(level_se, change_se)),
+          value.name    = .q(est, se),
+          variable.name = 'analysis')
+L[, analysis := factor(analysis, 1 : 2,
+                       c('Weight among survivors',
+                         'Change from baseline among survivors'))]
+L[, `:=`(lo = est - 1.96 * se, hi = est + 1.96 * se)]
+
+res$r_level   <- cor(tc$level, tc$pct_dead)
+res$level_m   <- tc[week == m, level]
+res$change_m  <- tc[week == m, change]
+res$change_se <- tc[week == m, change_se]
+res$pctdead_m <- tc[week == m, pct_dead]
+
+cap_artifact <- paste0(
+  'Treatment contrasts among patients still alive, plotted against the ',
+  'percentage who have died by that week, with 0.95 confidence bands. ',
+  "Treatment changes no patient's weight, yet the contrast in weight level ",
+  'tracks cumulative mortality almost exactly (r = ', rnd(res$r_level),
+  '), reaching ', rnd(res$level_m), ' kg once ', round(res$pctdead_m, 1),
+  '% have died. The contrast in change from baseline, which cancels the ',
+  'weight level that mortality selects on, stays near zero throughout.')
+```
+
+```{r}
+#| label: fig-artifact
+#| fig-cap: !expr cap_artifact
+plt(est ~ pct_dead | analysis, data = L, ymin = lo, ymax = hi,
+    type = type_ribbon(),
+    xlab = 'Patients who have died by this week (%)',
+    ylab = 'Treatment contrast (kg)')
+abline(h = 0, lty = 1)
+```
+
+@fig-artifact shows both. The contrast in weight among survivors grows in almost perfect proportion to cumulative mortality, while the contrast in change from baseline stays close to zero, ending at `r rnd(res$change_m)` kg with a standard error of `r rnd(res$change_se)`. [The change contrast wanders a little because each patient's single baseline measurement, with its measurement error, is shared by all of that patient's later weeks. Its wandering is consistent with chance.]{.aside}
+
+# No Assumption About the Unseeable Can Rescue It
+
+In a real trial nobody ever sees both survival outcomes for the same patient: each patient receives one treatment, and what would have happened on the other is never observed. How a patient's two hypothetical outcomes go together cannot be learned from any data, however many patients are studied [@daw00cau; @sen04ind; @sen11inv; @daw23per]. One might therefore suspect that the simulation stacked the deck by choosing a convenient way for the two outcomes to go together.
+
+It did the opposite. Within each kind of patient, the two survival probabilities in @tbl-survival differ, and that alone forces a minimum number of patients whose survival treatment changes, whatever is assumed about the unobservable. The table below shows how many patients have their survival changed by treatment under different ways the two outcomes could go together, all consistent with this design.
+
+```{r}
+#| label: tbl-coupling
+#| tbl-cap: "Percent of patients whose survival is changed by treatment, under different ways a patient's two potential survival outcomes could be linked. Every row is consistent with the same design; the data can never say which is true."
+p0  <- psurv[, 'control']
+p1  <- psurv[, 'active' ]
+w   <- c(pfrail, 1 - pfrail)
+cpl <- rbind(abs(p1 - p0),                           # outcomes agree when possible
+             p1 * (1 - p0) + p0 * (1 - p1),           # independent
+             abs(p1 - p0),                           # smallest possible
+             p1 + p0 - 2 * pmax(0, p1 + p0 - 1))      # largest possible
+cpl <- cbind(cpl, overall = as.vector(cpl %*% w))
+res$floor <- cpl[3, 'overall']
+res$ceil  <- cpl[4, 'overall']
+dimnames(cpl) <- list(c('As simulated (agree as often as possible)',
+                        'Independent',
+                        'Smallest possible',
+                        'Largest possible'),
+                      c('Frail', 'Robust', 'All patients'))
+knitr::kable(100 * cpl, digits = 1)
+```
+
+The simulation used the arrangement that makes the two outcomes agree as often as possible, which yields the smallest possible number of patients affected. Even so, treatment changes the survival of `r pct(res$floor)`% of patients, and it could be as many as `r pct(res$ceil)`%. The assumption fails by at least `r pct(res$floor)` percentage points no matter what one believes about quantities no experiment can reveal. [The smallest and largest possible values are the Fréchet–Hoeffding bounds. For two yes/no outcomes with probabilities $p_0$ and $p_1$, the proportion disagreeing must lie between $|p_1 - p_0|$ and $\min(p_0 + p_1, 2 - p_0 - p_1)$.]{.aside}
+
+# What the Survivor Comparison Actually Requires
+
+There is a deeper point. The survivor comparison does not actually need the strong assumption that treatment changes no patient's survival. It needs only that the survivors in the two groups be the same mix of patients, in every respect that affects weight. Because randomization makes the groups the same mix at the start, that holds if, *within each kind of patient*, treatment does not change the chance of surviving.
+
+This weaker condition is about groups of patients, not about each patient's two hypothetical outcomes, so it requires no speculation about what can never be observed. It also makes plain what the offered check gets wrong. The condition that matters is about survival *within* kinds of patients. The check looks only at survival *overall*. Here, within frail patients treatment raises survival from `r psurv['frail', 'control']` to `r psurv['frail', 'active']`; within robust patients it lowers survival from `r psurv['robust', 'control']` to `r psurv['robust', 'active']`. Overall, survival is unchanged. The gap between "within" and "overall" is exactly where effects that cancel each other live, and it is the one place the check cannot see. [Formally, the comparison needs survival to be independent of treatment given the factors $U$ that also affect weight: $\Pr(S = 1 \mid A, U)$ must not depend on $A$. This is a statement about a single world, involving no joint distribution of potential outcomes, and it is weaker than $S(1) = S(0)$.]{.aside}
+
+The assumption is also implausible exactly where it matters most. In an antidepressant trial, a possible effect of treatment on survival is not a technicality; it is the central safety question. Assuming treatment changes no one's survival assumes away the very concern that makes the analysis difficult.
+
+The weaker condition still cannot be checked when the relevant kinds of patients are invisible. But the data often contain partial information about them. Here, weight itself reflects frailty. That suggests a different approach: instead of an analysis that throws away everyone who died and then assumes the problem away, use all the data, including the deaths.
+
+# Asking a Question the Data Can Answer
+
+When death makes the original question unanswerable, the productive move is to ask a clinically meaningful question that the data *can* answer, rather than to adopt a stronger assumption that rescues the original one.
+
+Each week, every patient is in one of a set of ordered states: alive at some weight, or dead. Death is ranked worse than any weight, and among the living a heavier weight is ranked worse than a lighter one. A natural question is then: does assignment to the active treatment tend to put patients in better or worse states over time? This question is defined for every randomized patient, it matters to patients and clinicians, and the data answer it directly, with no assumption about outcomes that were never observed. [This treats the weekly outcome as *ordinal*. An ordinal analysis uses only the *ordering* of the states, not any numerical spacing between them, so it never has to decide how many kilograms a death is "worth." That distinguishes it from composite outcomes that assign death a numerical value, where the choice of value changes the answer [@pha25est].]{.aside}
+
+This reformulation also changes the question, and it is fair to ask how it differs from changing the question to "patients who would live either way." The difference is that the reformulated question is still about everyone randomized, it describes something a clinician could act on, and every part of it is estimable from the data. The question about patients who would live either way concerns a group that cannot be identified before treatment—no clinician can tell whether the patient in front of them belongs to it—and its answer depends on assumptions the data cannot check.
+
+The model describes each week's state in terms of the previous week's state, the patient's baseline weight, time, and treatment. Weight enters as measured, with no binning or rounding, and death is simply the worst possible value. [This is a first-order Markov proportional odds model: "first-order Markov" because each week's state is modeled from the previous week's state; "proportional odds" because treatment is assumed to shift the whole distribution of states in the same direction. That assumption can be relaxed with a partial proportional odds model. See [these notes](https://hbiostat.org/rmsc/markov) for details and [this resource](https://hbiostat.org/ordinal) for ordinal models generally.]{.aside} Baseline weight is included as a separate term, not only as the previous state at week 1, so it can have a permanent effect: it is a second noisy measurement of the same true weight level, and so of frailty.
+
+```{r}
+#| label: fit-combined
+##  Transitions: attach the previous week's weight to each week's record.
+##  The inner self-join also drops week 0, which has no predecessor.  No
+##  record is ever generated after death, so yprev is always a real weight.
+d  <- dall[dall[, .(id, week = week + 1L, yprev = wt)],
+           on = .(id, week), nomatch = 0]
+dl <- d[dead == FALSE]                       # transitions not ending in death
+dd <- datadist(d); options(datadist = 'dd')
+
+##  Death is coded as wt = wtdead, so the combined ordinal state is just wt
+res$tfit <- system.time(
+  f <- orm(wt ~ rcs(yprev, 4) + rcs(wt0, 4) + week + tx, data = d))['elapsed']
+f
+af <- anova(f)
+res$ntrans    <- nrow(d)
+res$ndeaths   <- sum(d$dead)
+res$ndistinct <- f$stats['Distinct Y']
+res$f_tx_chi  <- af['tx', 'Chi-Square']
+res$f_tx_p    <- af['tx', 'P']
+res$f_r2      <- r2(f)
+```
+
+The model is fitted to `r res$ntrans` weekly transitions, `r res$ndeaths` of which end in death, with `r res$ndistinct` distinct values of the outcome. [Fitting took `r rnd(res$tfit)` seconds. The order restriction on the many intercepts in an ordinal model is what makes fitting so fast even with hundreds of thousands of distinct outcome values.]{.aside} The treatment effect on the combined state is small ($\chi^2$ = `r rnd(res$f_tx_chi)` on 1 d.f., P = `r pexp(res$f_tx_p)`). That is a correct answer to the question asked, but by itself it hides something important, because treatment acts on dying and not on weight, and a single summary of the combined state blends those two things. [The combined model is a good one: $R^2$ = `r rnd(res$f_r2)`.]{.aside}
+
+# What the Transition Model Finds
+
+Separating the two kinds of weekly transition—from one weight to the next among the living, and from life to death—shows where the effect lives. This is the multistate view of the same data.
+
+```{r}
+#| label: fit-transitions
+fw  <- orm(wt   ~ rcs(yprev, 4) + rcs(wt0, 4) + week + tx, data = dl)
+fd  <- lrm(dead ~ rcs(yprev, 4) * tx + rcs(wt0, 4) + week, data = d)
+afw <- anova(fw)
+afd <- anova(fd)
+irow <- 'yprev * tx  (Factor+Higher Order Factors)'
+
+res$fw_tx_lor  <- coef(fw)['tx']
+res$fw_tx_se   <- sqrt(vcov(fw)['tx', 'tx'])
+res$fw_tx_p    <- afw['tx', 'P']
+res$fw_prev    <- afw['yprev', 'Chi-Square']
+res$fw_base    <- afw['wt0',   'Chi-Square']
+res$int_chi    <- afd[irow, 'Chi-Square']
+res$int_df     <- afd[irow, 'd.f.']
+res$int_p      <- afd[irow, 'P']
+res$fd_base   <- afd['wt0', 'Chi-Square']
+
+##  Weight contrasts in kg, conditioning on the patient's history as the
+##  Markov model does
+res$adj_prev <- coef(ols(wt ~ rcs(yprev, 4) + tx, data = dl))['tx']
+res$adj_both <- coef(ols(wt ~ rcs(yprev, 4) + rcs(wt0, 4) + tx, data = dl))['tx']
+afw
+afd
+```
+
+## Weight
+
+Among patients alive in consecutive weeks, treatment has essentially no effect on next week's weight: the log odds ratio is `r rnd(res$fw_tx_lor)` (standard error `r rnd(res$fw_tx_se)`, P = `r pexp(res$fw_tx_p)`). That is the truth.
+
+The same thing can be seen in kilograms. The survivor comparison reported `r rnd(res$survcon)` kg. Comparing weights among the living while accounting for each patient's previous weekly weight, as the transition model does, gives `r rnd(res$adj_prev)` kg; accounting for baseline weight as well gives `r rnd(res$adj_both)` kg. Once a patient's own recent weight is taken into account, the artifact is gone. Nothing had to be assumed about patients who died. [Previous weight and baseline weight are both strongly related to the next week's weight ($\chi^2$ = `r round(res$fw_prev)` and `r round(res$fw_base)`, each on 3 d.f.), because each is a noisy measurement of the same true weight level, and two measurements estimate it better than one.]{.aside}
+
+## Death
+
+```{r}
+#| label: gradient-data
+ws <- seq(50, 95, length = 200)
+k  <- contrast(fd,
+               list(tx = 1, yprev = ws, wt0 = ws, week = round(m / 2)),
+               list(tx = 0, yprev = ws, wt0 = ws, week = round(m / 2)),
+               expand = FALSE)
+k  <- k[.q(yprev, Contrast, Lower, Upper)]
+
+##  True weekly hazard ratios implied by psurv, for the reference lines
+hrtrue <- log(psurv[, 'active']) / log(psurv[, 'control'])
+
+##  Weight at which the estimated treatment odds ratio crosses 1
+res$cross <- uniroot(approxfun(k$yprev, k$Contrast), range(k$yprev))$root
+
+cap_gradient <- paste0(
+  'Treatment odds ratio for death in the following week as a function of ',
+  'weight in the previous week, from the first-order Markov logistic ',
+  'transition model, with 0.95 confidence band. The solid line marks no ',
+  'effect; the dashed lines are the true weekly hazard ratios built into the ',
+  'simulation, ', rnd(hrtrue['frail']), ' for frail patients and ',
+  rnd(hrtrue['robust']), ' for robust ones. The model recovers both without ',
+  'ever observing frailty, crossing 1.0 at ', round(res$cross, 1),
+  ' kg, close to the midpoint (', mean(wlev), ' kg) between the frail and ',
+  'robust weight centers, where weight no longer discriminates between them. ',
+  'Treatment $\\times$ previous weight interaction $\\chi^2$ = ',
+  round(res$int_chi, 1), ' on ', res$int_df, ' d.f., P = ', pexp(res$int_p),
+  ', while the comparison of survival between treatment groups gives P = ',
+  pexp(res$survp), '.')
+```
+
+```{r}
+#| label: fig-gradient
+#| fig-cap: !expr cap_gradient
+plt(exp(Contrast) ~ yprev, data = k, ymin = exp(Lower), ymax = exp(Upper),
+    type = type_ribbon(), log = 'y',
+    xlab = 'Weight in the previous week (kg)',
+    ylab = 'Treatment odds ratio for death in the following week')
+abline(h = c(hrtrue['frail'], 1, hrtrue['robust']), lty = c(2, 1, 2))
+```
+
+The transition model finds the effect on death that the overall survival comparison could not. Whether treatment raises or lowers the risk of dying depends strongly on how heavy the patient was the week before ($\chi^2$ = `r rnd(res$int_chi)` on `r res$int_df` d.f., P = `r pexp(res$int_p)`). @fig-gradient shows the treatment effect as a smooth function of the previous week's weight. For light patients it settles near the true value for the frail, for heavy patients near the true value for the robust, and it crosses the line of no effect where weight can no longer tell the two kinds apart. The model was never told that there were two kinds of patients; the two levels emerge from the data.
+
+```{r}
+#| label: tbl-gradient
+#| tbl-cap: "Estimated treatment odds ratio for death in the following week, for patients whose weight has been stable, so that baseline and previous weight agree."
+wsel <- c(55, 62, 70, 78, 85)
+nd   <- expand.grid(yprev = wsel, tx = 0 : 1, week = round(m / 2))
+nd$wt0 <- nd$yprev
+nd$lp  <- predict(fd, nd)
+ortab  <- data.frame(wsel, exp(nd$lp[nd$tx == 1] - nd$lp[nd$tx == 0]))
+names(ortab) <- c('Previous weight (kg)', 'Treatment odds ratio')
+knitr::kable(ortab, digits = 2)
+```
+
+This is how the assumption that treatment changes no one's survival should be checked. If the assumption were true, treatment could have no effect on survival in *any* group of patients, including groups defined by weight. The transition model examines exactly that and rejects the assumption decisively, in data where the overall survival comparison gives P = `r pexp(res$survp)`. [Given the previous week's weight, baseline weight is far more informative about next week's weight ($\chi^2$ = `r round(res$fw_base)` on 3 d.f.) than about death ($\chi^2$ = `r rnd(res$fd_base)` on 3 d.f.). Predicting a weight measurement benefits from averaging out measurement error over two determinations; mortality depends on frailty, for which recent weight is already a good proxy.]{.aside}
+
+# What Formalism Can and Cannot Do
+
+None of this is an argument against careful notation or diagrams. @fig-schematic is itself a causal diagram, and it explains in one picture why the survivor comparison fails. Formal tools are good at making assumptions visible and at catching errors of design and analysis before they are made.
+
+What they cannot do is make an assumption true, or make a question answerable when the data cannot answer it. Writing an assumption in precise notation does not make it checkable. Showing that an assumption has *some* consequence that can be tested does not make the assumption itself testable, especially when the consequence is the weakest one available and is blind to precisely the failure that matters. The precision of the statement is easily mistaken for strength of support, and the more elaborate the machinery, the easier that mistake becomes. Here, careful guidance whose stated purpose is to examine the assumptions behind each analysis describes this assumption as testable; that is a measure of how easily the mistake is made.
+
+Formal machinery can also change the question without announcing it. "The effect of treatment among patients who would survive on either treatment" sounds like a refinement of the original question, but it is a different question, about a group of patients no one can identify in advance, and a clinician deciding how to treat the patient in front of them cannot use its answer. A related alternative, "the effect that would have been seen if no one had died," replaces a question about real patients with one about a world that does not exist. [Analyses of personalized treatment decisions that rely on such unobservable quantities are examined critically by @daw23per. A rigorous formal framework that avoids them altogether, based on decision theory, is described by @daw21dec and @con17ext.]{.aside}
+
+One simulated trial shows that the offered check *can* fail completely. It does not show how often it does. But three features of this example are not contrived. The way the two potential outcomes were linked was the one most favorable to the assumption. Treatment effects on survival that go in opposite directions in different kinds of patients are entirely plausible for any treatment with both benefits and safety concerns. And trials with such treatments are exactly where an analyst would most want the check to work.
+
+The general principle is that what can be estimated should constrain what is asked. A precisely posed question that the data cannot answer is worth less than an answerable question close to the one the clinician asked. When an outcome such as weight is truncated by death, the clinically sound path is to model all patients, with death as the worst outcome, and to examine how treatment affects each kind of transition—not to discard the deaths and then assume the consequences away.
+
+# Summary
+
+When some patients die before an outcome can be measured, a comparison of survivors can show a convincing treatment effect that does not exist, even in a randomized trial. Assuming that treatment changes no patient's survival repairs the comparison on paper, and equal survival in the two groups is offered as a check. In a simulated trial where the truth is known, the check passed perfectly while the survivor comparison reported a large, highly significant effect on weight that was entirely an artifact of who survived. No assumption about unobservable quantities could rescue it. What the comparison actually requires is a weaker, more transparent condition that the overall survival check cannot detect failures of. A longitudinal ordinal model that keeps every patient and treats death as the worst outcome answers a clinically meaningful question, finds no effect on weight, finds the true effects on survival, and rejects the assumption that the overall check could not. Formal machinery is valuable for making assumptions visible, but it gives false comfort when the assumptions cannot be verified or when it quietly substitutes a different question for the one that was asked.
+
+# Resources
+
+* [ICH E9(R1) addendum on estimands and sensitivity analysis in clinical trials](https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf)
+* [Discussion: causal formalism and RCTs](https://discourse.datamethods.org/t/causal-formalism-and-rcts/)
+* [Randomized clinical trials are causal by design](https://fharrell.com/post/causal)
+* [Statistical models answer the fundamental clinical question and provide clinical trial estimands](https://fharrell.com/post/rctmod)
+* [Markov longitudinal ordinal models](https://hbiostat.org/rmsc/markov)
+* [General resources for ordinal models](https://hbiostat.org/ordinal)
+
+# Computing Environment
+
+```{r}
+grateful::cite_packages(pkgs = 'Session', output = 'paragraph', out.dir = '.',
+    cite.tidyverse = FALSE, omit = c('grateful', 'knitr'))
+```
+
+The code was run on `r sessionInfo()$running`. It was developed in collaboration with Claude (Anthropic) after extensive interactions.

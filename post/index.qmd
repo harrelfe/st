@@ -12,6 +12,7 @@ listing:
     page-size: 10
 page-layout: full
 title-block-banner: false
+google-scholar: false
 ---
 
 

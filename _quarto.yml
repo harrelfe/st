@@ -1,13 +1,16 @@
 project:
   type: website
-  post-render: syncdir _site/ /Users/harrelfe/web/blog
+  post-render:
+    - Rscript set-doi-guid.R
+    - syncdir _site/ /Users/harrelfe/web/blog
 	
 website:
   title: "Statistical Thinking"
-  site-url: https://fharrell.com/
+  site-url: https://www.fharrell.com
+  draft-mode: unlinked
   google-analytics: "G-P47K0XF3SM"
   page-footer:
-    left: "Blog made with [Quarto](https://quarto.org/), by Frank Harrell. License: [CC BY-SA 2.0](https:creativecommons.org/licenses/by-sa/2.0/)."
+    left: "Blog made with [Quarto](https://quarto.org/), by Frank Harrell. License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)."
     right:
       - icon: github
         href: https://github.com/harrelfe/
@@ -88,3 +91,8 @@ comments:
 execute:
   warning: false
   message: false
+
+filters:
+  - at: pre-quarto
+    path: cite-box.lua
+

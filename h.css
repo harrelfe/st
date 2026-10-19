@@ -11,3 +11,19 @@
 		white-space: pre;
 }
 
+.cite-box {
+  border-left: 5px solid #31BAE9;
+  background: #f1f8fc;
+  padding: 0.6rem 1rem 0.7rem;
+  margin: 1rem 0 1.5rem;
+  border-radius: 4px;
+  font-size: 90%;
+}
+.cite-box-title {
+  color: #0b6fa4;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.3rem;
+}
+.cite-box p { margin: 0; }

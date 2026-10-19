@@ -1,0 +1,421 @@
+
+R version 4.6.1 (2026-06-24) -- "Happy Hop"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> ##  ---------------------------------------------------------------------
+> ##  Weight truncated by death: what a survivor-only analysis reports, and
+> ##  what a discrete-time first-order Markov model reports, on the same data.
+> ##
+> ##  The simulation is rigged so that the truth is known exactly:
+> ##    * treatment changes NO individual's weight, at any week
+> ##    * treatment saves light (frail) patients and kills heavy (robust)
+> ##      ones in exactly offsetting numbers, so marginal survival is
+> ##      identical in the two arms
+> ##
+> ##  Hence the arm-level survival comparison -- the check offered in support
+> ##  of assuming S(1) = S(0) -- has nothing to detect, while a survivor-only
+> ##  contrast of week-m weight reports an effect that does not exist.
+> ##  ---------------------------------------------------------------------
+> 
+> require(rms)
+Loading required package: rms
+Loading required package: Hmisc
+
+Attaching package: ‘Hmisc’
+
+The following objects are masked from ‘package:base’:
+
+    format.pval, units
+
+> require(data.table)
+Loading required package: data.table
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:base’:
+
+    %notin%
+
+> require(tinyplot)
+Loading required package: tinyplot
+> tinytheme('dynamic')
+> ia <- interactive()
+> options(prType = if(ia) 'html' else 'plain')
+> if(! ia) pdf("plots.pdf", width = 7, height = 7) 
+> 
+> m      <- 26        # weeks of scheduled follow-up
+> npg    <- 6000      # patients per treatment arm
+> sdlev  <- 5         # between-patient SD of true weight level (kg)
+> sdmeas <- 3         # SD of a single weight determination (kg)
+> wtdead <- 1000      # weight value signifying death; exceeds every real
+>                     # weight, so it is automatically the worst ordinal state
+> 
+> ##  ---------------------------------------------------------------------
+> ##  Data generating function for ONE patient
+> ##  ---------------------------------------------------------------------
+> ##  Arguments
+> ##    tx : 0 = control, 1 = active treatment
+> ##    m  : number of weeks of scheduled follow-up
+> ##
+> ##  The patient has an unobservable frailty U.  U does two things: it sets
+> ##  the patient's true weight level, and it sets the patient's risk of
+> ##  dying.  That is the only link between weight and death.
+> ##
+> ##    U = 1  frail   true weight level centered at 60 kg
+> ##    U = 0  robust  true weight level centered at 80 kg
+> ##
+> ##  Treatment appears NOWHERE in the weight process below.  It enters only
+> ##  the survival probability.  So the true causal effect of treatment on
+> ##  weight is exactly zero, for every patient, at every week.  Treatment is
+> ##  also independent of U, so the week-0 weight distribution is the same in
+> ##  the two arms by construction.
+> ##
+> ##  Probability of surviving to week m:
+> ##
+> ##                        control   active
+> ##      frail  (light)      0.80     0.90    treatment saves the frail
+> ##      robust (heavy)      0.95     0.85    treatment kills the robust
+> ##
+> ##  With U equally likely, marginal survival is 0.5(.80) + 0.5(.95) = .875
+> ##  under control and 0.5(.90) + 0.5(.85) = .875 under treatment.  The two
+> ##  are identical by construction, at every sample size.
+> ##
+> ##  Records returned, one row per scheduled visit:
+> ##    weeks 0, 1, ..., tlast   real weights, where tlast is the last
+> ##                             scheduled week strictly before death
+> ##    one further row          only if death occurs within follow-up; it
+> ##                             carries week tlast + 1 and wt = wtdead
+> ##
+> ##  Nothing is ever missing.  A patient alive at week m contributes exactly
+> ##  m + 1 rows; a patient who dies contributes a number of rows that varies
+> ##  with the week of death.
+> ##  ---------------------------------------------------------------------
+> 
+> gen1 <- function(tx, m) {
++   U      <- rbinom(1, 1, 0.5)                       # 1 = frail, 0 = robust
++   level  <- 80 - 20 * U + rnorm(1, 0, sdlev)        # true weight level, kg
++   psurv  <- if(U == 1) c(0.80, 0.90)[tx + 1] else c(0.95, 0.85)[tx + 1]
++   ##  constant weekly hazard reproducing that m-week survival probability
++   tdeath <- rexp(1, rate = -log(psurv) / m)
++   ##  last scheduled week strictly before death, capped at m.  as.integer()
++   ##  matters: data.table requires the same column types for every group,
++   ##  and ceiling() returns double.
++   tlast  <- as.integer(min(m, ceiling(tdeath) - 1))
++   week   <- 0L : tlast
++   wt     <- level + rnorm(length(week), 0, sdmeas)
++   if(tdeath <= m) {                                 # death within follow-up
++     week <- c(week, tlast + 1L)
++     wt   <- c(wt,   wtdead)
++   }
++   data.table(week = week, wt = wt)
++ }
+> 
+> ##  ---------------------------------------------------------------------
+> ##  Run the generator once per patient.  The grid holds one row per
+> ##  patient: a patient number within arm, the follow-up duration, and the
+> ##  randomised treatment.  Crossing patient number with treatment gives
+> ##  npg patients in each arm.
+> ##  ---------------------------------------------------------------------
+> set.seed(23)
+> grid <- setDT(expand.grid(i = 1 : npg, m = m, tx = 0 : 1))
+> grid[, id := .I]
+> dall <- grid[, gen1(tx, m), by = .(id, tx)]
+> 
+> ##  Death indicator and the patient's baseline weight on every record
+> dall[, dead := wt == wtdead]
+> dall[, wt0  := wt[week == 0], by = id]
+> 
+> ##  ---------------------------------------------------------------------
+> ##  Figure 1: the survivor-only artifact is manufactured by mortality
+> ##
+> ##  For each week, among patients still alive that week, compute
+> ##    (a) the cross-sectional treatment contrast in weight, and
+> ##    (b) the treatment contrast in change from baseline weight.
+> ##  Plot both against the percentage of patients who have died by then.
+> ##
+> ##  A composition artifact is pinned to zero before anyone has died and
+> ##  must grow as deaths accumulate.  A real effect on weight is under no
+> ##  such constraint.  Differencing from baseline removes the patient's
+> ##  weight level, which is the quantity selection operates on, so (b)
+> ##  stays at zero throughout while (a) tracks cumulative mortality.
+> ##
+> ##  Requires dall from the main script (one record per patient per week
+> ##  while alive, plus one death record; wt0 = baseline weight).
+> ##  ---------------------------------------------------------------------
+> 
+> npat <- uniqueN(dall$id)
+> 
+> ##  A patient alive at week t has exactly one record at week t, and a
+> ##  patient who died earlier has none, so counting records gives both the
+> ##  risk set and cumulative mortality.
+> tc <- dall[dead == FALSE & week >= 1, {
++   y1 <- wt[tx == 1]
++   y0 <- wt[tx == 0]
++   c1 <- (wt - wt0)[tx == 1]
++   c0 <- (wt - wt0)[tx == 0]
++   .(nalive    = .N,
++     level     = mean(y1) - mean(y0),
++     level_se  = sqrt(var(y1) / length(y1) + var(y0) / length(y0)),
++     change    = mean(c1) - mean(c0),
++     change_se = sqrt(var(c1) / length(c1) + var(c0) / length(c0)))
++ }, by = week][order(week)]
+> 
+> tc[, pct_dead := 100 * (1 - nalive / npat)]
+> 
+> L <- melt(tc,
++           id.vars       = .q(week, pct_dead),
++           measure.vars  = list(.q(level, change), .q(level_se, change_se)),
++           value.name    = .q(est, se),
++           variable.name = 'analysis')
+> L[, analysis := factor(analysis, 1 : 2,
++                        c('Weight among survivors',
++                          'Change from baseline among survivors'))]
+> L[, `:=`(lo = est - 1.96 * se, hi = est + 1.96 * se)]
+> 
+> # Treatment contrasts among patients still alive, plotted against the percentage who have died by that week, with 0.95 confidence bands. Treatment changes no patient's weight, yet the contrast in weight level tracks cumulative mortality almost exactly (r = −0.99), reaching −1.19 kg once 12.8% have died. The contrast in change from baseline, which cancels the weight level that mortality selects on, stays near zero throughout.
+> 
+> plt(est ~ pct_dead | analysis, data = L, ymin = lo, ymax = hi,
++     type = type_ribbon(),
++     xlab = 'Patients who have died by this week (%)',
++     ylab = 'Treatment contrast (kg)')
+> abline(h = 0, lty = 1)
+> 
+> ##  Swap pct_dead for week on the x axis to show the same thing against
+> ##  time: plt(est ~ week | analysis, ...)
+> 
+> 
+> 
+> ##  The transitions actually modelled.  Attaching the previous week's
+> ##  weight by an inner self-join gives the first-order Markov covariate and
+> ##  at the same time drops week 0, which has no predecessor.  Because no
+> ##  record is ever generated after death, yprev is always a real weight,
+> ##  and no value anywhere in the data is missing.
+> Y0 <- dall[week == 0, wt]
+> d  <- dall[dall[, .(id, week = week + 1L, yprev = wt)],
++            on = .(id, week), nomatch = 0]
+> dl <- d[dead == FALSE]
+> 
+> plt(~ Y0, type = type_histogram(breaks = 100))
+> 
+> ##  ---------------------------------------------------------------------
+> ##  Description, including the baseline balance that randomisation buys
+> ##  ---------------------------------------------------------------------
+> b0   <- dall[week == 0, .(n = .N, mean = mean(wt), sd = sd(wt)), by = tx][order(tx)]
+> b0p  <- t.test(wt ~ tx, data = dall[week == 0])$p.value
+> b0ks <- suppressWarnings(ks.test(dall[week == 0 & tx == 0, wt],
++                                  dall[week == 0 & tx == 1, wt])$p.value)
+> surv <- dall[, .(alive = !any(dead)), by = .(id, tx)]
+> sm   <- surv[, .(n = .N, alive = sum(alive)), by = tx][order(tx)]
+> stest<- prop.test(rev(sm$alive), rev(sm$n))$p.value
+> npr  <- dall[, .(k = .N), by = id][surv, on = 'id']
+> 
+> cat(sprintf('Patients: %d control, %d active\n', sm$n[1], sm$n[2]),
++     sprintf('Records generated: %d   transitions modelled: %d   deaths: %d\n',
++             nrow(dall), nrow(d), sum(d$dead)),
++     sprintf('Distinct weight values among transitions: %d\n', uniqueN(d$wt)),
++     sprintf('Records per patient: always %d for a survivor, %d to %d for one who dies\n',
++             m + 1L, npr[alive == FALSE, min(k)], npr[alive == FALSE, max(k)]),
++     sprintf('\nWeek-0 weight: %.3f kg (SD %.3f) control, %.3f kg (SD %.3f) active\n',
++             b0$mean[1], b0$sd[1], b0$mean[2], b0$sd[2]),
++     sprintf('  t-test p = %.3f, Kolmogorov-Smirnov p = %.3f  <- identical by construction\n',
++             b0p, b0ks),
++     sprintf('\nWeek-%d survival: %.4f control, %.4f active\n',
++             m, sm$alive[1] / sm$n[1], sm$alive[2] / sm$n[2]),
++     sprintf('  test of equal survival p = %.3f   <- the check that is offered\n',
++             stest),
++     sep = '')
+Patients: 6000 control, 6000 active
+Records generated: 304081   transitions modelled: 292081   deaths: 1531
+Distinct weight values among transitions: 290551
+Records per patient: always 27 for a survivor, 2 to 27 for one who dies
+
+Week-0 weight: 70.107 kg (SD 11.582) control, 70.168 kg (SD 11.595) active
+  t-test p = 0.775, Kolmogorov-Smirnov p = 0.836  <- identical by construction
+
+Week-26 survival: 0.8755 control, 0.8693 active
+  test of equal survival p = 0.325   <- the check that is offered
+> 
+> ##  ---------------------------------------------------------------------
+> ##  What a cross-sectional survivor analysis reports
+> ##  ---------------------------------------------------------------------
+> wm <- dall[week == m & !dead]
+> cat(sprintf('\nWeek-%d survivors only, weight in kg\n', m),
++     sprintf('  survivor contrast (active - control)  : %+.3f kg  <- truth is 0\n',
++             wm[tx == 1, mean(wt)] - wm[tx == 0, mean(wt)]),
++     sprintf('  given previous weight                 : %+.3f kg\n',
++             coef(ols(wt ~ rcs(yprev, 4) + tx, data = dl))['tx']),
++     sprintf('  given previous and baseline weight    : %+.3f kg\n',
++             coef(ols(wt ~ rcs(yprev, 4) + rcs(wt0, 4) + tx, data = dl))['tx']),
++     sep = '')
+
+Week-26 survivors only, weight in kg
+  survivor contrast (active - control)  : -1.192 kg  <- truth is 0
+  given previous weight                 : -0.000 kg
+  given previous and baseline weight    : -0.020 kg
+> 
+> ##  ---------------------------------------------------------------------
+> ##  Markov-1 proportional odds model on the combined state.  Because death
+> ##  is coded as a weight of wtdead, the combined ordinal state is just wt.
+> ##  Baseline weight enters as its own term, not only as the previous state
+> ##  at week 1, so it is allowed a permanent effect.  It is a second noisy
+> ##  measurement of the same latent weight level, so including it sharpens
+> ##  the proxy for the unobservable frailty that drives mortality.
+> ##  ---------------------------------------------------------------------
+> dd <- datadist(d); options(datadist = 'dd')
+> f  <- orm(wt ~ rcs(yprev, 4) + rcs(wt0, 4) + week + tx, data = d)
+> f
+Logistic (Proportional Odds) Ordinal Regression Model
+
+orm(formula = wt ~ rcs(yprev, 4) + rcs(wt0, 4) + week + tx, data = d)
+
+                           Model Likelihood              Discrimination    Rank Discrim.    
+                                 Ratio Test                     Indexes          Indexes    
+Obs           292081    LR chi2   584715.13    R2                 0.865    rho     0.928    
+ESS           292081    d.f.              8    R2(8,292081)       0.865    Dxy     0.770    
+Distinct Y    290434    P(> chi2)   <0.0001    R2(8,292081)       0.865                     
+Median Y    70.77804    Score chi2554416.85    |P(Y>=median)-0.5| 0.449                     
+max |deriv|    6e-06    P(> chi2)   <0.0001                                                 
+
+        Coef    S.E.   Wald Z P(>|Z|)
+yprev    0.1879 0.0019 100.38 <0.0001
+yprev'   0.1428 0.0065  21.89 <0.0001
+yprev'' -0.3777 0.0158 -23.90 <0.0001
+wt0      0.1890 0.0019 100.55 <0.0001
+wt0'     0.1330 0.0066  20.23 <0.0001
+wt0''   -0.3490 0.0158 -22.11 <0.0001
+week    -0.0002 0.0004  -0.43 0.6645 
+tx      -0.0098 0.0064  -1.52 0.1286 
+
+> # Olinks was run on round(wt, 3) and showed that the logit
+> # link had the best fit in terms of deviance.
+> # probit and cloglog would not work with >200,000 intercepts
+> # Olinks(f)
+> cat('\nMarkov-1 PO on the combined state (death = worst)\n')
+
+Markov-1 PO on the combined state (death = worst)
+> print(anova(f))
+                Wald Statistics          Response: wt 
+
+ Factor          Chi-Square d.f. P     
+ yprev            58746.97  3    <.0001
+  Nonlinear         666.55  2    <.0001
+ wt0              58269.06  3    <.0001
+  Nonlinear         571.94  2    <.0001
+ week                 0.19  1    0.6645
+ tx                   2.31  1    0.1286
+ TOTAL NONLINEAR   2687.70  4    <.0001
+ TOTAL           301746.15  8    <.0001
+> 
+> ##  ---------------------------------------------------------------------
+> ##  The same transitions fitted separately.  Treatment acts on the death
+> ##  transition and not on weight, so one PO summary blends two different
+> ##  things; fitting them apart is the multistate view.
+> ##  ---------------------------------------------------------------------
+> fw <- orm(wt   ~ rcs(yprev, 4) + rcs(wt0, 4) + week + tx, data = dl)
+> fd <- lrm(dead ~ rcs(yprev, 4) * tx + rcs(wt0, 4) + week, data = d)
+> 
+> cat(sprintf('\nWeight transition among the living\n'),
++     sprintf('  tx log odds ratio %+.4f (SE %.4f)   <- should be 0\n',
++             coef(fw)['tx'], sqrt(vcov(fw)['tx', 'tx'])),
++     sep = '')
+
+Weight transition among the living
+  tx log odds ratio -0.0102 (SE 0.0065)   <- should be 0
+>     
+> ws <- seq(50, 95, length = 200)
+> k  <- contrast(fd,
++                list(tx = 1, yprev = ws, wt0 = ws, week = round(m / 2)),
++                list(tx = 0, yprev = ws, wt0 = ws, week = round(m / 2)),
++                expand=FALSE)
+> k <- k[.q(yprev, Contrast, Lower, Upper)]
+> 
+> # Treatment odds ratio for death in the following week as a function of weight in the previous week, from the first-order Markov logistic transition model, with 0.95 confidence band. The solid line marks no effect; the dashed lines are the true weekly hazard ratios built into the simulation, 0.472 for frail patients and 3.168 for robust ones. The model recovers both without ever observing frailty, crossing 1.0 just below 70 kg — the midpoint of the two latent weight centres, where weight no longer discriminates between them. Treatment × previous weight interaction χ² = 235.5 on 3 d.f., P ≈ 10⁻⁵⁰, while the comparison of survival between arms gives P = 0.33.
+> 
+> plt(exp(Contrast) ~ yprev, data = k, ymin = exp(Lower), ymax = exp(Upper),
++     type = type_ribbon(), log = 'y',
++     xlab = 'Weight in the previous week (kg)',
++     ylab = 'Treatment odds ratio for death in the following week')
+> abline(h = c(0.472, 1, 3.168), lty = c(2, 1, 2))
+> print(anova(fw))
+                Wald Statistics          Response: wt 
+
+ Factor          Chi-Square d.f. P     
+ yprev            62075.27  3    <.0001
+  Nonlinear         598.51  2    <.0001
+ wt0              61720.56  3    <.0001
+  Nonlinear         511.90  2    <.0001
+ week                 0.08  1    0.7712
+ tx                   2.46  1    0.1168
+ TOTAL NONLINEAR   2311.59  4    <.0001
+ TOTAL           306524.64  8    <.0001
+> 
+> ##  Display the gradient for patients whose weight has been stable, so
+> ##  baseline and previous weight agree; otherwise the two frailty proxies
+> ##  would be held at conflicting values.
+> ws <- c(55, 62, 70, 78, 85)
+> nd <- expand.grid(yprev = ws, tx = 0 : 1, week = round(m / 2))
+> nd$wt0 <- nd$yprev
+> nd$lp <- predict(fd, nd)
+> cat('\nDeath transition: treatment odds ratio by previous weight\n')
+
+Death transition: treatment odds ratio by previous weight
+> print(data.frame(`previous weight (kg)`      = ws,
++                  `tx OR for dying this week` =
++                    round(exp(nd$lp[nd$tx == 1] - nd$lp[nd$tx == 0]), 2),
++                  check.names = FALSE), row.names = FALSE)
+ previous weight (kg) tx OR for dying this week
+                   55                      0.46
+                   62                      0.47
+                   70                      1.19
+                   78                      3.06
+                   85                      3.25
+> print(anova(fd))
+                Wald Statistics          Response: dead 
+
+ Factor                                    Chi-Square d.f. P     
+ yprev  (Factor+Higher Order Factors)      236.63      6   <.0001
+  All Interactions                         235.49      3   <.0001
+  Nonlinear (Factor+Higher Order Factors)   42.23      4   <.0001
+ tx  (Factor+Higher Order Factors)         235.54      4   <.0001
+  All Interactions                         235.49      3   <.0001
+ wt0                                         4.85      3   0.1834
+  Nonlinear                                  1.88      2   0.3905
+ week                                        0.74      1   0.3907
+ yprev * tx  (Factor+Higher Order Factors) 235.49      3   <.0001
+  Nonlinear                                 34.51      2   <.0001
+  Nonlinear Interaction : f(A,B) vs. AB     34.51      2   <.0001
+ TOTAL NONLINEAR                            54.10      6   <.0001
+ TOTAL NONLINEAR + INTERACTION             240.04      7   <.0001
+ TOTAL                                     266.89     11   <.0001
+> 
+> cat('\nTreatment is harmful to the heavy and protective to the light, in\n',
++     'exactly offsetting numbers.  S(1) = S(0) implies no treatment effect\n',
++     'on survival in ANY stratum, so the interaction above falsifies it --\n',
++     'while the arm-level survival comparison cannot.\n', sep = '')
+
+Treatment is harmful to the heavy and protective to the light, in
+exactly offsetting numbers.  S(1) = S(0) implies no treatment effect
+on survival in ANY stratum, so the interaction above falsifies it --
+while the arm-level survival comparison cannot.
+>     
+> if(! ia) graphics.off()
+> 
+> 
+> proc.time()
+   user  system elapsed 
+ 16.174   1.186  17.998 

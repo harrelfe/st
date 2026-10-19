@@ -177,7 +177,7 @@ Variable clustering, using a similarity measure such as Spearman's $\rho$ rank c
 
 # Analysis
 
-Analysis should be driven by [statistical principles](https://www.fharrell.com/post/principles) and be based to the extent possible on a statistical analysis plan to avoid double-dipping and too many "investigator degrees of freedom", referred to as the [garden of forking paths](http://www.stat.columbia.edu/~gelman/research/published/ForkingPaths.pdf).  Analyses should be completely reproducible.  They should use the raw data as much as possible, never dichotomizing continuous or ordinal variables.[One exception: an ordinal predictor with few levels can be modeled as a categorical variable but using all possible dichotomizations (less one) with indicator variables.]{.aside}  Don't [fall into the trap](http://hbiostat.org/bbr/md/change.html) of computing change from baseline in a parallel-group study.
+Analysis should be driven by [statistical principles](https://www.fharrell.com/post/principles) and be based to the extent possible on a statistical analysis plan to avoid double-dipping and too many "investigator degrees of freedom", referred to as the [garden of forking paths](http://www.stat.columbia.edu/~gelman/research/published/ForkingPaths.pdf).  Analyses should be completely reproducible.  They should use the raw data as much as possible, never dichotomizing continuous or ordinal variables.[One exception: an ordinal predictor with few levels can be modeled as a categorical variable but using all possible dichotomizations (less one) with indicator variables.]{.aside}  Don't [fall into the trap](http://hbiostat.org/bbr/change) of computing change from baseline in a parallel-group study.
 
 ## Descriptive Analysis
 

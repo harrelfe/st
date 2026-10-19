@@ -1,7 +1,7 @@
 ---
 title: "Causal by Design"
 author:
-  - name: Frank Harrell 
+  - name: Frank Harrell
     url: https://hbiostat.org
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 date: 2026-04-08
@@ -59,4 +59,19 @@ The only hope for design 4 requires all of the following steps to be faithfully 
 
 # Summary
 
-Causal calculus such as the system developed by Pearl is elegant and can provide a great deal of insight for complex research questions.  But straight-up randomized experiments are causal by design.  Observational studies should be prospectively designed so that causal inference has a chance.  Target trial emulation runs the risk of serving as window dressing for inadequately designed observational studies.
+Causal calculus such as the system developed by Pearl is elegant and can provide a great deal of insight for complex research questions.  But straight-up randomized experiments are causal by design.  Observational studies should be prospectively designed so that causal inference has a chance.  Target trial emulation runs the risk of serving as window dressing for inadequately designed observational studies.  Any method that claims to emulate what RCTs do must address
+
+* prospective protocols for study conduct, patient recruitment, data acquisition, patient care, treatment administration, concomitant therapies, safety monitoring, etc.
+* random allocation
+* blinding (including blinded evaluation of patient responses)
+* blocking and other handling of uncontrolled variables
+* sources of outcome variation
+* measurement processes and their standardization
+* concurrent controls in time and space
+* reasons patients enter and leave the cohort
+* interventional consistency
+* pre-specification of statistical analysis plans
+* consistent outcome evaluation
+* uniformity of follow-up across treatment groups
+* recall bias
+* solid time 0 definition

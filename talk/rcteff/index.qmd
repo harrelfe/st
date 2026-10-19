@@ -3,7 +3,7 @@ title: Modernizing Clinical Trial Design and Analysis to Improve Efficiency & Fl
 author:
   - name: Frank Harrell
     url: https://hbiostat.org
-date: 2026-04-30
+date: 2026-08-10
 categories: [RCT, drug-development, bayes, regression, endpoints, "2020", "2021", "2024", "2026"]
 description: "This presentation covers several ways to make clinical trials more efficient and to reduce the chance of ending with an equivocal result.  Some of the approaches covered are Bayesian sequential designs allowing for study extension if results are promising, not being tied by type I assertion probabilities/α spending, using high-information longitudinal ordinal outcomes, and covariate adjustment."
 ---
@@ -13,9 +13,13 @@ description: "This presentation covers several ways to make clinical trials more
 * [Vanderbilt Translational Research Forum 2021-11-04](https://my.vanderbilt.edu/translationalresearchforum) | [Video](https://youtu.be/ANNRSgpFPvM)
 * [Consilium Scientific](https://consilium-scientific.org) 2024-03-14 | [Video](https://youtu.be/FI2ncRU9PPQ?si=zquTF6Qi8TGW8Qjb) and [here](https://www.linkedin.com/video/live/urn:li:ugcPost:7174090132512260096)
 * [Seventh Annual Janice Pogue Lectureship in Biostatistics](https://www.phri.ca/lectureships/), Population Health Research Institute, Hamilton, Ontario, Canada 2024-12-05
+* National Heart and Lung Institute, Imperial College London and Imperial Clinical Trials Unit, Imperial College London, 2026-06-03
+* Baim Institute for Clinical Research [Grand Rounds](https://www.baiminstitute.org/index.php/grand-rounds), 2026-08-10
+
 * [Slides](https://hbiostat.org/talks/rcteff.html)
 * [Pictures](https://www.linkedin.com/feed/update/urn%3Ali%3Aactivity%3A7271161538067992576/?midToken=AQHdxkrKc00ieg&midSig=2-vwKVisN9TXw1)
 * [Video](https://lnkd.in/gnaSDUGw)
+* [Baim Institute Grant Rounds Video with updated material](https://www.baiminstitute.org/index.php/modernizing-clinical-trial-design-and-analysis-to-improve-efficiency-flexibility) 2026-08-10
 
 #### Important Considerations in Trial Design for Flexibility & Efficiency
 * RRE 2026: Research RoundTable in Epilepsy, Washington DC 2026-04-30

@@ -1,0 +1,13 @@
+---
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: 2026-05-19
+title: "Thoughts About the Roles of AI for Statistics"
+description: "This talk covers what I've learned from using large language models in my work for the past two years.  For statistical programming, success has come when I play the role of specification writer and comprehensive tester.  For statistical methodology, AI has been successful serving me as a mathematical statistical assistant and a critic.  Instead of avoiding AI we should embrace it, but we should always set a higher bar for the quality of our work as a result."
+categories: [2026, AI, computing]
+---
+
+* Events
+  - [Regression Modeling Strategies Course 2026](https://hbiostat.org/course) 2026-05-19
+* [Slides](https://hbiostat.org/talks/ai.html)

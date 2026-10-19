@@ -26,7 +26,7 @@ $font-size-base:              0.9rem !default;
 h1.title {
   font-family: "Merriweather";
   font-size: 30px;
-	color: red;
+	color: blue;   // was red 2026-07-25
 }
 
 h1.title.display-7 {
@@ -47,7 +47,7 @@ a:hover {
 }
 
 //** Global textual link color.
-$link-color:            #E2402E !default;
+$link-color: blue !default;            // was #E2402E !default;
 //** Link hover color set via `darken()` function.
 $link-hover-color:      darken($link-color, 15%) !default;
 //** Link decoration.

@@ -1,13 +1,13 @@
 ---
 title: "Measures of Central Tendency for an Asymmetric Distribution, and Confidence Intervals"
 author:
-  - name: Frank Harrell 
+  - name: Frank Harrell
     url: https://hbiostat.org
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 date: 2025-08-14
 date-modified: last-modified
 categories: [bootstrap, computing, inference, r, "2025"]
-description: "There are three widely applicable measures of central tendency for general continuous distributions: the mean, median, and pseudomedian (the mode is useful for describing smooth theoretical distributions but not so useful when attempting to estimate the mode empirically).  Each measure has its own advantages and disadvantages, and the usual confidence intervals for the mean may be very inaccurate when the distribution is very asymmetric.  The central limit theorem may be of no help.  In this article I discuss tradeoffs of the three location measures and describe why the pseudomedian is perhaps the overall winner due to its combination of robustness, efficiency, and having an accurate confidence interval.  I study CI coverage of 18 procedures for the mean, one exact and one approximate procedure for the median, and five procedures for the pseudomedian, for samples of size $n=200$ drawn from a lognormal distribution. Various bootstrap procedures are included in the study. The goal of the confidence interval procedures is to achieve non-coverage probabilities that are close to the nominal 0.025 level in both tails.  The usual standard deviation-based central limit theorem approach failed in both tails.  The BCa bootstrap method was the most accurate for computing confidence limits for the mean, but the upper limit was too small with $n=200$, having non-coverage probability of 0.086 for the right tail instead of the nominal 0.025.  Three types of intervals for the more robust pseudomedian were extremely accurate, giving more reasons to use the pseudomedian as a primary location measure, whether or not the distribution is symmetric."
+description: "There are three widely applicable measures of central tendency for general continuous distributions: the mean, median, and pseudomedian (the mode is useful for describing smooth theoretical distributions but not so useful when attempting to estimate the mode empirically).  Each measure has its own advantages and disadvantages, and the usual confidence intervals for the mean may be very inaccurate when the distribution is very asymmetric.  The central limit theorem may be of no help.  In this article I discuss tradeoffs of the three location measures and describe why the pseudomedian is perhaps the overall winner due to its combination of robustness, efficiency, and having an accurate confidence interval.  I study CI coverage of 18 procedures for the mean, one exact and one approximate procedure for the median, and five procedures for the pseudomedian, for samples of size $n=200$ drawn from a lognormal distribution. Various bootstrap procedures are included in the study. The goal of the confidence interval procedures is to achieve non-coverage probabilities that are close to the nominal 0.025 level in both tails.  The usual standard deviation-based central limit theorem approach failed in both tails.  The BCa bootstrap method was the most accurate for computing confidence limits for the mean, but the upper limit was too small with $n=200$, having non-coverage probability of 0.086 for the right tail instead of the nominal 0.025.  No other bootstrap variants, including the fast triple studentized bootstrap, measureably improved confidence coverage.  Three types of intervals for the more robust pseudomedian were extremely accurate, giving more reasons to use the pseudomedian as a primary location measure, whether or not the distribution is symmetric."
 bibliography:
   - grateful-refs.bib
 code-fold: false
@@ -41,7 +41,7 @@ g <- function(lognorm=FALSE) {
   pmed <- pMedian(x)
   mindif <- if(lognorm) 0.2 else 0.02
   dif <- min(diff(sort(c(m, med, pmed))))
-  if(dif > mindif) 
+  if(dif > mindif)
     (m < pmed & pmed < med) | (m > pmed & pmed > med)
   else NA
 }
@@ -101,9 +101,11 @@ For the Harrell-Davis median estimator we assume normality and use the jackknife
 
 Not studied here is _empirical likelihood_, which was a promising approach when it was developed by [Owen in 1990](https://en.wikipedia.org/wiki/Empirical_likelihood).  But I tried it for the situation studied here and confidence coverage for the mean was terrible.  Advocates of empirical likelihood suggested putting a bootstrap loop around the already computationally intensive combinatorial empirical likelihood algorithm, in order to get accurate CIs.  But why go to that trouble instead of just using the bootstrap, or why not use the double bootstrap to get highly accurate intervals with much less computation than empirical likelihood?[The double bootstrap is used to correct a single bootstrap.  The most efficient double bootstrap algorithm available increases computation time by $23\times$ over a single bootstrap.]{.aside}
 
+**Update**: Various other boostrap variants were tried including a triple bootstrap, with unsatisfactory results.  See a summary at the end of this article.  This summary also better explains the fundamental limitations of mean-based methods for small skewed samples.
+
 # Distribution and True Location Values
 
-As mentioned above, the distribution from which we'll simulate samples is the lognormal distribution with $\mu=0, \sigma=1.65$.  
+As mentioned above, the distribution from which we'll simulate samples is the lognormal distribution with $\mu=0, \sigma=1.65$.
 
 ```{r}
 mu         <- 0
@@ -224,15 +226,15 @@ cis <- function(x, exact=FALSE) {
   n     <- length(x)
   est   <- c(mean=m, median=med, hdmedian=hdmed, pseudomedian=pmed)
   estimate <- unname(what[, est[measure]])
-  
+
   u <- z / sqrt(n)
-  
+
   # nmin=10000 means use pooled SD if n < 100000
   dsd <- function(x, j) {
     dualSD(x, nmin=if(j == 1) 100000 else 2,
            center=switch(j, NA, pMedian(x), median(x), m ))
   }
-  
+
   # Do all bootstrap resamples of the mean
   stat <- function(x, i) {
     x <- x[i]
@@ -246,7 +248,7 @@ cis <- function(x, exact=FALSE) {
   bci    <- boot.ci(b)[c('normal', 'basic', 'student', 'percent', 'bca')]
   lcl    <- function(z) z[length(z) - 1]
   ucl    <- function(z) z[length(z)]
-  
+
   pmedb <- function(x, i) pMedian(x[i])
   # Do all bootstrap resamples of the pseudomedian
   bpm   <- boot(x, statistic=pmedb, R=1000)
@@ -344,10 +346,10 @@ cis <- function(x, exact=FALSE) {
       list(lo=lcl(bpmci$basic), hi=ucl(bpmci$basic))
     }
     )
-  
+
   lower <- unlist(sapply(res, function(x) x$lo))
   upper <- unlist(sapply(res, function(x) x$hi))
-  
+
   data.table(type = 1:length(lower), estimate=estimate, Lower=lower, Upper=upper)
 }
 
@@ -377,7 +379,7 @@ run1 <- function(reps, showprogress, core) {
   r
   }
 
-if(file.exists('sim.rds')) R <- readRDS('sim.rds')  else {  
+if(file.exists('sim.rds')) R <- readRDS('sim.rds')  else {
   # The following tool 2 min. using 11 cores
   R <- runParallel(run1, reps=5000, seed=3)   # see https://hbiostat.org/rflow/parallel
   saveRDS(R, 'sim.rds')
@@ -437,7 +439,7 @@ u[i, ]
 # ggplot(u, aes(total_error, length, color=type)) + geom_point()
 ```
 
-The overall winner for CI for the mean is the BCa bootstrap, which has tail non-coverage probabilities of 0.022 and 0.086 for overall coverage of 0.89 against the target of 0.95.  This is not completely satisfactory, and a better confidence interval method may exist.  If one wanted to trade off some coverage accuracy to get tighter CIs, the bootstrap percentile method might be considered. [As shown [here](https://stats.stackexchange.com/questions/186957), BCa yields poor coverage when $n=25$. 
+The overall winner for CI for the mean is the BCa bootstrap, which has tail non-coverage probabilities of 0.022 and 0.086 for overall coverage of 0.89 against the target of 0.95.  This is not completely satisfactory, and a better confidence interval method may exist.  If one wanted to trade off some coverage accuracy to get tighter CIs, the bootstrap percentile method might be considered. [As shown [here](https://stats.stackexchange.com/questions/186957), BCa yields poor coverage when $n=25$.
 For $n=40$ and BCa again performed the best, but with 0.014 non-coverage on the left and 0.154 on the right.  Even for $n=400$, no bootstrap variant got extremely close to 0.025 non-coverage in both tails, but BCa was still the best.]{.aside}
 
 Ad hoc methods of computing confidence intervals for the mean had embarrassing performance.  The usual CLT formula was unsatisfactory in both tails, and attempted fixes made things worse.
@@ -459,13 +461,13 @@ g <- function(n, type) {
   set.seed(n)   # make percentle and bca use the same data for each n
   y   <- rlnorm(n, mu, sigma)
   t1  <- system.time(a <- pMedian(y, conf.int=0.95, type=as.character(type)))['elapsed']
-  list(time=t1, lower=a['lower'], upper=a['upper'])  
+  list(time=t1, lower=a['lower'], upper=a['upper'])
 }
 if(file.exists('perc_vs_bca.rds')) u <- readRDS('perc_vs_bca.rds') else {
   u <- d[, g(n, type), by=.(n, type)]
   saveRDS(u, 'perc_vs_bca.rds')
 }
-ggplot(u, aes(x=n, y=time, color=type)) + geom_smooth(se=FALSE) + 
+ggplot(u, aes(x=n, y=time, color=type)) + geom_smooth(se=FALSE) +
   ylab('Execution Time, sec.')
 ```
 
@@ -535,11 +537,57 @@ Exact widths are in blue, and true CI widths predicted by a log-log model are in
 
 # Summary
 
-The mean may be thought of as a "parametric quantity" and at present there is no general-purpose method for computing completely accurate (in both tails) confidence limits for means drawn from very asymmetric distributions.  More methods for computing confidence limits for means are needed if you are likely to encounter very skewed distributions.  The best available method at present is the BCa bootstrap, although its intervals are longer than some other methods. 
+The mean may be thought of as a "parametric quantity" and at present there is no general-purpose method for computing completely accurate (in both tails) confidence limits for means drawn from very asymmetric distributions.  More methods for computing confidence limits for means are needed if you are likely to encounter very skewed distributions.  The best available method at present is the BCa bootstrap, although its intervals are longer than some other methods.
 
 The robustness and efficiency of the pseudomedian and the high accuracy of confidence limits for it (especially the bootstrap BCa and percentile limits) should make it more of a go-to measure of central tendency, for both symmetric and asymmetric distributions.
 
-I hope that others will adapt the code provided here to study more sample sizes and distributions.  
+I hope that others will adapt the code provided here to study more sample sizes and distributions.
+
+-----
+
+# Confidence Intervals for the Mean Under Skewness: Why Every Fix We Tried Hit the Same Wall
+
+The following was developed in an interaction with Claude Sonnet 4.6.  The full chat with code and simulation results may be found [here](https://claude.ai/share/1c6e752f-d7ab-45f3-82a6-253d73a41d77).
+
+## Starting point
+
+We built `ftboot()`, an efficient R implementation of the fast triple bootstrap (FTB; Davidson & Trokić, 2020) for confidence intervals on the mean of a numeric vector. FTB approximates the (very expensive) standard triple bootstrap by replacing nested resampling with a single chain of three paired resamples per replicate, then inverting the resulting algorithm's nested order-statistic lookups in closed form rather than by numerical root-finding. The implementation was validated against a literal, unvectorized version of the published algorithm and showed good coverage and fast runtimes under ordinary (e.g., normal) data.
+
+## The test that broke it
+
+We then ran `ftboot()` on samples of size n=50 from a Lognormal(μ=0, σ=1) distribution, tracking left- and right-tail non-coverage separately (rather than just overall coverage, which can hide an imbalance between the tails). The result: the left tail was on target, but the right tail showed roughly double the nominal non-coverage rate. This matched what a plain BCa bootstrap also showed on the same data — and both findings echo Frank Harrell's much larger study (*Measures of Central Tendency for an Asymmetric Distribution, and Confidence Intervals*, fharrell.com/post/aci), which found that across 18 procedures for the mean (including CLT-based, several bootstrap variants, and ad hoc skewness corrections), BCa was the best performer yet still had right-tail non-coverage of 0.086 against a nominal 0.025 at n=200 for an even more skewed lognormal, with no method tested closing the gap even at n=400.
+
+## What we tried, and why each attempt failed
+
+**Skewness-adjusted bootstrap-t.** We tried layering a Johnson-style Edgeworth correction onto the studentized statistics feeding FTB's resampling chain, in two variants: adjusting only the bootstrap reference distribution, and adjusting both the reference distribution and the observed pivot. Neither helped; the first made the right tail meaningfully worse. The reason: Johnson's correction is designed to patch the gap between a t-statistic's true distribution and an idealized symmetric reference table — but the bootstrap-t already replaces that idealized reference with the empirical bootstrap distribution, which already encodes the data's skewness directly. Layering an analytic correction on top doesn't add information; it distorts an already-correct empirical picture, in this case by uniformly shifting the whole reference distribution in a way that narrowed the right tail rather than widening it.
+
+**Switching the bootstrap variant (basic, percentile) instead of BCa.** Reasoned through rather than tested: both are expected to perform similarly or worse than BCa under skew, since BCa's whole design is to correct for exactly this asymmetry, and the simpler variants have no such correction at all.
+
+**Transform, bootstrap, back-transform.** Bootstrapping log(x) and exponentiating the resulting interval endpoints gives a good CI for the *median* of X (or more precisely for exp of the log-scale mean), not for the *mean* of X — because the mean of a lognormal depends on both the log-scale mean and the log-scale variance, and naively exponentiating endpoints doesn't propagate the variance term's own uncertainty. This is a tool for a different estimand, not a shortcut to the same one.
+
+**A flexible 3–4 parameter distributional family (e.g., GB2, generalized gamma, Tukey's g-h), fit by maximum likelihood, with the mean derived from the fitted parameters.** This relocates the problem rather than solving it: the mean's value under any of these families depends sensitively on the tail-shape parameter, and that parameter is estimated almost entirely from the few most extreme observations — the same scarce information that was starving the bootstrap's right tail in the first place. The family's flexibility helps only to the extent it is correctly specified, and verifying correct specification is hardest exactly where heavy tails make it matter most.
+
+## The common thread
+
+Every method above is, in a structural sense, doing the same thing: extrapolating into a region of the distribution that a finite, skewed sample under-represents. Nonparametric methods (bootstrap, empirical likelihood) are bound by the **support** of the n observed values — they cannot produce a tail more extreme than what was actually drawn. Parametric methods relocate that same limitation into the **precision of an estimated tail-shape parameter**, which is no better determined by a small sample than the support itself is. Frank Harrell independently found empirical likelihood gave "terrible" coverage for the same kind of problem, consistent with this diagnosis: it is the same ceiling, not a defect specific to bootstrapping or to EL.
+
+The deeper reason is that **the mean is a linear functional of the data** — every observation, however extreme, contributes to it with full weight and no downweighting. A single far-out draw moves the mean by an amount proportional to its own size; nothing in the definition of the mean offers a cushion against that. Estimating it well under skew therefore *requires* getting the tail right, and getting the tail right from a finite sample is hard in direct proportion to how heavy and asymmetric that tail is. This is true whether the tail-fitting is done implicitly (resampling) or explicitly (a fitted shape parameter); the requirement doesn't go away, only the vocabulary used to describe it changes.
+
+## The resolution: change the estimand, not the method
+
+The median and the pseudomedian (Hodges-Lehmann estimator) are defined by **rank/order information** rather than by a weighted sum. The median doesn't care how extreme the largest observation is, only that it's larger than the others — so its sampling distribution stays close to symmetric and well-behaved even when the population is heavily skewed. This is a difference in *kind*, not degree: these estimators were never exposed to the tail-extrapolation problem that the mean cannot escape.
+
+This matches Harrell's finding in the linked post: confidence intervals for the pseudomedian — both the BCa bootstrap version and the *exact* Hodges-Lehmann interval (which only assumes symmetry of the underlying distribution, not any particular parametric shape) — achieved near-nominal non-coverage in both tails at n=200 under the same lognormal distribution where 18 different procedures for the mean all fell short. The pseudomedian also retains most of the mean's efficiency under normality (95.5% relative efficiency) while having a breakdown point of 0.29, versus the mean's breakdown point of 0.
+
+## Bottom line
+
+For a continuous distribution of genuinely unknown and possibly asymmetric, heavy-tailed shape, no confidence interval procedure for the mean — bootstrap-based, analytically corrected, or built on a flexible parametric family — can be expected to reliably get both tails right at realistic sample sizes, because the difficulty is inherent to what the mean is, not to any particular method of estimating it. The pseudomedian (or median) sidesteps this problem entirely rather than mitigating it, which is the core argument for treating it as a primary measure of central tendency even when the data-generating distribution is not known to be symmetric.
+
+## References
+
+- Davidson, R. and Trokić, M. (2020). "The Fast Iterated Bootstrap." *Journal of Econometrics*, 218(2), 451–475.
+- Harrell, F. (2025). "Measures of Central Tendency for an Asymmetric Distribution, and Confidence Intervals." *Statistical Thinking*. https://fharrell.com/post/aci
+
 
 # Computing Environment
 
@@ -549,4 +597,3 @@ grateful::cite_packages(pkgs='Session', output='paragraph', out.dir='.',
 ```
 
 The code was run on `r sessionInfo()$running` on a Macbook Pro M2 Max.
-

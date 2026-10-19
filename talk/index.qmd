@@ -13,6 +13,7 @@ listing:
 page-layout: full
 title-block-banner: false
 toc: true
+feed: false
 ---
 
 ::: {#talks}

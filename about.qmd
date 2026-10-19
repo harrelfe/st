@@ -47,3 +47,7 @@ My research interests include Bayesian statistics, predictive modeling and model
 
 * PhD in Biostatistics<br>University of North Carolina<br>1979
 * BS in Mathematics<br>University of Alabama in Birmingham<br>1973
+
+## License
+
+Posts before 2026-10-07 were previously licensed CC BY-SA 2.0; all posts are now CC BY 4.0.
