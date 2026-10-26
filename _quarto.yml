@@ -81,6 +81,7 @@ format:
     highlight-style: tango
     reference-location: margin
     fig-cap-location: margin
+    canonical-url: true
 
 comments:
   hypothesis:
