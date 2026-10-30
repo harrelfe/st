@@ -2,6 +2,7 @@
 title: "Integrating Audio, Video, and Discussion Boards with Course Notes"
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2017-08-01

@@ -2,6 +2,7 @@
 title: My Journey from Frequentist to Bayesian Statistics
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 date: 2017-02-19

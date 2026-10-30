@@ -1,7 +1,9 @@
 ---
 title: Navigating Statistical Modeling and Machine Learning
 author:
-  - name: Drew Griffin Levy<br><small>`@DrewLevy`</small>
+  - name:
+      given: Drew Griffin
+      family: Levy
     url: https://DoGoodScience.com
     affiliation: GoodScience, Inc.
     email: drew@dogoodscience.com

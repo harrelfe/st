@@ -2,6 +2,7 @@
 title: "How Does a Compound Symmetric Correlation Structure Translate to a Markov Model?"
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 date: 2023-12-03
 categories: [ordinal, prediction, regression, 2023]

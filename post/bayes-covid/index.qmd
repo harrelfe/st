@@ -1,15 +1,16 @@
 ---
 title: Bayesian Methods to Address Clinical Development Challenges for COVID-19 Drugs and Biologics
 author:
-  - name: Natalia Muhlemann MD
+  - name: Natalia Muhlemann
     affiliation: Cytel, Inc.
     url: https://cytel.com
     email: natalia.muhlemann@cytel.com
-  - name: Rajat Mukherjee Phd
+  - name: Rajat Mukherjee
     affiliation: Cytel, Inc.
     url: https://cytel.com
     email: rajat.mukherjee@cytel.com
-  - name: Frank Harrell PhD
+  - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University
 date: 2020-05-29

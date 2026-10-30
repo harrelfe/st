@@ -2,6 +2,7 @@
 title: Wedding Bayesian and Frequentist Designs Created a Mess
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
     url: https://hbiostat.org
 date: 2023-08-22

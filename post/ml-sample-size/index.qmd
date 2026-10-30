@@ -2,6 +2,7 @@
 title: How Can Machine Learning be Reliable When the Sample is Adequate for Only One Feature?
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2018-01-11

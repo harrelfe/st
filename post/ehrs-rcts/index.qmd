@@ -2,6 +2,7 @@
 title: "EHRs and RCTs:  Outcome Prediction vs. Optimal Treatment Selection"
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Professor of Biostatistics<br>Vanderbilt University School of Medicine
   - name: Laura Lazzeroni

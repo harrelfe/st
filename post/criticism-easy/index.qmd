@@ -4,6 +4,7 @@ date: 2017-11-05
 modified: 2020-11-15
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 categories: [RCT, 2017]

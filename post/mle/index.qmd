@@ -2,6 +2,7 @@
 title: "Statistical Computing Approaches to Maximum Likelihood Estimation"
 author:
   - name: Frank Harrell 
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 date: 2024-11-28

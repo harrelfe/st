@@ -2,6 +2,7 @@
 title: Commentary on Improving Precision and Power in Randomized Trials for COVID-19 Treatments Using Covariate Adjustment, for Binary, Ordinal, and Time-to-Event Outcomes
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics<br>Nashville TN USA<br>`@f2harrell`
   - name: Stephen Senn

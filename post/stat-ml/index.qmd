@@ -2,6 +2,7 @@
 title: Road Map for Choosing Between Statistical Modeling and Machine Learning
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2018-04-30

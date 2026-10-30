@@ -1,9 +1,13 @@
 ---
 title: Decision curve analysis for quantifying the additional benefit of a new marker
 author:
-  - name: Emily Vertosick and Andrew Vickers
+  - name: Emily Vertosick
     affiliation: Department of Epidemiology and Biostatistics, Memorial Sloan Kettering Cancer Center
     url: https://www.decisioncurveanalysis.org
+  - name: Andrew Vickers
+    affiliation: Department of Epidemiology and Biostatistics, Memorial Sloan Kettering Cancer Center
+    url: https://www.decisioncurveanalysis.org
+    
 date: 2022-04-11
 categories: [2022, biomarker, accuracy-score, decision-making, diagnosis, medicine]
 description: "This article examines the benefits of decision curve analysis for assessing model performance when adding a new marker to an existing model. Decision curve analysis provides a clinically interpretable metric based on the number of events identified and interventions avoided."

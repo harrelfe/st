@@ -2,6 +2,7 @@
 title: Resources for Ordinal Regression Models
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics<br>Expert Biostatistics Advisor<br>Center for Drug Evaluation and Research<br>FDA
 date: 2023-05-01

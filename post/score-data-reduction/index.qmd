@@ -2,6 +2,7 @@
 title: "Scoring Multiple Variables, Too Many Variables and Too Few Observations: Data Reduction"
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2017-11-21

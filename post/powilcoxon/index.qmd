@@ -2,6 +2,7 @@
 title: Equivalence of Wilcoxon Statistic and Proportional Odds Model
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
 

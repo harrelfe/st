@@ -2,6 +2,7 @@
 title: The Burden of Demonstrating HTE
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2019-04-08

@@ -5,6 +5,7 @@ modified: 2020-11-15
 categories: [prediction, bootstrap, validation, 2017]
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 description: "The many disadvantages of split-sample validation, including subtle ones, are discussed."

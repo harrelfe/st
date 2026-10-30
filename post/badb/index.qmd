@@ -2,6 +2,7 @@
 title: How to Do Bad Biomarker Research
 author:
   - name: Frank Harrell
+    orcid: 0000-0002-8271-5493
     url: https://hbiostat.org
     affiliation: Vanderbilt University<br>School of Medicine<br>Department of Biostatistics
 date: 2022-10-06
