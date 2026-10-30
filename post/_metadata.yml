@@ -1,9 +1,11 @@
 # options specified here will apply to all posts in this folder
 
-author:
-  - name: Frank Harrell
-    orcid: 0000-0002-8271-5493
-    affiliation: Vanderbilt University School of Medicine
+# Don't use the following or would add me as first author in
+# guest blog posts
+#author:
+#  - name: Frank Harrell
+#    orcid: 0000-0002-8271-5493
+#    affiliation: Vanderbilt University School of Medicine
 
 # freeze computational output
 # (see https://quarto.org/docs/projects/code-execution.html#freeze)

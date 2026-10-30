@@ -65,6 +65,44 @@ if (st[1] > 0 && length(st) == length(en) && all(en > st) && all(st[-1] > en[-le
     x   <- rawToChar(raw); Encoding(x) <- "UTF-8"
   }
 } else if (st[1] > 0) warning("feed <item> tags are not well paired; non-post items were not filtered", call. = FALSE)
+# Remove the "How to cite this article" box (added by cite-box.lua) from the feed items.  It is
+# useful on the web page, but Rogue Scholar builds each record's abstract from the start of the
+# item text, so leaving it in puts the citation into every abstract.  The pages are not touched.
+pat_cb <- "(?s)<div class=\"cite-box\">\\s*<div class=\"cite-box-title\">.*?</div>\\s*<p>.*?</p>\\s*</div>\\s*"
+n_cite <- length(gregexpr(pat_cb, x, perl = TRUE, useBytes = TRUE)[[1]])
+if (gregexpr(pat_cb, x, perl = TRUE, useBytes = TRUE)[[1]][1] < 0) n_cite <- 0L
+x <- gsub(pat_cb, "", x, perl = TRUE, useBytes = TRUE)
+# Put each post's front-matter `description:` at the start of its feed item.  Quarto's full-text
+# feed carries only the rendered body, so without this Rogue Scholar builds the abstract from
+# whatever the post happens to start with.  Posts with no description are left alone, and items
+# that already have the abstract paragraph are skipped, so a second run changes nothing.
+Encoding(x) <- "UTF-8"
+get_desc <- function(slug) {
+  q <- file.path("post", slug, "index.qmd")
+  if (!file.exists(q)) return("")
+  l <- readLines(q, warn = FALSE, encoding = "UTF-8")
+  e <- which(trimws(l) == "---")
+  if (length(e) < 2 || e[1] != 1L) return("")
+  d <- tryCatch(yaml::yaml.load(paste(l[(e[1] + 1L):(e[2] - 1L)], collapse = "\n"))$description,
+                error = function(err) NULL)
+  if (!is.character(d) || length(d) != 1L) return("")
+  d <- gsub("---", "\u2014", d, fixed = TRUE); d <- gsub("--", "\u2013", d, fixed = TRUE)
+  d <- gsub("&", "&amp;", d, fixed = TRUE); d <- gsub("<", "&lt;", d, fixed = TRUE); d <- gsub(">", "&gt;", d, fixed = TRUE)
+  trimws(gsub("[[:space:]]+", " ", d))
+}
+n_abs <- 0L
+its <- regmatches(x, gregexpr("(?s)<item>.*?</item>", x, perl = TRUE))[[1]]
+if (length(its)) {
+  new <- vapply(its, function(it) {
+    sl <- sub("(?s).*<link>[^<]*/post/([^/<]+)/?</link>.*", "\\1", it, perl = TRUE)
+    if (identical(sl, it) || grepl('class="abstract-feed"', it, fixed = TRUE)) return(it)
+    d <- get_desc(sl)
+    if (!nzchar(d)) return(it)
+    n_abs <<- n_abs + 1L
+    sub("(<description><!\\[CDATA\\[\\s*)", paste0("\\1<p class=\"abstract-feed\">", gsub("\\", "\\\\", d, fixed = TRUE), "</p>\n"), it, perl = TRUE)
+  }, "", USE.NAMES = FALSE)
+  regmatches(x, gregexpr("(?s)<item>.*?</item>", x, perl = TRUE)) <- list(new)
+}
 n_doi_before <- length(regmatches(x, gregexpr("<guid>https://doi.org/", x, fixed = TRUE, useBytes = TRUE))[[1]])
 
 pat <-"<guid>[^<]*/post/[^/<]+/?</guid>"
@@ -83,6 +121,6 @@ for (i in which(have)) {
 
 out <- if (dry) "index-doi-preview.xml" else feed
 writeBin(charToRaw(x), out)
-info("guid -> DOI: dropped ", n_dropped, " non-post item(s); replaced ", sum(have), " post guid(s); ", n_doi_before, " were already DOIs; ",
+info("guid -> DOI: removed ", n_cite, " cite box(es); added ", n_abs, " abstract(s); dropped ", n_dropped, " non-post item(s); replaced ", sum(have), " post guid(s); ", n_doi_before, " were already DOIs; ",
      length(regmatches(x, gregexpr("<guid>", x, fixed = TRUE, useBytes = TRUE))[[1]]), " guid(s) total in the feed",
      if (dry) paste0("  [DRY RUN: wrote ", out, "]") else "")
